@@ -40,11 +40,33 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
     /**
      * Check permissions for API access
+     *
+     * Requires WordPress authentication via Application Passwords.
+     * To generate an Application Password:
+     * 1. Go to WordPress admin > Users > Profile
+     * 2. Scroll to "Application Passwords" section
+     * 3. Enter a name (e.g., "Chrome Extension") and click "Add New Application Password"
+     * 4. Copy the generated password and use it with your WordPress username for HTTP Basic Auth
      */
     public function permissions_check($request) {
-        // Allow all requests - authentication handled by reverse proxy
-        // If you want to re-enable WordPress authentication, change this to:
-        // return current_user_can('read');
+        // Require WordPress authentication (supports Application Passwords)
+        if (!is_user_logged_in()) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('Authentication required. Please provide valid WordPress credentials.', 'booking-match-api'),
+                array('status' => 401)
+            );
+        }
+
+        // User must have at least 'read' capability
+        if (!current_user_can('read')) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('You do not have permission to access this resource.', 'booking-match-api'),
+                array('status' => 403)
+            );
+        }
+
         return true;
     }
 
