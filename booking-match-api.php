@@ -53,6 +53,9 @@ class Booking_Match_API {
         // Initialize
         add_action('rest_api_init', array($this, 'register_routes'));
         add_action('plugins_loaded', array($this, 'init'));
+
+        // Add CORS support for Chrome extension
+        add_action('rest_api_init', array($this, 'add_cors_support'));
     }
 
     /**
@@ -91,6 +94,23 @@ class Booking_Match_API {
     public function register_routes() {
         $controller = new BMA_REST_Controller();
         $controller->register_routes();
+    }
+
+    /**
+     * Add CORS headers to support Chrome extension requests
+     */
+    public function add_cors_support() {
+        // Add CORS headers to response
+        add_filter('rest_post_dispatch', function($response, $server, $request) {
+            // Only for BMA endpoints
+            if (strpos($request->get_route(), '/bma/') !== false) {
+                $response->header('Access-Control-Allow-Origin', '*');
+                $response->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+                $response->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+                $response->header('Access-Control-Allow-Credentials', 'true');
+            }
+            return $response;
+        }, 15, 3);
     }
 }
 
