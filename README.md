@@ -223,21 +223,36 @@ https://yoursite.com/booking-page/?booking_id=12345&date=2025-11-04
 
 ## Configuration
 
+### Settings Page
+
+Access the plugin settings at **Settings → Booking Match API** in your WordPress admin.
+
+**Booking Management Page URL**: Enter the full URL of the page that displays your hotel bookings (with the `[hotel-table-bookings-by-date]` shortcode).
+
+Example: `https://admin.hotelnumberfour.com/bookings/`
+
+If left empty, the plugin will default to: `https://yoursite.com/bookings/`
+
+### API Credentials
+
 The plugin reuses configuration from the main hotel admin plugin:
 
 - NewBook API credentials (username, password, API key, region)
 - Resos API key
 - Hotel ID
 
-### Adding Booking Page URL
+Configure these at **Settings → Hotel Booking Table**.
 
-To generate correct deep links, add this option to your WordPress database:
+### Alternative Configuration Methods
 
+You can also set the booking page URL programmatically:
+
+**Via PHP:**
 ```php
 update_option('bma_booking_page_url', 'https://yoursite.com/booking-page/');
 ```
 
-Or add to `wp-config.php`:
+**Via wp-config.php:**
 ```php
 define('BMA_BOOKING_PAGE_URL', 'https://yoursite.com/booking-page/');
 ```
@@ -253,12 +268,16 @@ booking-match-api/
 │   ├── class-bma-newbook-search.php   # NewBook search logic
 │   ├── class-bma-matcher.php          # Booking matching logic
 │   ├── class-bma-response-formatter.php # Response formatting
-│   └── class-bma-authenticator.php    # Authentication (stub)
+│   ├── class-bma-authenticator.php    # Authentication (stub)
+│   ├── class-bma-admin.php            # Admin settings page
+│   └── class-bma-template-helper.php  # HTML template helper
 └── templates/
     └── chrome-extension-response.php  # HTML template
 ```
 
 ### Classes
+
+**BMA_Admin**: Admin settings page for configuring booking page URL and viewing API documentation
 
 **BMA_REST_Controller**: Registers REST route, validates parameters, orchestrates search and matching
 

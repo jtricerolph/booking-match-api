@@ -65,12 +65,22 @@ class Booking_Match_API {
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-response-formatter.php';
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-authenticator.php';
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-template-helper.php';
+
+        // Load admin class if in admin area
+        if (is_admin()) {
+            require_once BMA_PLUGIN_DIR . 'includes/class-bma-admin.php';
+        }
     }
 
     /**
      * Initialize plugin
      */
     public function init() {
+        // Initialize admin if in admin area
+        if (is_admin()) {
+            new BMA_Admin();
+        }
+
         // Plugin initialized
         do_action('bma_init');
     }
