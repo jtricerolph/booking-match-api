@@ -99,6 +99,37 @@ class BMA_REST_Controller extends WP_REST_Controller {
         error_log('BMA-AUTH: ========== Authentication Check End ==========');
         // ========== DEBUG LOGGING END ==========
 
+        // If not logged in via cookie, try manual Application Password authentication
+        if (!is_user_logged_in() && isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
+            error_log('BMA-AUTH: Attempting manual Application Password authentication');
+
+            $username = $_SERVER['PHP_AUTH_USER'];
+            $password = $_SERVER['PHP_AUTH_PW'];
+
+            // Try to authenticate using Application Password
+            $user = wp_authenticate_application_password(null, $username, $password);
+
+            if ($user instanceof WP_User) {
+                error_log('BMA-AUTH: Manual Application Password authentication SUCCESSFUL for user: ' . $user->user_login);
+                wp_set_current_user($user->ID);
+
+                // Check if user has required capability
+                if (!$user->has_cap('read')) {
+                    error_log('BMA-AUTH: REJECTED - User lacks read capability');
+                    return new WP_Error(
+                        'rest_forbidden',
+                        __('You do not have permission to access this resource.', 'booking-match-api'),
+                        array('status' => 403)
+                    );
+                }
+
+                error_log('BMA-AUTH: ACCEPTED - Manual authentication successful');
+                return true;
+            } else {
+                error_log('BMA-AUTH: Manual Application Password authentication FAILED');
+            }
+        }
+
         // Require WordPress authentication (supports Application Passwords)
         if (!is_user_logged_in()) {
             error_log('BMA-AUTH: REJECTED - User not logged in');
