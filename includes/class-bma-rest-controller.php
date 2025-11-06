@@ -49,60 +49,18 @@ class BMA_REST_Controller extends WP_REST_Controller {
      * 4. Copy the generated password and use it with your WordPress username for HTTP Basic Auth
      */
     public function permissions_check($request) {
-        // ========== DEBUG LOGGING START ==========
-        error_log('BMA-AUTH: ========== Authentication Check Started ==========');
-
-        // Log request headers
-        $headers = array();
-        foreach ($_SERVER as $key => $value) {
-            if (strpos($key, 'HTTP_') === 0) {
-                $header_name = str_replace('HTTP_', '', $key);
-                $headers[$header_name] = $value;
-            }
-        }
-        error_log('BMA-AUTH: Request Headers: ' . print_r($headers, true));
-
-        // Log specific important headers
-        error_log('BMA-AUTH: Authorization Header: ' . (isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : 'NOT SET'));
-        error_log('BMA-AUTH: PHP_AUTH_USER: ' . (isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : 'NOT SET'));
-        error_log('BMA-AUTH: PHP_AUTH_PW: ' . (isset($_SERVER['PHP_AUTH_PW']) ? 'SET (length: ' . strlen($_SERVER['PHP_AUTH_PW']) . ')' : 'NOT SET'));
-        error_log('BMA-AUTH: Origin: ' . (isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'NOT SET'));
-        error_log('BMA-AUTH: Referer: ' . (isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'NOT SET'));
-        error_log('BMA-AUTH: User-Agent: ' . (isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'NOT SET'));
-
-        // Check authentication status
-        $is_logged_in = is_user_logged_in();
-        error_log('BMA-AUTH: is_user_logged_in() = ' . ($is_logged_in ? 'TRUE' : 'FALSE'));
-
-        // Get current user info
-        $current_user = wp_get_current_user();
-        if ($current_user->ID) {
-            error_log('BMA-AUTH: Current User ID: ' . $current_user->ID);
-            error_log('BMA-AUTH: Current User Login: ' . $current_user->user_login);
-            error_log('BMA-AUTH: Current User Email: ' . $current_user->user_email);
-            error_log('BMA-AUTH: Current User Roles: ' . print_r($current_user->roles, true));
-        } else {
-            error_log('BMA-AUTH: No current user (ID = 0)');
-        }
-
-        // Check if using Application Password
-        if (defined('APPLICATION_PASSWORD_USER_ID')) {
-            error_log('BMA-AUTH: Application Password Auth - User ID: ' . APPLICATION_PASSWORD_USER_ID);
-        } else {
-            error_log('BMA-AUTH: Not using Application Password (constant not defined)');
-        }
-
-        // Log request method and endpoint
-        error_log('BMA-AUTH: Request Method: ' . $_SERVER['REQUEST_METHOD']);
-        error_log('BMA-AUTH: Request URI: ' . $_SERVER['REQUEST_URI']);
-
-        error_log('BMA-AUTH: ========== Authentication Check End ==========');
-        // ========== DEBUG LOGGING END ==========
+        // Log key request details
+        error_log(sprintf(
+            'BMA-AUTH: Request [%s %s] Origin: %s | Auth: %s | PHP_AUTH_USER: %s',
+            $_SERVER['REQUEST_METHOD'],
+            $_SERVER['REQUEST_URI'],
+            isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'none',
+            isset($_SERVER['HTTP_AUTHORIZATION']) ? 'present' : 'missing',
+            isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : 'not set'
+        ));
 
         // If not logged in via cookie, try manual Application Password authentication
         if (!is_user_logged_in() && isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
-            error_log('BMA-AUTH: Attempting manual Application Password authentication');
-
             $username = $_SERVER['PHP_AUTH_USER'];
             $password = $_SERVER['PHP_AUTH_PW'];
 
@@ -110,12 +68,11 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $user = wp_authenticate_application_password(null, $username, $password);
 
             if ($user instanceof WP_User) {
-                error_log('BMA-AUTH: Manual Application Password authentication SUCCESSFUL for user: ' . $user->user_login);
                 wp_set_current_user($user->ID);
 
                 // Check if user has required capability
                 if (!$user->has_cap('read')) {
-                    error_log('BMA-AUTH: REJECTED - User lacks read capability');
+                    error_log("BMA-AUTH: REJECTED - User '{$user->user_login}' lacks read capability");
                     return new WP_Error(
                         'rest_forbidden',
                         __('You do not have permission to access this resource.', 'booking-match-api'),
@@ -123,16 +80,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     );
                 }
 
-                error_log('BMA-AUTH: ACCEPTED - Manual authentication successful');
+                error_log("BMA-AUTH: ACCEPTED - User '{$user->user_login}' authenticated via Application Password");
                 return true;
             } else {
-                error_log('BMA-AUTH: Manual Application Password authentication FAILED');
+                error_log("BMA-AUTH: Manual Application Password auth failed for user: {$username}");
             }
         }
 
         // Require WordPress authentication (supports Application Passwords)
         if (!is_user_logged_in()) {
-            error_log('BMA-AUTH: REJECTED - User not logged in');
+            error_log('BMA-AUTH: REJECTED - No valid authentication provided (not logged in, no valid PHP_AUTH)');
             return new WP_Error(
                 'rest_forbidden',
                 __('Authentication required. Please provide valid WordPress credentials.', 'booking-match-api'),
@@ -142,7 +99,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
         // User must have at least 'read' capability
         if (!current_user_can('read')) {
-            error_log('BMA-AUTH: REJECTED - User lacks read capability');
+            $current_user = wp_get_current_user();
+            error_log("BMA-AUTH: REJECTED - User '{$current_user->user_login}' lacks read capability");
             return new WP_Error(
                 'rest_forbidden',
                 __('You do not have permission to access this resource.', 'booking-match-api'),
@@ -150,7 +108,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
             );
         }
 
-        error_log('BMA-AUTH: ACCEPTED - Authentication successful');
+        $current_user = wp_get_current_user();
+        error_log("BMA-AUTH: ACCEPTED - User '{$current_user->user_login}' authenticated");
         return true;
     }
 
