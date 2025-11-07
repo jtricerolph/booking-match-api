@@ -145,8 +145,9 @@ class BMA_Matcher {
 
     /**
      * Match Resos booking to hotel booking (reuse existing logic)
+     * Made public so other plugins can use this matcher
      */
-    private function match_resos_to_hotel($resos_booking, $hotel_booking, $date) {
+    public function match_resos_to_hotel($resos_booking, $hotel_booking, $date) {
         $hotel_booking_id = $hotel_booking['booking_id'] ?? '';
         $hotel_ref = $hotel_booking['booking_reference_id'] ?? '';
         $hotel_room = $hotel_booking['site_name'] ?? '';
