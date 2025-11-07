@@ -154,11 +154,11 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'sanitize_callback' => 'sanitize_text_field',
             ),
             'context' => array(
-                'description' => __('Response format context (json, chrome-extension, etc.)', 'booking-match-api'),
+                'description' => __('Response format context (json, chrome-extension, chrome-sidepanel, etc.)', 'booking-match-api'),
                 'type' => 'string',
                 'required' => false,
                 'default' => 'json',
-                'enum' => array('json', 'chrome-extension'),
+                'enum' => array('json', 'chrome-extension', 'chrome-sidepanel'),
                 'sanitize_callback' => 'sanitize_text_field',
             ),
         );

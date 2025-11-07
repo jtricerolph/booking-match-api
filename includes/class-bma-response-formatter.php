@@ -24,7 +24,11 @@ class BMA_Response_Formatter {
      */
     public function format_response($results, $search_method, $context = 'json') {
         if ($context === 'chrome-extension') {
-            return $this->format_html_response($results, $search_method);
+            return $this->format_html_response($results, $search_method, 'chrome-extension');
+        }
+
+        if ($context === 'chrome-sidepanel') {
+            return $this->format_html_response($results, $search_method, 'chrome-sidepanel');
         }
 
         // Default JSON response
@@ -114,23 +118,35 @@ class BMA_Response_Formatter {
     }
 
     /**
-     * Format HTML response for Chrome extension
+     * Format HTML response for Chrome extension or sidepanel
      */
-    private function format_html_response($results, $search_method) {
+    private function format_html_response($results, $search_method, $context = 'chrome-extension') {
         $booking_count = count($results);
 
         // Start HTML output
         ob_start();
 
-        // Load template
-        include BMA_PLUGIN_DIR . 'templates/chrome-extension-response.php';
+        // Load appropriate template based on context
+        if ($context === 'chrome-sidepanel') {
+            $template_file = BMA_PLUGIN_DIR . 'templates/chrome-sidepanel-response.php';
+        } else {
+            $template_file = BMA_PLUGIN_DIR . 'templates/chrome-extension-response.php';
+        }
+
+        // Check if template exists, fallback to default if not
+        if (!file_exists($template_file)) {
+            error_log("BMA: Template not found: {$template_file}, using default chrome-extension template");
+            $template_file = BMA_PLUGIN_DIR . 'templates/chrome-extension-response.php';
+        }
+
+        include $template_file;
 
         $html = ob_get_clean();
 
         // Return as data object (REST API will handle encoding)
         return array(
             'success' => true,
-            'context' => 'chrome-extension',
+            'context' => $context,
             'html' => $html,
             'bookings_found' => $booking_count,
             'search_method' => $search_method
