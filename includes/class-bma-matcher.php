@@ -151,6 +151,21 @@ class BMA_Matcher {
         $hotel_ref = $hotel_booking['booking_reference_id'] ?? '';
         $hotel_room = $hotel_booking['site_name'] ?? '';
 
+        // Check for exclusion notes FIRST (before any matching logic)
+        // If Resos booking has "NOT-#{hotel_booking_id}" note, exclude it from matching
+        $notes = $this->get_resos_notes($resos_booking);
+        if (!empty($hotel_booking_id)) {
+            $exclusion_pattern = 'NOT-#' . $hotel_booking_id;
+            if (stripos($notes, $exclusion_pattern) !== false) {
+                // This match has been explicitly excluded
+                return array(
+                    'matched' => false,
+                    'excluded' => true,
+                    'exclusion_reason' => 'Manual exclusion note found'
+                );
+            }
+        }
+
         // Priority 1: Booking ID in custom fields
         $custom_fields = $resos_booking['customFields'] ?? array();
         foreach ($custom_fields as $field) {
