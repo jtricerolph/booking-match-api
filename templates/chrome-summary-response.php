@@ -19,7 +19,7 @@ if (empty($bookings)) {
     <?php foreach ($bookings as $booking): ?>
         <div class="booking-card" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
             <!-- Collapsed Summary -->
-            <div class="booking-header" onclick="toggleBookingDetails(<?php echo esc_attr($booking['booking_id']); ?>)">
+            <div class="booking-header">
                 <div class="booking-main-info">
                     <div class="booking-guest">
                         <strong><?php echo esc_html($booking['guest_name']); ?></strong>
@@ -99,7 +99,7 @@ if (empty($bookings)) {
 
                 <!-- Action Button -->
                 <div class="detail-actions">
-                    <button class="open-booking-btn" onclick="openBooking(<?php echo esc_attr($booking['booking_id']); ?>)">
+                    <button class="open-booking-btn" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
                         Open Booking in NewBook →
                     </button>
                 </div>
@@ -109,27 +109,40 @@ if (empty($bookings)) {
 </div>
 
 <script>
-function toggleBookingDetails(bookingId) {
-    const details = document.getElementById('details-' + bookingId);
-    const card = details.closest('.booking-card');
-    const icon = card.querySelector('.expand-icon');
+// Attach event listeners after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers to booking headers
+    const headers = document.querySelectorAll('.booking-header');
+    headers.forEach(header => {
+        header.addEventListener('click', function() {
+            const card = this.closest('.booking-card');
+            const bookingId = card.dataset.bookingId;
+            const details = document.getElementById('details-' + bookingId);
+            const icon = card.querySelector('.expand-icon');
 
-    if (details.style.display === 'none') {
-        details.style.display = 'block';
-        icon.textContent = '▲';
-        card.classList.add('expanded');
-    } else {
-        details.style.display = 'none';
-        icon.textContent = '▼';
-        card.classList.remove('expanded');
-    }
-}
+            if (details.style.display === 'none' || !details.style.display) {
+                details.style.display = 'block';
+                icon.textContent = '▲';
+                card.classList.add('expanded');
+            } else {
+                details.style.display = 'none';
+                icon.textContent = '▼';
+                card.classList.remove('expanded');
+            }
+        });
+    });
 
-function openBooking(bookingId) {
-    // Open booking in main NewBook window
-    const url = `https://appeu.newbook.cloud/bookings_view/${bookingId}`;
-    chrome.tabs.create({ url: url });
-}
+    // Add click handlers to "Open in NewBook" buttons
+    const openButtons = document.querySelectorAll('.open-booking-btn');
+    openButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent header click event
+            const bookingId = this.dataset.bookingId;
+            const url = `https://appeu.newbook.cloud/bookings_view/${bookingId}`;
+            chrome.tabs.create({ url: url });
+        });
+    });
+});
 </script>
 
 <style>
