@@ -663,6 +663,8 @@ if (!defined('ABSPATH')) {
     line-height: 1.5;
     transition: background 0.2s;
     box-sizing: border-box;
+    margin-right: 8px;
+    margin-top: 8px;
 }
 
 .bma-action-link:hover {
