@@ -301,8 +301,13 @@ class BMA_NewBook_Search {
             return ($b['booking_id'] ?? 0) - ($a['booking_id'] ?? 0);
         });
 
+        error_log("BMA NewBook Search: Fetched " . count($bookings) . " bookings, applying limit = {$limit}");
+
         // Apply limit
-        return array_slice($bookings, 0, $limit);
+        $limited_bookings = array_slice($bookings, 0, $limit);
+        error_log("BMA NewBook Search: Returning " . count($limited_bookings) . " bookings after limit");
+
+        return $limited_bookings;
     }
 
     /**

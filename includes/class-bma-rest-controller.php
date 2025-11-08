@@ -354,6 +354,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $context = $request->get_param('context') ?: 'json';
             $limit = $request->get_param('limit') ?: 5;
 
+            error_log("BMA Summary: Requested limit = {$limit}, context = {$context}");
+
             // Fetch recently placed bookings from NewBook
             $searcher = new BMA_NewBook_Search();
             $recent_bookings = $searcher->fetch_recent_placed_bookings($limit);
