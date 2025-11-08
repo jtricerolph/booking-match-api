@@ -214,6 +214,78 @@ if (!defined('ABSPATH')) {
                                             View in ResOS
                                         </a>
                                     <?php endif; ?>
+
+                                    <!-- Update Booking Button -->
+                                    <button class="bma-action-btn update"
+                                            onclick="toggleUpdateForm('<?php echo esc_js($night['date']); ?>', '<?php echo esc_js($match['resos_booking_id']); ?>')">
+                                        ✏️ Update
+                                    </button>
+
+                                    <!-- Exclude Match Button (for non-primary or multiple matches) -->
+                                    <?php if (!$match['match_info']['is_primary'] || $match_count > 1): ?>
+                                        <button class="bma-action-btn exclude"
+                                                onclick="confirmExcludeMatch('<?php echo esc_js($match['resos_booking_id']); ?>', '<?php echo esc_js($booking['booking_id']); ?>', '<?php echo esc_js($match['guest_name']); ?>')">
+                                            ✖ Exclude
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Update Booking Form (Initially Hidden) -->
+                                <div id="update-form-<?php echo esc_attr($night['date']); ?>-<?php echo esc_attr($match['resos_booking_id']); ?>" class="bma-booking-form" style="display:none;"
+                                     data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>"
+                                     data-guest-name="<?php echo esc_attr($match['guest_name']); ?>"
+                                     data-time="<?php echo esc_attr($match['time'] ?? ''); ?>"
+                                     data-people="<?php echo esc_attr($match['people']); ?>"
+                                     data-guest-phone="<?php echo esc_attr($booking['phone'] ?? ''); ?>"
+                                     data-guest-email="<?php echo esc_attr($booking['email'] ?? ''); ?>">
+
+                                    <h5>Update Restaurant Booking</h5>
+
+                                    <div class="bma-form-row">
+                                        <label>Guest Name *</label>
+                                        <input type="text" class="update-guest-name" value="<?php echo esc_attr($match['guest_name']); ?>" required>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>Time</label>
+                                        <input type="time" class="update-time" value="<?php echo esc_attr($match['time'] ?? ''); ?>">
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>People</label>
+                                        <input type="number" class="update-people" min="1" value="<?php echo esc_attr($match['people']); ?>">
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>Phone</label>
+                                        <input type="tel" class="update-phone" value="<?php echo esc_attr($booking['phone'] ?? ''); ?>">
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>Email</label>
+                                        <input type="email" class="update-email" value="<?php echo esc_attr($booking['email'] ?? ''); ?>">
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>
+                                            <input type="checkbox" class="update-hotel-guest" <?php echo !empty($match['is_hotel_guest']) ? 'checked' : ''; ?>>
+                                            Mark as Hotel Guest
+                                        </label>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>
+                                            <input type="checkbox" class="update-dbb" <?php echo !empty($match['is_dbb']) ? 'checked' : ''; ?>>
+                                            Mark as DBB/Package
+                                        </label>
+                                    </div>
+
+                                    <div class="bma-form-actions">
+                                        <button type="button" class="bma-btn-cancel" onclick="toggleUpdateForm('<?php echo esc_js($night['date']); ?>', '<?php echo esc_js($match['resos_booking_id']); ?>')">Cancel</button>
+                                        <button type="button" class="bma-btn-submit" onclick="submitUpdateBooking('<?php echo esc_js($night['date']); ?>', '<?php echo esc_js($match['resos_booking_id']); ?>')">Update Booking</button>
+                                    </div>
+
+                                    <div class="bma-form-feedback"></div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -227,20 +299,78 @@ if (!defined('ABSPATH')) {
                             <div class="bma-package-alert-message">
                                 This guest has a dinner package but no restaurant booking yet.
                             </div>
-                            <a href="<?php echo esc_url($this->generate_deep_link($booking['booking_id'], $night['date'])); ?>"
-                               class="bma-action-link create urgent" target="_blank">
-                                Create Booking Now
-                            </a>
                         <?php else: ?>
                             <div class="bma-night-status unmatched">
                                 <span class="bma-status-icon">⚠</span>
                                 <span>No restaurant booking</span>
                             </div>
-                            <a href="<?php echo esc_url($this->generate_deep_link($booking['booking_id'], $night['date'])); ?>"
-                               class="bma-action-link create" target="_blank">
-                                Create Booking
-                            </a>
                         <?php endif; ?>
+
+                        <!-- Create Booking Button -->
+                        <button class="bma-action-btn create <?php echo $has_package_alert ? 'urgent' : ''; ?>"
+                                onclick="toggleCreateForm('<?php echo esc_js($night['date']); ?>')">
+                            <?php echo $has_package_alert ? '+ Create Booking Now' : '+ Create Booking'; ?>
+                        </button>
+
+                        <!-- Create Booking Form (Initially Hidden) -->
+                        <div id="create-form-<?php echo esc_attr($night['date']); ?>" class="bma-booking-form" style="display:none;"
+                             data-date="<?php echo esc_attr($night['date']); ?>"
+                             data-guest-name="<?php echo esc_attr($booking['guest_name']); ?>"
+                             data-guest-phone="<?php echo esc_attr($booking['phone'] ?? ''); ?>"
+                             data-guest-email="<?php echo esc_attr($booking['email'] ?? ''); ?>"
+                             data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                             data-people="<?php
+                                 $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
+                                 echo esc_attr($occ['adults'] + $occ['children'] + $occ['infants']);
+                             ?>">
+
+                            <h5>Create Restaurant Booking</h5>
+
+                            <div class="bma-form-row">
+                                <label>Date</label>
+                                <input type="text" class="form-date" value="<?php echo esc_attr($night['date']); ?>" readonly>
+                            </div>
+
+                            <div class="bma-form-row">
+                                <label>Guest Name *</label>
+                                <input type="text" class="form-guest-name" value="<?php echo esc_attr($booking['guest_name']); ?>" required>
+                            </div>
+
+                            <div class="bma-form-row">
+                                <label>Time *</label>
+                                <input type="time" class="form-time" value="19:00" required>
+                            </div>
+
+                            <div class="bma-form-row">
+                                <label>People *</label>
+                                <input type="number" class="form-people" min="1" value="<?php
+                                    $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
+                                    echo esc_attr($occ['adults'] + $occ['children'] + $occ['infants']);
+                                ?>" required>
+                            </div>
+
+                            <div class="bma-form-row">
+                                <label>Phone</label>
+                                <input type="tel" class="form-phone" value="<?php echo esc_attr($booking['phone'] ?? ''); ?>">
+                            </div>
+
+                            <div class="bma-form-row">
+                                <label>Email</label>
+                                <input type="email" class="form-email" value="<?php echo esc_attr($booking['email'] ?? ''); ?>">
+                            </div>
+
+                            <div class="bma-form-row">
+                                <label>Notes</label>
+                                <textarea class="form-notes" rows="2" placeholder="e.g., Room <?php echo esc_attr($booking['room'] ?? ''); ?>, Booking #<?php echo esc_attr($booking['booking_id']); ?>"></textarea>
+                            </div>
+
+                            <div class="bma-form-actions">
+                                <button type="button" class="bma-btn-cancel" onclick="toggleCreateForm('<?php echo esc_js($night['date']); ?>')">Cancel</button>
+                                <button type="button" class="bma-btn-submit" onclick="submitCreateBooking('<?php echo esc_js($night['date']); ?>')">Create Booking</button>
+                            </div>
+
+                            <div class="bma-form-feedback"></div>
+                        </div>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>
@@ -657,7 +787,537 @@ if (!defined('ABSPATH')) {
     background: #8b5cf6;
     color: white;
 }
+
+/* Action Buttons */
+.bma-action-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-right: 8px;
+    margin-top: 8px;
+}
+
+.bma-action-btn:hover {
+    background: #5568d3;
+}
+
+.bma-action-btn.create {
+    background: #10b981;
+}
+
+.bma-action-btn.create:hover {
+    background: #059669;
+}
+
+.bma-action-btn.create.urgent {
+    background: #ef4444;
+    font-weight: 600;
+    animation: pulse 2s infinite;
+}
+
+.bma-action-btn.create.urgent:hover {
+    background: #dc2626;
+}
+
+.bma-action-btn.update {
+    background: #f59e0b;
+}
+
+.bma-action-btn.update:hover {
+    background: #d97706;
+}
+
+.bma-action-btn.exclude {
+    background: #ef4444;
+}
+
+.bma-action-btn.exclude:hover {
+    background: #dc2626;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+/* Booking Forms */
+.bma-booking-form {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 12px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bma-booking-form h5 {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.bma-form-row {
+    margin-bottom: 12px;
+}
+
+.bma-form-row label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4b5563;
+    margin-bottom: 4px;
+}
+
+.bma-form-row input[type="text"],
+.bma-form-row input[type="email"],
+.bma-form-row input[type="tel"],
+.bma-form-row input[type="time"],
+.bma-form-row input[type="number"],
+.bma-form-row textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.bma-form-row input[type="text"]:focus,
+.bma-form-row input[type="email"]:focus,
+.bma-form-row input[type="tel"]:focus,
+.bma-form-row input[type="time"]:focus,
+.bma-form-row input[type="number"]:focus,
+.bma-form-row textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.bma-form-row input[type="checkbox"] {
+    margin-right: 6px;
+}
+
+.bma-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.bma-btn-cancel {
+    padding: 10px 20px;
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.bma-btn-cancel:hover {
+    background: #4b5563;
+}
+
+.bma-btn-submit {
+    padding: 10px 20px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.bma-btn-submit:hover {
+    background: #059669;
+}
+
+.bma-btn-submit:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.bma-form-feedback {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    display: none;
+}
+
+.bma-form-feedback.success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+    display: block;
+}
+
+.bma-form-feedback.error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+    display: block;
+}
+
+/* Confirmation Modal */
+.bma-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.bma-modal {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.bma-modal h4 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.bma-modal p {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.bma-modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
 </style>
 
 <!-- Load Material Symbols font for status icons -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+<script>
+// Get API configuration from parent window or use defaults
+function getAPIConfig() {
+    // Try to get from parent window's APIClient if available
+    if (window.parent && window.parent.apiClient) {
+        return {
+            baseUrl: window.parent.apiClient.baseUrl,
+            authHeader: window.parent.apiClient.authHeader
+        };
+    }
+
+    // Fallback: construct from current location
+    const protocol = window.location.protocol;
+    const host = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    return {
+        baseUrl: `${protocol}//${host}${port}/wp-json/bma/v1`,
+        authHeader: '' // Will be set by parent context
+    };
+}
+
+// Toggle create booking form
+function toggleCreateForm(date) {
+    const formId = 'create-form-' + date;
+    const form = document.getElementById(formId);
+    if (form) {
+        if (form.style.display === 'none') {
+            form.style.display = 'block';
+            form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            form.style.display = 'none';
+        }
+    }
+}
+
+// Toggle update booking form
+function toggleUpdateForm(date, resosBookingId) {
+    const formId = 'update-form-' + date + '-' + resosBookingId;
+    const form = document.getElementById(formId);
+    if (form) {
+        if (form.style.display === 'none') {
+            form.style.display = 'block';
+            form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            form.style.display = 'none';
+        }
+    }
+}
+
+// Submit create booking
+async function submitCreateBooking(date) {
+    const formId = 'create-form-' + date;
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    const feedback = form.querySelector('.bma-form-feedback');
+    const submitBtn = form.querySelector('.bma-btn-submit');
+
+    // Get form values
+    const formData = {
+        date: form.querySelector('.form-date').value,
+        time: form.querySelector('.form-time').value,
+        guest_name: form.querySelector('.form-guest-name').value,
+        people: parseInt(form.querySelector('.form-people').value),
+        phone: form.querySelector('.form-phone').value,
+        email: form.querySelector('.form-email').value,
+        restaurant_note: form.querySelector('.form-notes').value,
+        booking_ref: form.dataset.bookingId,
+        hotel_guest: 'Yes'
+    };
+
+    // Validate required fields
+    if (!formData.date || !formData.time || !formData.guest_name || !formData.people) {
+        showFeedback(feedback, 'Please fill in all required fields', 'error');
+        return;
+    }
+
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating...';
+
+    try {
+        const config = getAPIConfig();
+        const response = await fetch(`${config.baseUrl}/bookings/create`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': config.authHeader
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showFeedback(feedback, `✓ Booking created successfully! Booking ID: ${result.booking_id}`, 'success');
+            // Reload the tab after 2 seconds to show updated data
+            setTimeout(() => {
+                if (window.parent && window.parent.reloadRestaurantTab) {
+                    window.parent.reloadRestaurantTab();
+                }
+            }, 2000);
+        } else {
+            showFeedback(feedback, `Error: ${result.message || 'Failed to create booking'}`, 'error');
+        }
+    } catch (error) {
+        showFeedback(feedback, `Error: ${error.message}`, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Booking';
+    }
+}
+
+// Submit update booking
+async function submitUpdateBooking(date, resosBookingId) {
+    const formId = 'update-form-' + date + '-' + resosBookingId;
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    const feedback = form.querySelector('.bma-form-feedback');
+    const submitBtn = form.querySelector('.bma-btn-submit');
+
+    // Get form values
+    const updates = {};
+
+    const guestName = form.querySelector('.update-guest-name').value;
+    if (guestName) updates.guest_name = guestName;
+
+    const time = form.querySelector('.update-time').value;
+    if (time) updates.time = time;
+
+    const people = form.querySelector('.update-people').value;
+    if (people) updates.people = parseInt(people);
+
+    const phone = form.querySelector('.update-phone').value;
+    if (phone) updates.phone = phone;
+
+    const email = form.querySelector('.update-email').value;
+    if (email) updates.email = email;
+
+    const hotelGuest = form.querySelector('.update-hotel-guest').checked;
+    updates.hotel_guest = hotelGuest ? 'Yes' : '';
+
+    const dbb = form.querySelector('.update-dbb').checked;
+    updates.dbb = dbb ? 'Yes' : '';
+
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Updating...';
+
+    try {
+        const config = getAPIConfig();
+        const response = await fetch(`${config.baseUrl}/bookings/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': config.authHeader
+            },
+            body: JSON.stringify({
+                booking_id: resosBookingId,
+                updates: updates
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showFeedback(feedback, '✓ Booking updated successfully!', 'success');
+            // Reload the tab after 2 seconds to show updated data
+            setTimeout(() => {
+                if (window.parent && window.parent.reloadRestaurantTab) {
+                    window.parent.reloadRestaurantTab();
+                }
+            }, 2000);
+        } else {
+            showFeedback(feedback, `Error: ${result.message || 'Failed to update booking'}`, 'error');
+        }
+    } catch (error) {
+        showFeedback(feedback, `Error: ${error.message}`, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Update Booking';
+    }
+}
+
+// Confirm and exclude match
+function confirmExcludeMatch(resosBookingId, hotelBookingId, guestName) {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'bma-modal-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'bma-modal';
+    modal.innerHTML = `
+        <h4>Exclude This Match?</h4>
+        <p>This will add a "NOT-#${hotelBookingId}" note to the ResOS booking for <strong>${guestName}</strong>, marking it as excluded from this hotel booking.</p>
+        <div class="bma-modal-actions">
+            <button class="bma-btn-cancel" onclick="this.closest('.bma-modal-overlay').remove()">Cancel</button>
+            <button class="bma-action-btn exclude" onclick="executeExcludeMatch('${resosBookingId}', '${hotelBookingId}')">Exclude Match</button>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.remove();
+        }
+    });
+}
+
+// Execute exclude match
+async function executeExcludeMatch(resosBookingId, hotelBookingId) {
+    const modal = document.querySelector('.bma-modal');
+    const submitBtn = modal.querySelector('.bma-action-btn.exclude');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Excluding...';
+
+    try {
+        const config = getAPIConfig();
+        const response = await fetch(`${config.baseUrl}/bookings/exclude`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': config.authHeader
+            },
+            body: JSON.stringify({
+                resos_booking_id: resosBookingId,
+                hotel_booking_id: hotelBookingId
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Show success message and reload
+            modal.innerHTML = `
+                <h4>✓ Match Excluded</h4>
+                <p>The NOT-#${hotelBookingId} note has been added to the ResOS booking.</p>
+                <div class="bma-modal-actions">
+                    <button class="bma-btn-submit" onclick="this.closest('.bma-modal-overlay').remove(); if (window.parent && window.parent.reloadRestaurantTab) window.parent.reloadRestaurantTab();">Close</button>
+                </div>
+            `;
+        } else {
+            modal.innerHTML = `
+                <h4>Error</h4>
+                <p>${result.message || 'Failed to exclude match'}</p>
+                <div class="bma-modal-actions">
+                    <button class="bma-btn-cancel" onclick="this.closest('.bma-modal-overlay').remove()">Close</button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        modal.innerHTML = `
+            <h4>Error</h4>
+            <p>${error.message}</p>
+            <div class="bma-modal-actions">
+                <button class="bma-btn-cancel" onclick="this.closest('.bma-modal-overlay').remove()">Close</button>
+            </div>
+        `;
+    }
+}
+
+// Show feedback message
+function showFeedback(feedbackElement, message, type) {
+    if (!feedbackElement) return;
+    feedbackElement.textContent = message;
+    feedbackElement.className = `bma-form-feedback ${type}`;
+    feedbackElement.style.display = 'block';
+}
+</script>
