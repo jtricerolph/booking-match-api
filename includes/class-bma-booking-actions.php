@@ -482,4 +482,340 @@ class BMA_Booking_Actions {
         // Add UK country code (+44) as default
         return '+44' . $digits;
     }
+
+    /**
+     * Create a new Resos booking
+     *
+     * @param array $booking_data Booking details
+     * @return array Success/error response
+     */
+    public function create_resos_booking($booking_data) {
+        // Validate required parameters
+        if (empty($booking_data['date']) || empty($booking_data['time'])) {
+            return array(
+                'success' => false,
+                'message' => 'Date and time are required'
+            );
+        }
+
+        if (empty($booking_data['guest_name'])) {
+            return array(
+                'success' => false,
+                'message' => 'Guest name is required'
+            );
+        }
+
+        // Get Resos API key
+        $resos_api_key = get_option('hotel_booking_resos_api_key');
+        if (empty($resos_api_key)) {
+            return array(
+                'success' => false,
+                'message' => 'Resos API key not configured'
+            );
+        }
+
+        // Extract and set defaults
+        $date = $booking_data['date'];
+        $time = $booking_data['time'];
+        $people = isset($booking_data['people']) ? intval($booking_data['people']) : 2;
+        $guest_name = $booking_data['guest_name'];
+        $guest_phone = isset($booking_data['guest_phone']) ? $booking_data['guest_phone'] : '';
+        $guest_email = isset($booking_data['guest_email']) ? $booking_data['guest_email'] : '';
+        $notification_sms = isset($booking_data['notification_sms']) && $booking_data['notification_sms'];
+        $notification_email = isset($booking_data['notification_email']) && $booking_data['notification_email'];
+        $referrer = isset($booking_data['referrer']) ? $booking_data['referrer'] : '';
+        $language_code = isset($booking_data['language_code']) ? $booking_data['language_code'] : 'en';
+        $opening_hour_id = isset($booking_data['opening_hour_id']) ? $booking_data['opening_hour_id'] : '';
+        $booking_note = isset($booking_data['booking_note']) ? $booking_data['booking_note'] : '';
+
+        // Custom field values
+        $hotel_booking_ref = isset($booking_data['booking_ref']) ? $booking_data['booking_ref'] : '';
+        $is_hotel_guest = isset($booking_data['hotel_guest']) ? $booking_data['hotel_guest'] : '';
+        $has_dbb = isset($booking_data['dbb']) ? $booking_data['dbb'] : '';
+        $dietary_requirements = isset($booking_data['dietary_requirements']) ? $booking_data['dietary_requirements'] : '';
+        $dietary_other = isset($booking_data['dietary_other']) ? $booking_data['dietary_other'] : '';
+
+        // Format phone for Resos API
+        if (!empty($guest_phone)) {
+            $guest_phone = $this->format_phone_for_resos($guest_phone);
+        }
+
+        // Build the base booking data
+        $resos_booking_data = array(
+            'date' => $date,
+            'time' => $time,
+            'people' => $people,
+            'guest' => array(
+                'name' => $guest_name,
+                'phone' => $guest_phone,
+                'email' => $guest_email,
+                'notificationSms' => $notification_sms,
+                'notificationEmail' => $notification_email
+            ),
+            'source' => 'api',
+            'status' => 'approved',
+            'languageCode' => $language_code
+        );
+
+        // Add optional fields
+        if (!empty($referrer)) {
+            $resos_booking_data['referrer'] = $referrer;
+        }
+
+        if (!empty($opening_hour_id)) {
+            $resos_booking_data['openingHourId'] = $opening_hour_id;
+        }
+
+        // Handle customFields if any are provided
+        $needs_custom_fields = !empty($hotel_booking_ref) || !empty($is_hotel_guest) ||
+                               !empty($has_dbb) || !empty($dietary_requirements) ||
+                               !empty($dietary_other);
+
+        if ($needs_custom_fields) {
+            error_log('BMA: Custom fields detected for create, fetching definitions...');
+
+            // Fetch customField definitions from Resos
+            $custom_fields_url = 'https://api.resos.com/v1/customFields';
+            $cf_args = array(
+                'method' => 'GET',
+                'timeout' => 30,
+                'headers' => array(
+                    'Authorization' => 'Basic ' . base64_encode($resos_api_key . ':'),
+                    'Accept' => 'application/json'
+                )
+            );
+
+            $cf_response = wp_remote_get($custom_fields_url, $cf_args);
+            if (is_wp_error($cf_response)) {
+                return array(
+                    'success' => false,
+                    'message' => 'Failed to fetch customField definitions: ' . $cf_response->get_error_message()
+                );
+            }
+
+            $cf_code = wp_remote_retrieve_response_code($cf_response);
+            if ($cf_code !== 200) {
+                return array(
+                    'success' => false,
+                    'message' => 'Failed to fetch customField definitions. Status: ' . $cf_code
+                );
+            }
+
+            $custom_field_definitions = json_decode(wp_remote_retrieve_body($cf_response), true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return array(
+                    'success' => false,
+                    'message' => 'Failed to parse customField definitions'
+                );
+            }
+
+            // Map of internal field names to Resos customField names
+            $custom_field_map = array(
+                'booking_ref' => 'Booking #',
+                'hotel_guest' => 'Hotel Guest',
+                'dbb' => 'DBB',
+                'dietary_requirements' => ' Dietary Requirements',  // Note: has leading space in Resos!
+                'dietary_other' => 'Other Dietary Requirements'
+            );
+
+            // Process each custom field
+            $custom_fields_to_add = array();
+            $field_values = array(
+                'booking_ref' => $hotel_booking_ref,
+                'hotel_guest' => $is_hotel_guest,
+                'dbb' => $has_dbb,
+                'dietary_requirements' => $dietary_requirements,
+                'dietary_other' => $dietary_other
+            );
+
+            foreach ($field_values as $internal_name => $value) {
+                if (empty($value)) {
+                    continue; // Skip empty values
+                }
+
+                $resos_name = $custom_field_map[$internal_name];
+
+                // Find the customField definition
+                $field_definition = null;
+                foreach ($custom_field_definitions as $def) {
+                    if ($def['name'] === $resos_name) {
+                        $field_definition = $def;
+                        break;
+                    }
+                }
+
+                if (!$field_definition) {
+                    error_log("BMA: WARNING: Could not find customField definition for '{$resos_name}'");
+                    continue;
+                }
+
+                // Determine if this is a multiple choice field
+                $field_type = isset($field_definition['type']) ? $field_definition['type'] : '';
+                $is_multiple_choice = in_array($field_type, array('radio', 'dropdown', 'checkbox'));
+
+                // Prepare the field value structure
+                $field_value_data = array(
+                    '_id' => $field_definition['_id'],
+                    'name' => $field_definition['name']
+                );
+
+                // Special handling for multiselect checkbox fields (dietary requirements)
+                if ($internal_name === 'dietary_requirements' && $field_type === 'checkbox') {
+                    // Split comma-separated choice IDs
+                    $selected_ids = array_filter(array_map('trim', explode(',', $value)));
+                    $choice_objects = array();
+
+                    if (isset($field_definition['multipleChoiceSelections']) && is_array($field_definition['multipleChoiceSelections'])) {
+                        foreach ($selected_ids as $selected_id) {
+                            // Match by choice ID
+                            foreach ($field_definition['multipleChoiceSelections'] as $choice) {
+                                if (isset($choice['_id']) && $choice['_id'] === $selected_id) {
+                                    $choice_objects[] = array(
+                                        '_id' => $choice['_id'],
+                                        'name' => $choice['name'],
+                                        'value' => true
+                                    );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!empty($choice_objects)) {
+                        $field_value_data['value'] = $choice_objects;  // Array of objects for multiselect
+                    } else {
+                        error_log("BMA: WARNING: No valid choices found for dietary requirements");
+                        continue;
+                    }
+                } elseif ($is_multiple_choice) {
+                    // For single choice fields, find the choice ID
+                    $choice_id = null;
+                    if (isset($field_definition['multipleChoiceSelections']) && is_array($field_definition['multipleChoiceSelections'])) {
+                        foreach ($field_definition['multipleChoiceSelections'] as $choice) {
+                            if (isset($choice['name']) && $choice['name'] === $value) {
+                                $choice_id = $choice['_id'];
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($choice_id) {
+                        $field_value_data['value'] = $choice_id;
+                        $field_value_data['multipleChoiceValueName'] = $value;
+                    } else {
+                        error_log("BMA: WARNING: Could not find choice ID for {$resos_name} with value '{$value}'");
+                        continue;
+                    }
+                } else {
+                    // For regular text fields, just set the value
+                    $field_value_data['value'] = $value;
+                }
+
+                $custom_fields_to_add[] = $field_value_data;
+            }
+
+            // Add customFields to booking data if we have any
+            if (!empty($custom_fields_to_add)) {
+                $resos_booking_data['customFields'] = $custom_fields_to_add;
+            }
+        }
+
+        // Make POST request to create booking
+        $url = 'https://api.resos.com/v1/bookings';
+        $request_body = json_encode($resos_booking_data);
+        $args = array(
+            'method' => 'POST',
+            'timeout' => 30,
+            'headers' => array(
+                'Authorization' => 'Basic ' . base64_encode($resos_api_key . ':'),
+                'Content-Type' => 'application/json'
+            ),
+            'body' => $request_body
+        );
+
+        error_log('BMA: Create Resos Booking - POST ' . $url);
+        error_log('BMA: Request Body: ' . $request_body);
+
+        $response = wp_remote_request($url, $args);
+
+        if (is_wp_error($response)) {
+            return array(
+                'success' => false,
+                'message' => 'Resos API request failed: ' . $response->get_error_message()
+            );
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+
+        error_log('BMA: Response Code: ' . $response_code);
+        error_log('BMA: Response Body: ' . $response_body);
+
+        if ($response_code !== 200 && $response_code !== 201) {
+            return array(
+                'success' => false,
+                'message' => 'Resos API returned error code: ' . $response_code,
+                'response_code' => $response_code,
+                'response_body' => $response_body
+            );
+        }
+
+        $data = json_decode($response_body, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return array(
+                'success' => false,
+                'message' => 'Failed to parse Resos API response: ' . json_last_error_msg()
+            );
+        }
+
+        error_log('BMA: Create Booking SUCCESS - ' . $guest_name . ' on ' . $date . ' at ' . $time);
+
+        // Extract booking ID from response
+        $booking_id = '';
+        if (is_string($data)) {
+            $booking_id = $data;
+        } elseif (is_array($data) && isset($data['_id'])) {
+            $booking_id = $data['_id'];
+        }
+
+        // If there's a booking note, add it via separate endpoint
+        if (!empty($booking_note) && !empty($booking_id)) {
+            error_log('BMA: Adding booking note to ' . $booking_id);
+
+            $note_url = 'https://api.resos.com/v1/bookings/' . urlencode($booking_id) . '/restaurantNote';
+            $note_data = array('text' => $booking_note);
+            $note_request_body = json_encode($note_data);
+
+            $note_args = array(
+                'method' => 'POST',
+                'timeout' => 30,
+                'headers' => array(
+                    'Authorization' => 'Basic ' . base64_encode($resos_api_key . ':'),
+                    'Content-Type' => 'application/json'
+                ),
+                'body' => $note_request_body
+            );
+
+            $note_response = wp_remote_request($note_url, $note_args);
+
+            if (is_wp_error($note_response)) {
+                error_log('BMA: WARNING: Failed to add note: ' . $note_response->get_error_message());
+                // Don't fail the entire booking if note fails
+            } else {
+                $note_response_code = wp_remote_retrieve_response_code($note_response);
+                if ($note_response_code === 200 || $note_response_code === 201) {
+                    error_log('BMA: Note added successfully');
+                } else {
+                    error_log('BMA: WARNING: Failed to add note. Status: ' . $note_response_code);
+                }
+            }
+        }
+
+        return array(
+            'success' => true,
+            'message' => 'Booking created successfully',
+            'booking_id' => $booking_id,
+            'booking_data' => $data
+        );
+    }
 }

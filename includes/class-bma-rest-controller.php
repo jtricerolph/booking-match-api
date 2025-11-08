@@ -81,6 +81,15 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'args' => $this->get_exclude_match_params(),
             ),
         ));
+
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/create', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'create_booking'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => $this->get_create_booking_params(),
+            ),
+        ));
     }
 
     /**
@@ -919,6 +928,174 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'description' => __('Hotel booking ID to exclude from matching', 'booking-match-api'),
                 'type' => 'string',
                 'required' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+        );
+    }
+
+    /**
+     * Create a new Resos booking
+     *
+     * @param WP_REST_Request $request Full request data
+     * @return WP_REST_Response|WP_Error Response object
+     */
+    public function create_booking($request) {
+        try {
+            // Extract all booking data from request
+            $booking_data = array(
+                'date' => $request->get_param('date'),
+                'time' => $request->get_param('time'),
+                'people' => $request->get_param('people'),
+                'guest_name' => $request->get_param('guest_name'),
+                'guest_phone' => $request->get_param('guest_phone'),
+                'guest_email' => $request->get_param('guest_email'),
+                'notification_sms' => $request->get_param('notification_sms'),
+                'notification_email' => $request->get_param('notification_email'),
+                'referrer' => $request->get_param('referrer'),
+                'language_code' => $request->get_param('language_code'),
+                'opening_hour_id' => $request->get_param('opening_hour_id'),
+                'booking_note' => $request->get_param('booking_note'),
+                'booking_ref' => $request->get_param('booking_ref'),
+                'hotel_guest' => $request->get_param('hotel_guest'),
+                'dbb' => $request->get_param('dbb'),
+                'dietary_requirements' => $request->get_param('dietary_requirements'),
+                'dietary_other' => $request->get_param('dietary_other'),
+            );
+
+            $actions = new BMA_Booking_Actions();
+            $result = $actions->create_resos_booking($booking_data);
+
+            if (!$result['success']) {
+                return new WP_Error(
+                    'create_failed',
+                    $result['message'],
+                    array('status' => 400)
+                );
+            }
+
+            return rest_ensure_response($result);
+
+        } catch (Exception $e) {
+            error_log('BMA Create Booking Error: ' . $e->getMessage());
+            return new WP_Error(
+                'create_error',
+                __('Error creating booking', 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Get create booking endpoint parameters
+     */
+    protected function get_create_booking_params() {
+        return array(
+            'date' => array(
+                'description' => __('Booking date (YYYY-MM-DD)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
+                'validate_callback' => function($param, $request, $key) {
+                    $date = DateTime::createFromFormat('Y-m-d', $param);
+                    return $date && $date->format('Y-m-d') === $param;
+                },
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'time' => array(
+                'description' => __('Booking time (HH:MM)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'guest_name' => array(
+                'description' => __('Guest name', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'people' => array(
+                'description' => __('Number of guests', 'booking-match-api'),
+                'type' => 'integer',
+                'required' => false,
+                'default' => 2,
+                'sanitize_callback' => 'absint',
+            ),
+            'guest_phone' => array(
+                'description' => __('Guest phone number', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'guest_email' => array(
+                'description' => __('Guest email', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_email',
+            ),
+            'notification_sms' => array(
+                'description' => __('Send SMS notification to guest', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => false,
+            ),
+            'notification_email' => array(
+                'description' => __('Send email notification to guest', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => false,
+            ),
+            'referrer' => array(
+                'description' => __('Booking referrer URL', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'esc_url_raw',
+            ),
+            'language_code' => array(
+                'description' => __('Language code (e.g., en, es)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'default' => 'en',
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'opening_hour_id' => array(
+                'description' => __('Resos opening hour ID', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'booking_note' => array(
+                'description' => __('Restaurant note (visible only to restaurant)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_textarea_field',
+            ),
+            'booking_ref' => array(
+                'description' => __('Hotel booking reference number', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'hotel_guest' => array(
+                'description' => __('Hotel guest status (e.g., "Yes")', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'dbb' => array(
+                'description' => __('DBB package status (e.g., "Yes")', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'dietary_requirements' => array(
+                'description' => __('Dietary requirements (comma-separated choice IDs)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'dietary_other' => array(
+                'description' => __('Other dietary requirements (free text)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
                 'sanitize_callback' => 'sanitize_text_field',
             ),
         );
