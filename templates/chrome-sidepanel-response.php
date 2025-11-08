@@ -174,28 +174,52 @@ if (!defined('ABSPATH')) {
                                 <?php endif; ?>
 
                                 <div class="bma-match-details">
-                                    <div class="bma-match-row">
-                                        <span class="bma-match-label">Guest:</span>
-                                        <span><?php echo esc_html($match['guest_name']); ?></span>
+                                    <!-- Line 1: Guest Name - Time (People pax) -->
+                                    <div class="bma-match-primary">
+                                        <?php echo esc_html($match['guest_name']); ?> -
+                                        <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
+                                        (<?php echo esc_html($match['people']); ?> pax)
                                     </div>
-                                    <div class="bma-match-row">
-                                        <span class="bma-match-label">Time:</span>
-                                        <span><?php echo esc_html($match['time'] ?? 'Not specified'); ?></span>
-                                    </div>
-                                    <div class="bma-match-row">
-                                        <span class="bma-match-label">People:</span>
-                                        <span><?php echo esc_html($match['people']); ?></span>
-                                    </div>
-                                    <?php if (!empty($match['is_hotel_guest'])): ?>
-                                        <div class="bma-match-row">
+
+                                    <!-- Line 2: Status icon + Matched on fields -->
+                                    <div class="bma-match-secondary">
+                                        <span class="status-icon material-symbols-outlined" data-status="<?php echo esc_attr($match['status'] ?? 'request'); ?>">
+                                            <?php
+                                            // Get status icon name for Material Symbols
+                                            $status = strtolower($match['status'] ?? 'request');
+                                            $status_icons = array(
+                                                'approved' => 'thumb_up',
+                                                'confirmed' => 'thumb_up',
+                                                'request' => 'help',
+                                                'declined' => 'thumb_down',
+                                                'waitlist' => 'pending_actions',
+                                                'arrived' => 'directions_walk',
+                                                'seated' => 'airline_seat_recline_normal',
+                                                'left' => 'flight_takeoff',
+                                                'no_show' => 'block',
+                                                'no-show' => 'block',
+                                                'canceled' => 'cancel',
+                                                'cancelled' => 'cancel'
+                                            );
+                                            echo isset($status_icons[$status]) ? $status_icons[$status] : 'help';
+                                            ?>
+                                        </span>
+                                        <span class="bma-match-on">
+                                            Matched: <?php
+                                            // Build matched fields text
+                                            $match_label = $match['match_info']['match_label'] ?? 'Unknown';
+                                            // Replace " + " with " / " for compact format
+                                            $match_label = str_replace(' + ', ' / ', $match_label);
+                                            echo esc_html($match_label);
+                                            ?>
+                                        </span>
+                                        <?php if (!empty($match['is_hotel_guest'])): ?>
                                             <span class="bma-badge-small hotel-guest">Hotel Guest</span>
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($match['is_dbb'])): ?>
-                                        <div class="bma-match-row">
+                                        <?php endif; ?>
+                                        <?php if (!empty($match['is_dbb'])): ?>
                                             <span class="bma-badge-small dbb">DBB</span>
-                                        </div>
-                                    <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
 
                                 <div class="bma-match-actions">
@@ -624,13 +648,41 @@ if (!defined('ABSPATH')) {
 }
 
 .bma-match-details {
-    display: grid;
-    grid-template-columns: 80px 1fr;
-    gap: 8px;
     margin-bottom: 12px;
     font-size: 13px;
 }
 
+/* Compact format: Line 1 - Guest Name - Time (People pax) */
+.bma-match-primary {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+/* Compact format: Line 2 - Status icon + Matched fields */
+.bma-match-secondary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    flex-wrap: wrap;
+}
+
+.bma-match-secondary .status-icon {
+    font-size: 16px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.bma-match-secondary .bma-match-on {
+    color: #4b5563;
+    flex-shrink: 0;
+}
+
+/* Legacy styles for grid layout (no longer used but kept for compatibility) */
 .bma-match-row {
     display: contents;
 }
