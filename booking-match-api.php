@@ -66,6 +66,7 @@ class Booking_Match_API {
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-newbook-search.php';
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-matcher.php';
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-comparison.php';
+        require_once BMA_PLUGIN_DIR . 'includes/class-bma-booking-actions.php';
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-response-formatter.php';
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-authenticator.php';
         require_once BMA_PLUGIN_DIR . 'includes/class-bma-template-helper.php';

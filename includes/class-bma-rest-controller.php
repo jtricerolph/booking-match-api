@@ -63,6 +63,24 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'args' => $this->get_comparison_params(),
             ),
         ));
+
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/update', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'update_booking'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => $this->get_update_booking_params(),
+            ),
+        ));
+
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/exclude', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'exclude_match'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => $this->get_exclude_match_params(),
+            ),
+        ));
     }
 
     /**
@@ -794,6 +812,113 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'description' => __('Specific Resos booking ID to compare (optional)', 'booking-match-api'),
                 'type' => 'string',
                 'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+        );
+    }
+
+    /**
+     * Update a Resos booking with new field values
+     *
+     * @param WP_REST_Request $request Full request data
+     * @return WP_REST_Response|WP_Error Response object
+     */
+    public function update_booking($request) {
+        try {
+            $booking_id = $request->get_param('booking_id');
+            $updates = $request->get_param('updates');
+
+            $actions = new BMA_Booking_Actions();
+            $result = $actions->update_resos_booking($booking_id, $updates);
+
+            if (!$result['success']) {
+                return new WP_Error(
+                    'update_failed',
+                    $result['message'],
+                    array('status' => 400)
+                );
+            }
+
+            return rest_ensure_response($result);
+
+        } catch (Exception $e) {
+            error_log('BMA Update Booking Error: ' . $e->getMessage());
+            return new WP_Error(
+                'update_error',
+                __('Error updating booking', 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Exclude a Resos booking from matching a hotel booking
+     *
+     * @param WP_REST_Request $request Full request data
+     * @return WP_REST_Response|WP_Error Response object
+     */
+    public function exclude_match($request) {
+        try {
+            $resos_booking_id = $request->get_param('resos_booking_id');
+            $hotel_booking_id = $request->get_param('hotel_booking_id');
+
+            $actions = new BMA_Booking_Actions();
+            $result = $actions->exclude_resos_match($resos_booking_id, $hotel_booking_id);
+
+            if (!$result['success']) {
+                return new WP_Error(
+                    'exclude_failed',
+                    $result['message'],
+                    array('status' => 400)
+                );
+            }
+
+            return rest_ensure_response($result);
+
+        } catch (Exception $e) {
+            error_log('BMA Exclude Match Error: ' . $e->getMessage());
+            return new WP_Error(
+                'exclude_error',
+                __('Error excluding match', 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Get update booking endpoint parameters
+     */
+    protected function get_update_booking_params() {
+        return array(
+            'booking_id' => array(
+                'description' => __('Resos booking ID to update', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'updates' => array(
+                'description' => __('Field updates (JSON object)', 'booking-match-api'),
+                'type' => 'object',
+                'required' => true,
+            ),
+        );
+    }
+
+    /**
+     * Get exclude match endpoint parameters
+     */
+    protected function get_exclude_match_params() {
+        return array(
+            'resos_booking_id' => array(
+                'description' => __('Resos booking ID to exclude', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'hotel_booking_id' => array(
+                'description' => __('Hotel booking ID to exclude from matching', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
                 'sanitize_callback' => 'sanitize_text_field',
             ),
         );
