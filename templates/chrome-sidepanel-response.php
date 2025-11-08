@@ -227,8 +227,12 @@ if (!defined('ABSPATH')) {
                                         ✏️ Update
                                     </button>
 
-                                    <!-- Exclude Match Button (for non-primary or multiple matches) -->
-                                    <?php if (!$match['match_info']['is_primary'] || $match_count > 1): ?>
+                                    <!-- Exclude Match Button (for non-confirmed matches) -->
+                                    <?php
+                                    // Don't show Exclude button for confirmed matches (booking_id match type)
+                                    $is_confirmed = isset($match['match_info']['match_type']) && $match['match_info']['match_type'] === 'booking_id';
+                                    if (!$is_confirmed):
+                                    ?>
                                         <button class="bma-action-btn exclude"
                                                 data-action="exclude-match"
                                                 data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>"
