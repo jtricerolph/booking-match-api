@@ -36,15 +36,17 @@ if (empty($bookings)) {
 
                 <!-- Issue Badges -->
                 <div class="booking-badges">
-                    <?php if ($booking['restaurant_issues'] > 0): ?>
-                        <span class="issue-badge restaurant-badge" title="Restaurant issues">
-                            🍽️ <?php echo esc_html($booking['restaurant_issues']); ?>
+                    <?php if ($booking['critical_count'] > 0): ?>
+                        <span class="issue-badge critical-badge" title="Critical issues">
+                            <span class="material-symbols-outlined">flag</span>
+                            <?php echo esc_html($booking['critical_count']); ?>
                         </span>
                     <?php endif; ?>
 
-                    <?php if ($booking['check_issues'] > 0): ?>
-                        <span class="issue-badge check-badge" title="Check issues">
-                            ⚠ <?php echo esc_html($booking['check_issues']); ?>
+                    <?php if ($booking['warning_count'] > 0): ?>
+                        <span class="issue-badge warning-badge" title="Warnings">
+                            <span class="material-symbols-outlined">warning</span>
+                            <?php echo esc_html($booking['warning_count']); ?>
                         </span>
                     <?php endif; ?>
                 </div>
@@ -66,22 +68,27 @@ if (empty($bookings)) {
                 </div>
 
                 <!-- Restaurant Summary -->
-                <?php if ($booking['restaurant_issues'] > 0): ?>
+                <?php if ($booking['critical_count'] > 0 || $booking['warning_count'] > 0): ?>
                     <div class="detail-section restaurant-summary">
-                        <h4>🍽️ Restaurant Matches</h4>
+                        <h4><span class="material-symbols-outlined">restaurant</span> Restaurant Matches</h4>
                         <ul class="issue-list">
                             <?php
                             $actions = $booking['actions_required'];
                             $action_messages = array(
-                                'package_alert' => 'Package booking - missing reservation',
-                                'missing_restaurant' => 'No restaurant booking found',
-                                'multiple_matches' => 'Multiple matches - needs review',
-                                'non_primary_match' => 'Suggested match - low confidence'
+                                'package_alert' => array('text' => 'Package booking - missing reservation', 'level' => 'critical'),
+                                'multiple_matches' => array('text' => 'Multiple matches - needs review', 'level' => 'warning'),
+                                'non_primary_match' => array('text' => 'Suggested match - low confidence', 'level' => 'warning')
                             );
 
                             foreach ($actions as $action) {
                                 if (isset($action_messages[$action])) {
-                                    echo '<li>' . esc_html($action_messages[$action]) . '</li>';
+                                    $msg = $action_messages[$action];
+                                    $icon = $msg['level'] === 'critical' ? 'flag' : 'warning';
+                                    $class = $msg['level'] === 'critical' ? 'critical-item' : 'warning-item';
+                                    echo '<li class="' . esc_attr($class) . '">';
+                                    echo '<span class="material-symbols-outlined">' . esc_html($icon) . '</span>';
+                                    echo esc_html($msg['text']);
+                                    echo '</li>';
                                 }
                             }
                             ?>
@@ -220,16 +227,23 @@ if (empty($bookings)) {
     border-radius: 12px;
     font-size: 11px;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.restaurant-badge {
-    background: #fed7d7;
-    color: #742a2a;
+.issue-badge .material-symbols-outlined {
+    font-size: 14px;
 }
 
-.check-badge {
-    background: #fef5e7;
-    color: #975a16;
+.critical-badge {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.warning-badge {
+    background: #fef3c7;
+    color: #92400e;
 }
 
 .expand-icon {
@@ -274,17 +288,48 @@ if (empty($bookings)) {
     margin: 0 0 8px 0;
     font-size: 13px;
     color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.restaurant-summary h4 .material-symbols-outlined {
+    font-size: 16px;
 }
 
 .issue-list {
     margin: 0;
-    padding-left: 20px;
+    padding-left: 0;
+    list-style: none;
     font-size: 12px;
     color: #4a5568;
 }
 
 .issue-list li {
-    margin: 4px 0;
+    margin: 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.issue-list li .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.issue-list li.critical-item {
+    color: #991b1b;
+}
+
+.issue-list li.critical-item .material-symbols-outlined {
+    color: #dc2626;
+}
+
+.issue-list li.warning-item {
+    color: #92400e;
+}
+
+.issue-list li.warning-item .material-symbols-outlined {
+    color: #f59e0b;
 }
 
 .placeholder-text {
@@ -315,3 +360,6 @@ if (empty($bookings)) {
     background: #2c5aa0;
 }
 </style>
+
+<!-- Material Symbols Icons -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />

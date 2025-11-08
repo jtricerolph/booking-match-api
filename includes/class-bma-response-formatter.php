@@ -139,35 +139,38 @@ class BMA_Response_Formatter {
      */
     private function format_html_response($results, $search_method, $context = 'chrome-extension') {
         $booking_count = count($results);
-        $badge_count = 0;
+        $critical_count = 0;  // Red flags: Package bookings without restaurant
+        $warning_count = 0;   // Amber flags: Multiple matches, non-primary matches
 
-        // Calculate badge count (issues requiring attention)
+        // Calculate badge counts with severity levels
         foreach ($results as $result) {
             foreach ($result['nights'] as $night) {
                 $has_matches = !empty($night['resos_matches']);
                 $match_count = $has_matches ? count($night['resos_matches']) : 0;
                 $has_package = isset($night['has_package']) && $night['has_package'];
 
-                // Critical: has package but no restaurant booking
+                // CRITICAL: Package booking without restaurant reservation
                 if ($has_package && !$has_matches) {
-                    $badge_count++;
+                    $critical_count++;
                 }
-
-                // Issue: multiple matches (needs manual selection)
-                if ($match_count > 1) {
-                    $badge_count++;
+                // WARNING: Multiple matches requiring manual selection
+                elseif ($match_count > 1) {
+                    $warning_count++;
                 }
-
-                // Warning: single non-primary match (lower confidence)
-                if ($has_matches && $match_count === 1) {
+                // WARNING: Single non-primary (suggested) match
+                elseif ($has_matches && $match_count === 1) {
                     $primary_match = isset($night['resos_matches'][0]) ? $night['resos_matches'][0] : null;
                     $is_primary = $primary_match && isset($primary_match['match_info']['is_primary']) && $primary_match['match_info']['is_primary'];
                     if (!$is_primary) {
-                        $badge_count++;
+                        $warning_count++;
                     }
                 }
+                // NO ISSUE: Missing restaurant booking when no package
+                // (Not flagged as this is normal)
             }
         }
+
+        $badge_count = $critical_count + $warning_count;
 
         // Start HTML output
         ob_start();
@@ -196,7 +199,9 @@ class BMA_Response_Formatter {
             'html' => $html,
             'bookings_found' => $booking_count,
             'search_method' => $search_method,
-            'badge_count' => $badge_count
+            'badge_count' => $badge_count,
+            'critical_count' => $critical_count,
+            'warning_count' => $warning_count
         );
     }
 

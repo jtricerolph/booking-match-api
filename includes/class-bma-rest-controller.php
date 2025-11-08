@@ -365,7 +365,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     return array(
                         'success' => true,
                         'html' => $formatter->format_summary_html(array()),
-                        'badge_count' => 0,
+                        'critical_count' => 0,
+                        'warning_count' => 0,
                         'bookings_count' => 0
                     );
                 }
@@ -373,19 +374,22 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 return array(
                     'success' => true,
                     'bookings' => array(),
-                    'badge_count' => 0,
+                    'critical_count' => 0,
+                    'warning_count' => 0,
                     'bookings_count' => 0
                 );
             }
 
             // Process each booking
             $summary_bookings = array();
-            $total_badge_count = 0;
+            $total_critical_count = 0;
+            $total_warning_count = 0;
 
             foreach ($recent_bookings as $nb_booking) {
                 $processed = $this->process_booking_for_summary($nb_booking);
                 $summary_bookings[] = $processed;
-                $total_badge_count += $processed['badge_count'];
+                $total_critical_count += $processed['critical_count'];
+                $total_warning_count += $processed['warning_count'];
             }
 
             // Format response based on context
@@ -394,7 +398,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 return array(
                     'success' => true,
                     'html' => $formatter->format_summary_html($summary_bookings),
-                    'badge_count' => $total_badge_count,
+                    'critical_count' => $total_critical_count,
+                    'warning_count' => $total_warning_count,
                     'bookings_count' => count($summary_bookings)
                 );
             }
@@ -403,7 +408,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return array(
                 'success' => true,
                 'bookings' => $summary_bookings,
-                'badge_count' => $total_badge_count,
+                'critical_count' => $total_critical_count,
+                'warning_count' => $total_warning_count,
                 'bookings_count' => count($summary_bookings)
             );
 
@@ -441,9 +447,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $issue_checker = new BMA_Issue_Checker();
         $issues = $issue_checker->check_booking($booking);
 
-        // Analyze for actions required
+        // Analyze for actions required with severity levels
         $actions_required = array();
-        $restaurant_issues = 0;
+        $critical_count = 0;  // Red flags: Package bookings without restaurant
+        $warning_count = 0;   // Amber flags: Multiple matches, non-primary matches
         $check_issues = count($issues);
 
         foreach ($match_result['nights'] as $night) {
@@ -451,27 +458,32 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $match_count = count($night['resos_matches']);
             $has_package = $night['has_package'] ?? false;
 
+            // CRITICAL: Package booking without restaurant reservation
             if ($has_package && !$has_matches) {
                 $actions_required[] = 'package_alert';
-                $restaurant_issues++;
-            } elseif ($match_count > 1) {
+                $critical_count++;
+            }
+            // WARNING: Multiple matches requiring manual selection
+            elseif ($match_count > 1) {
                 $actions_required[] = 'multiple_matches';
-                $restaurant_issues++;
-            } elseif ($match_count === 1) {
+                $warning_count++;
+            }
+            // WARNING: Single non-primary (suggested) match
+            elseif ($match_count === 1) {
                 $is_primary = $night['resos_matches'][0]['match_info']['is_primary'] ?? false;
                 if (!$is_primary) {
                     $actions_required[] = 'non_primary_match';
-                    $restaurant_issues++;
+                    $warning_count++;
                 }
-            } elseif (!$has_matches && !$has_package) {
-                $actions_required[] = 'missing_restaurant';
-                $restaurant_issues++;
             }
+            // NO ISSUE: Missing restaurant booking when no package
+            // (Not flagged as this is normal)
         }
 
-        // Add check issues if any
+        // Add check issues if any (warnings)
         if ($check_issues > 0) {
             $actions_required[] = 'check_required';
+            $warning_count += $check_issues;
         }
 
         return array(
@@ -483,8 +495,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'status' => $status,
             'booking_source' => $booking_source,
             'actions_required' => array_unique($actions_required),
-            'badge_count' => count(array_unique($actions_required)),
-            'restaurant_issues' => $restaurant_issues,
+            'critical_count' => $critical_count,
+            'warning_count' => $warning_count,
             'check_issues' => $check_issues,
             'match_details' => $match_result
         );
