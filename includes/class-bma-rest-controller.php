@@ -36,6 +36,24 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'args' => $this->get_match_params(),
             ),
         ));
+
+        register_rest_route($this->namespace, '/summary', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_summary'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => $this->get_summary_params(),
+            ),
+        ));
+
+        register_rest_route($this->namespace, '/checks/(?P<booking_id>\d+)', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_checks'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => $this->get_checks_params(),
+            ),
+        ));
     }
 
     /**
@@ -279,5 +297,151 @@ class BMA_REST_Controller extends WP_REST_Controller {
         }
 
         return true;
+    }
+
+    /**
+     * Get summary params
+     */
+    private function get_summary_params() {
+        return array(
+            'context' => array(
+                'description' => __('Response format context', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'default' => 'json',
+                'enum' => array('json', 'chrome-summary'),
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+        );
+    }
+
+    /**
+     * Get checks params
+     */
+    private function get_checks_params() {
+        return array(
+            'booking_id' => array(
+                'description' => __('NewBook booking ID', 'booking-match-api'),
+                'type' => 'integer',
+                'required' => true,
+                'validate_callback' => function($param, $request, $key) {
+                    return is_numeric($param);
+                },
+            ),
+            'context' => array(
+                'description' => __('Response format context', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'default' => 'json',
+                'enum' => array('json', 'chrome-checks'),
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+        );
+    }
+
+    /**
+     * Get summary of recent bookings with actions required
+     */
+    public function get_summary($request) {
+        try {
+            $context = $request->get_param('context') ?: 'json';
+
+            // TODO: Implement actual summary logic
+            // For now, return last 5 bookings with stub data
+
+            $summary_bookings = array(
+                array(
+                    'booking_id' => '12345',
+                    'guest_name' => 'John Doe',
+                    'arrival_date' => date('Y-m-d'),
+                    'actions_required' => array('missing_restaurant'),
+                    'badge_count' => 1,
+                ),
+                array(
+                    'booking_id' => '12346',
+                    'guest_name' => 'Jane Smith',
+                    'arrival_date' => date('Y-m-d', strtotime('+1 day')),
+                    'actions_required' => array('package_alert'),
+                    'badge_count' => 1,
+                ),
+            );
+
+            $total_badge_count = array_sum(array_column($summary_bookings, 'badge_count'));
+
+            if ($context === 'chrome-summary') {
+                // Format as HTML for Chrome sidepanel
+                $formatter = new BMA_Response_Formatter();
+                return array(
+                    'success' => true,
+                    'html' => $formatter->format_summary_html($summary_bookings),
+                    'badge_count' => $total_badge_count,
+                    'bookings_count' => count($summary_bookings),
+                );
+            }
+
+            // Default JSON response
+            return array(
+                'success' => true,
+                'bookings' => $summary_bookings,
+                'badge_count' => $total_badge_count,
+                'bookings_count' => count($summary_bookings),
+            );
+
+        } catch (Exception $e) {
+            error_log('BMA Summary Error: ' . $e->getMessage());
+            return new WP_Error(
+                'summary_error',
+                __('Error retrieving summary', 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Get checks for a specific booking (placeholder for future)
+     */
+    public function get_checks($request) {
+        try {
+            $booking_id = $request->get_param('booking_id');
+            $context = $request->get_param('context') ?: 'json';
+
+            // TODO: Implement actual checks logic
+            // For now, return placeholder/stub data
+
+            $checks = array(
+                'twin_bed_request' => false,
+                'sofa_bed_request' => false,
+                'special_requests' => array(),
+                'room_features_mismatch' => array(),
+            );
+
+            $badge_count = 0; // No issues for now
+
+            if ($context === 'chrome-checks') {
+                // Format as HTML for Chrome sidepanel
+                $formatter = new BMA_Response_Formatter();
+                return array(
+                    'success' => true,
+                    'html' => $formatter->format_checks_html($booking_id, $checks),
+                    'badge_count' => $badge_count,
+                );
+            }
+
+            // Default JSON response
+            return array(
+                'success' => true,
+                'booking_id' => $booking_id,
+                'checks' => $checks,
+                'badge_count' => $badge_count,
+            );
+
+        } catch (Exception $e) {
+            error_log('BMA Checks Error: ' . $e->getMessage());
+            return new WP_Error(
+                'checks_error',
+                __('Error retrieving checks', 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
     }
 }

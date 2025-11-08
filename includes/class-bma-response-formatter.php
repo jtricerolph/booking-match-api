@@ -41,6 +41,7 @@ class BMA_Response_Formatter {
     private function format_json_response($results, $search_method) {
         $formatted_bookings = array();
         $should_auto_open = false;
+        $badge_count = 0;
 
         foreach ($results as $result) {
             $booking_data = array(
@@ -64,6 +65,21 @@ class BMA_Response_Formatter {
                 // (has package but no restaurant booking)
                 if ($has_package && !$has_matches) {
                     $should_auto_open = true;
+                    $badge_count++; // Critical issue
+                }
+
+                // Count multiple matches as issues
+                if ($match_count > 1) {
+                    $badge_count++;
+                }
+
+                // Count non-primary matches as issues
+                if ($has_matches && $match_count === 1) {
+                    $primary_match = isset($night['resos_matches'][0]) ? $night['resos_matches'][0] : null;
+                    $is_primary = $primary_match && isset($primary_match['match_info']['is_primary']) && $primary_match['match_info']['is_primary'];
+                    if (!$is_primary) {
+                        $badge_count++;
+                    }
                 }
 
                 $night_data = array(
@@ -113,7 +129,8 @@ class BMA_Response_Formatter {
             'search_method' => $search_method,
             'bookings_found' => count($formatted_bookings),
             'bookings' => $formatted_bookings,
-            'should_auto_open' => $should_auto_open
+            'should_auto_open' => $should_auto_open,
+            'badge_count' => $badge_count
         );
     }
 
@@ -176,5 +193,52 @@ class BMA_Response_Formatter {
         }
 
         return $url;
+    }
+
+    /**
+     * Format summary HTML for Chrome sidepanel
+     */
+    public function format_summary_html($bookings) {
+        ob_start();
+        $template_file = BMA_PLUGIN_DIR . 'templates/chrome-summary-response.php';
+
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            // Fallback simple HTML
+            echo '<div class="bma-summary">';
+            echo '<h2>Recent Bookings</h2>';
+            foreach ($bookings as $booking) {
+                echo '<div class="booking-item">';
+                echo '<strong>' . esc_html($booking['guest_name']) . '</strong><br>';
+                echo 'Booking #' . esc_html($booking['booking_id']) . '<br>';
+                echo 'Actions: ' . count($booking['actions_required']);
+                echo '</div>';
+            }
+            echo '</div>';
+        }
+
+        return ob_get_clean();
+    }
+
+    /**
+     * Format checks HTML for Chrome sidepanel
+     */
+    public function format_checks_html($booking_id, $checks) {
+        ob_start();
+        $template_file = BMA_PLUGIN_DIR . 'templates/chrome-checks-response.php';
+
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            // Fallback simple HTML
+            echo '<div class="bma-checks">';
+            echo '<h2>Checks for Booking #' . esc_html($booking_id) . '</h2>';
+            echo '<p>No issues found</p>';
+            echo '<p><em>Twin bed checks, sofa bed checks, and special request matching coming soon...</em></p>';
+            echo '</div>';
+        }
+
+        return ob_get_clean();
     }
 }
