@@ -437,6 +437,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $nights = $this->calculate_nights($arrival_date, $departure_date);
         $status = $booking['status'] ?? 'unknown';
 
+        // Extract occupants
+        $occupants = $this->extract_occupants($booking);
+
+        // Extract tariff types
+        $tariffs = $this->extract_tariffs($booking);
+
         // Match with restaurants
         $matcher = new BMA_Matcher();
         $match_result = $matcher->match_booking_all_nights($booking);
@@ -496,12 +502,59 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'nights' => $nights,
             'status' => $status,
             'booking_source' => $booking_source,
+            'occupants' => $occupants,
+            'tariffs' => $tariffs,
             'actions_required' => array_unique($actions_required),
             'critical_count' => $critical_count,
             'warning_count' => $warning_count,
             'check_issues' => $check_issues,
             'match_details' => $match_result
         );
+    }
+
+    /**
+     * Extract occupant counts from booking
+     */
+    private function extract_occupants($booking) {
+        $adults = 0;
+        $children = 0;
+        $infants = 0;
+
+        if (isset($booking['guests']) && is_array($booking['guests'])) {
+            foreach ($booking['guests'] as $guest) {
+                $age_group = $guest['age_group'] ?? '';
+                if ($age_group === 'Adult') {
+                    $adults++;
+                } elseif ($age_group === 'Child') {
+                    $children++;
+                } elseif ($age_group === 'Infant') {
+                    $infants++;
+                }
+            }
+        }
+
+        return array(
+            'adults' => $adults,
+            'children' => $children,
+            'infants' => $infants
+        );
+    }
+
+    /**
+     * Extract tariff types from booking
+     */
+    private function extract_tariffs($booking) {
+        $tariffs = array();
+
+        if (isset($booking['rooms']) && is_array($booking['rooms'])) {
+            foreach ($booking['rooms'] as $room) {
+                if (isset($room['tariff_type'])) {
+                    $tariffs[] = $room['tariff_type'];
+                }
+            }
+        }
+
+        return array_unique($tariffs);
     }
 
     /**

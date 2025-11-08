@@ -23,14 +23,10 @@ if (empty($bookings)) {
                 <div class="booking-main-info">
                     <div class="booking-guest">
                         <strong><?php echo esc_html($booking['guest_name']); ?></strong>
-                        <span class="booking-id">#<?php echo esc_html($booking['booking_id']); ?></span>
                     </div>
-                    <div class="booking-dates">
+                    <div class="booking-dates-compact">
                         <span><?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival_date']))); ?></span>
                         <span class="nights-badge"><?php echo esc_html($booking['nights']); ?> night<?php echo $booking['nights'] > 1 ? 's' : ''; ?></span>
-                    </div>
-                    <div class="booking-status status-<?php echo esc_attr(strtolower($booking['status'])); ?>">
-                        <?php echo esc_html(ucfirst($booking['status'])); ?>
                     </div>
                 </div>
 
@@ -56,53 +52,112 @@ if (empty($bookings)) {
 
             <!-- Expanded Details -->
             <div class="booking-details" id="details-<?php echo esc_attr($booking['booking_id']); ?>" style="display: none;">
-                <div class="detail-section">
-                    <div class="detail-row">
-                        <span class="detail-label">Source:</span>
-                        <span class="detail-value"><?php echo esc_html($booking['booking_source']); ?></span>
+                <!-- Compressed Booking Info -->
+                <div class="compact-details">
+                    <div class="compact-row">
+                        <span>Booking ID: #<?php echo esc_html($booking['booking_id']); ?></span>
+                        <span class="compact-occupants">
+                            <?php
+                            $occ = $booking['occupants'];
+                            $parts = array();
+                            if ($occ['adults'] > 0) $parts[] = $occ['adults'] . ' Adult' . ($occ['adults'] > 1 ? 's' : '');
+                            if ($occ['children'] > 0) $parts[] = $occ['children'] . ' Child' . ($occ['children'] > 1 ? 'ren' : '');
+                            if ($occ['infants'] > 0) $parts[] = $occ['infants'] . ' Infant' . ($occ['infants'] > 1 ? 's' : '');
+                            echo esc_html(implode(', ', $parts));
+                            ?>
+                        </span>
                     </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Check-out:</span>
-                        <span class="detail-value"><?php echo esc_html(date('D, d/m/y', strtotime($booking['departure_date']))); ?></span>
+                    <div class="compact-row">
+                        <span>Dates: <?php echo esc_html(date('D d/m', strtotime($booking['arrival_date']))); ?> - <?php echo esc_html(date('D d/m', strtotime($booking['departure_date']))); ?></span>
+                    </div>
+                    <div class="compact-row">
+                        <span>Tariff: <?php echo esc_html(empty($booking['tariffs']) ? 'Standard' : implode(', ', $booking['tariffs'])); ?></span>
+                    </div>
+                    <div class="compact-row">
+                        <span>Status: <?php echo esc_html(ucfirst($booking['status'])); ?></span>
+                        <span><?php echo esc_html($booking['booking_source']); ?></span>
                     </div>
                 </div>
 
-                <!-- Restaurant Summary -->
-                <?php if ($booking['critical_count'] > 0 || $booking['warning_count'] > 0): ?>
-                    <div class="detail-section restaurant-summary">
-                        <h4><span class="material-symbols-outlined">restaurant</span> Restaurant Matches</h4>
-                        <ul class="issue-list">
-                            <?php
-                            $actions = $booking['actions_required'];
-                            $action_messages = array(
-                                'package_alert' => array('text' => 'Package booking - missing reservation', 'level' => 'critical'),
-                                'multiple_matches' => array('text' => 'Multiple matches - needs review', 'level' => 'warning'),
-                                'non_primary_match' => array('text' => 'Suggested match - low confidence', 'level' => 'warning')
-                            );
-
-                            foreach ($actions as $action) {
-                                if (isset($action_messages[$action])) {
-                                    $msg = $action_messages[$action];
-                                    $icon = $msg['level'] === 'critical' ? 'flag' : 'warning';
-                                    $class = $msg['level'] === 'critical' ? 'critical-item' : 'warning-item';
-                                    echo '<li class="' . esc_attr($class) . '">';
-                                    echo '<span class="material-symbols-outlined">' . esc_html($icon) . '</span>';
-                                    echo esc_html($msg['text']);
-                                    echo '</li>';
-                                }
-                            }
-                            ?>
-                        </ul>
+                <!-- Restaurant Section -->
+                <div class="detail-separator"></div>
+                <div class="detail-section restaurant-section">
+                    <h4><span class="material-symbols-outlined">restaurant</span> Restaurant</h4>
+                    <div class="restaurant-nights">
+                        <?php
+                        $match_details = $booking['match_details'];
+                        foreach ($match_details['nights'] as $night):
+                            $night_date = $night['date'];
+                            $has_package = $night['has_package'] ?? false;
+                            $matches = $night['resos_matches'] ?? array();
+                            $match_count = count($matches);
+                        ?>
+                            <?php if ($match_count === 0): ?>
+                                <!-- No booking -->
+                                <div class="night-row">
+                                    <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
+                                    <span class="night-status">No booking</span>
+                                    <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
+                                        <span class="material-symbols-outlined">add</span>
+                                    </span>
+                                </div>
+                                <?php if ($has_package): ?>
+                                    <div class="night-alert critical-alert">
+                                        <span class="material-symbols-outlined">flag</span>
+                                        Package booking - missing reservation
+                                    </div>
+                                <?php endif; ?>
+                            <?php elseif ($match_count === 1): ?>
+                                <!-- Single match -->
+                                <?php
+                                $match = $matches[0];
+                                $is_primary = $match['match_info']['is_primary'] ?? false;
+                                $time = date('H:i', strtotime($match['time']));
+                                $pax = $match['num_guests'];
+                                ?>
+                                <div class="night-row">
+                                    <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
+                                    <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
+                                    <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
+                                        <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                    </span>
+                                </div>
+                                <?php if (!$is_primary): ?>
+                                    <div class="night-alert warning-alert">
+                                        <span class="material-symbols-outlined">warning</span>
+                                        Suggested match - low confidence
+                                    </div>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <!-- Multiple matches -->
+                                <?php foreach ($matches as $match):
+                                    $is_primary = $match['match_info']['is_primary'] ?? false;
+                                    $time = date('H:i', strtotime($match['time']));
+                                    $pax = $match['num_guests'];
+                                ?>
+                                    <div class="night-row">
+                                        <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
+                                        <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
+                                        <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
+                                            <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                        </span>
+                                    </div>
+                                <?php endforeach; ?>
+                                <div class="night-alert warning-alert">
+                                    <span class="material-symbols-outlined">warning</span>
+                                    Multiple matches - needs review
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
-                <?php endif; ?>
+                </div>
 
-                <!-- Checks Summary -->
-                <?php if ($booking['check_issues'] > 0): ?>
-                    <div class="detail-section checks-summary">
-                        <h4>⚠ Booking Checks</h4>
-                        <p class="placeholder-text">Issue checking coming soon...</p>
-                    </div>
-                <?php endif; ?>
+                <!-- Issues/Checks Section -->
+                <div class="detail-separator"></div>
+                <div class="detail-section checks-section">
+                    <h4><span class="material-symbols-outlined">check_circle</span> Issues/Checks</h4>
+                    <p class="placeholder-text">Coming soon...</p>
+                </div>
 
                 <!-- Action Button -->
                 <div class="detail-actions">
@@ -168,13 +223,9 @@ if (empty($bookings)) {
 
 .booking-main-info {
     flex: 1;
-}
-
-.booking-guest {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
+    justify-content: space-between;
 }
 
 .booking-guest strong {
@@ -182,12 +233,7 @@ if (empty($bookings)) {
     color: #2d3748;
 }
 
-.booking-id {
-    font-size: 12px;
-    color: #718096;
-}
-
-.booking-dates {
+.booking-dates-compact {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -202,20 +248,6 @@ if (empty($bookings)) {
     font-size: 11px;
     font-weight: 500;
 }
-
-.booking-status {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 500;
-    margin-top: 4px;
-}
-
-.status-confirmed { background: #c6f6d5; color: #22543d; }
-.status-provisional { background: #fef5e7; color: #975a16; }
-.status-cancelled { background: #fed7d7; color: #742a2a; }
-.status-unknown { background: #e2e8f0; color: #4a5568; }
 
 .booking-badges {
     display: flex;
@@ -257,88 +289,137 @@ if (empty($bookings)) {
     border-top: 1px solid #e2e8f0;
 }
 
-.detail-section {
+/* Compact Details Section */
+.compact-details {
     margin-top: 12px;
 }
 
-.detail-row {
+.compact-row {
     display: flex;
     justify-content: space-between;
-    padding: 6px 0;
-    font-size: 13px;
-}
-
-.detail-label {
-    color: #718096;
-    font-weight: 500;
-}
-
-.detail-value {
-    color: #2d3748;
-}
-
-.restaurant-summary, .checks-summary {
-    background: #f7fafc;
-    padding: 12px;
-    border-radius: 6px;
-    margin-top: 12px;
-}
-
-.restaurant-summary h4, .checks-summary h4 {
-    margin: 0 0 8px 0;
-    font-size: 13px;
-    color: #2d3748;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.restaurant-summary h4 .material-symbols-outlined {
-    font-size: 16px;
-}
-
-.issue-list {
-    margin: 0;
-    padding-left: 0;
-    list-style: none;
+    padding: 3px 0;
     font-size: 12px;
     color: #4a5568;
 }
 
-.issue-list li {
-    margin: 6px 0;
+.compact-occupants {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+/* Separator */
+.detail-separator {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 12px 0;
+}
+
+/* Detail Sections */
+.detail-section {
+    margin-bottom: 12px;
+}
+
+.detail-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #2d3748;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.issue-list li .material-symbols-outlined {
+.detail-section h4 .material-symbols-outlined {
     font-size: 16px;
 }
 
-.issue-list li.critical-item {
-    color: #991b1b;
+/* Restaurant Nights */
+.restaurant-nights {
+    font-size: 12px;
 }
 
-.issue-list li.critical-item .material-symbols-outlined {
-    color: #dc2626;
+.night-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
 }
 
-.issue-list li.warning-item {
-    color: #92400e;
+.night-date {
+    font-weight: 500;
+    color: #2d3748;
+    min-width: 70px;
 }
 
-.issue-list li.warning-item .material-symbols-outlined {
+.night-time {
+    flex: 1;
+    color: #4a5568;
+}
+
+.night-status {
+    flex: 1;
+    color: #718096;
+    font-style: italic;
+}
+
+.status-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.status-icon.ok {
+    color: #10b981;
+}
+
+.status-icon.warning {
     color: #f59e0b;
 }
 
-.placeholder-text {
-    font-size: 12px;
-    color: #a0aec0;
+.status-icon.critical {
+    color: #dc2626;
+}
+
+.status-icon .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.night-alert {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    margin: 4px 0 8px 0;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.night-alert .material-symbols-outlined {
+    font-size: 14px;
+}
+
+.critical-alert {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.warning-alert {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Checks Section */
+.checks-section .placeholder-text {
+    font-size: 11px;
+    color: #9ca3af;
     font-style: italic;
     margin: 0;
 }
 
+/* Action Button */
 .detail-actions {
     margin-top: 12px;
 }
