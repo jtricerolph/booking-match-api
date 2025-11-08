@@ -17,7 +17,7 @@ if (empty($bookings)) {
 
 <div class="bma-summary">
     <?php foreach ($bookings as $booking): ?>
-        <div class="booking-card" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
+        <div class="booking-card" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>">
             <!-- Collapsed Summary -->
             <div class="booking-header">
                 <div class="booking-main-info">
@@ -49,6 +49,11 @@ if (empty($bookings)) {
 
                 <span class="expand-icon">▼</span>
             </div>
+
+            <!-- Time Since Placed -->
+            <?php if (!empty($booking['booking_placed'])): ?>
+                <div class="time-since-placed" data-placed-time="<?php echo esc_attr($booking['booking_placed']); ?>"></div>
+            <?php endif; ?>
 
             <!-- Expanded Details -->
             <div class="booking-details" id="details-<?php echo esc_attr($booking['booking_id']); ?>" style="display: none;">
@@ -202,6 +207,7 @@ if (empty($bookings)) {
     border-radius: 8px;
     margin-bottom: 12px;
     transition: all 0.2s;
+    position: relative;
 }
 
 .booking-card:hover {
@@ -211,6 +217,21 @@ if (empty($bookings)) {
 
 .booking-card.expanded {
     border-color: #3182ce;
+}
+
+.booking-card.new-booking {
+    border: 2px solid #10b981;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+    animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+    }
 }
 
 .booking-header {
@@ -439,6 +460,21 @@ if (empty($bookings)) {
 
 .open-booking-btn:hover {
     background: #2c5aa0;
+}
+
+/* Time Since Placed */
+.time-since-placed {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-size: 10px;
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.booking-card.new-booking .time-since-placed {
+    color: #10b981;
+    font-weight: 600;
 }
 </style>
 

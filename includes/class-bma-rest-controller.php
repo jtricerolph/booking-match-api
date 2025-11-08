@@ -494,6 +494,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $warning_count += $check_issues;
         }
 
+        // Extract booking placed timestamp
+        $booking_placed = $booking['booking_placed'] ?? null;
+
         return array(
             'booking_id' => $booking_id,
             'guest_name' => $guest_name,
@@ -504,6 +507,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'booking_source' => $booking_source,
             'occupants' => $occupants,
             'tariffs' => $tariffs,
+            'booking_placed' => $booking_placed,
             'actions_required' => array_unique($actions_required),
             'critical_count' => $critical_count,
             'warning_count' => $warning_count,
