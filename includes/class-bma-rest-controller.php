@@ -550,10 +550,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
     private function extract_tariffs($booking) {
         $tariffs = array();
 
-        if (isset($booking['rooms']) && is_array($booking['rooms'])) {
-            foreach ($booking['rooms'] as $room) {
-                if (isset($room['tariff_type'])) {
-                    $tariffs[] = $room['tariff_type'];
+        if (isset($booking['tariffs_quoted']) && is_array($booking['tariffs_quoted'])) {
+            foreach ($booking['tariffs_quoted'] as $tariff) {
+                if (isset($tariff['label']) && !empty($tariff['label'])) {
+                    $tariffs[] = $tariff['label'];
                 }
             }
         }

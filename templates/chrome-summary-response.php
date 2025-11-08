@@ -245,21 +245,24 @@ if (empty($bookings)) {
 .booking-main-info {
     flex: 1;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
 }
 
 .booking-guest strong {
     font-size: 14px;
     color: #2d3748;
+    line-height: 1.2;
 }
 
 .booking-dates-compact {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: 12px;
     color: #4a5568;
+    line-height: 1.2;
 }
 
 .nights-badge {
