@@ -54,6 +54,15 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'args' => $this->get_checks_params(),
             ),
         ));
+
+        register_rest_route($this->namespace, '/comparison', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'get_comparison'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => $this->get_comparison_params(),
+            ),
+        ));
     }
 
     /**
@@ -621,5 +630,172 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 array('status' => 500)
             );
         }
+    }
+
+    /**
+     * Get comparison data between hotel and Resos booking
+     *
+     * @param WP_REST_Request $request Full request data
+     * @return WP_REST_Response|WP_Error Response object
+     */
+    public function get_comparison($request) {
+        try {
+            $booking_id = $request->get_param('booking_id');
+            $date = $request->get_param('date');
+            $resos_booking_id = $request->get_param('resos_booking_id');
+
+            // Fetch hotel booking
+            $searcher = new BMA_NewBook_Search();
+            $hotel_booking = $searcher->get_booking_by_id($booking_id);
+
+            if (!$hotel_booking) {
+                return new WP_Error(
+                    'booking_not_found',
+                    __('Hotel booking not found', 'booking-match-api'),
+                    array('status' => 404)
+                );
+            }
+
+            // Fetch Resos bookings for the date
+            $matcher = new BMA_Matcher();
+
+            // Use reflection to access the private fetch_resos_bookings method
+            $reflection = new ReflectionClass($matcher);
+            $method = $reflection->getMethod('fetch_resos_bookings');
+            $method->setAccessible(true);
+            $resos_bookings = $method->invoke($matcher, $date);
+
+            if (empty($resos_bookings)) {
+                return new WP_Error(
+                    'no_resos_bookings',
+                    __('No Resos bookings found for this date', 'booking-match-api'),
+                    array('status' => 404)
+                );
+            }
+
+            // If resos_booking_id provided, find that specific booking
+            $resos_booking = null;
+            if (!empty($resos_booking_id)) {
+                foreach ($resos_bookings as $booking) {
+                    $id = $booking['_id'] ?? $booking['id'] ?? '';
+                    if ($id === $resos_booking_id) {
+                        $resos_booking = $booking;
+                        break;
+                    }
+                }
+
+                if (!$resos_booking) {
+                    return new WP_Error(
+                        'resos_booking_not_found',
+                        __('Specified Resos booking not found', 'booking-match-api'),
+                        array('status' => 404)
+                    );
+                }
+            } else {
+                // No specific Resos booking ID - find best match for this date
+                // Use matcher to get matches for this night
+                $night_match = $this->get_night_match_from_all($hotel_booking, $date);
+
+                if (empty($night_match['resos_matches'])) {
+                    return new WP_Error(
+                        'no_matches',
+                        __('No matching Resos bookings found for this date', 'booking-match-api'),
+                        array('status' => 404)
+                    );
+                }
+
+                // Get the best match (first one, as matches are sorted by score)
+                $best_match = $night_match['resos_matches'][0];
+                $best_resos_id = $best_match['resos_booking_id'];
+
+                // Find the full Resos booking data
+                foreach ($resos_bookings as $booking) {
+                    $id = $booking['_id'] ?? $booking['id'] ?? '';
+                    if ($id === $best_resos_id) {
+                        $resos_booking = $booking;
+                        break;
+                    }
+                }
+            }
+
+            if (!$resos_booking) {
+                return new WP_Error(
+                    'resos_booking_error',
+                    __('Could not retrieve Resos booking data', 'booking-match-api'),
+                    array('status' => 500)
+                );
+            }
+
+            // Generate comparison data
+            $comparison = new BMA_Comparison();
+            $comparison_data = $comparison->prepare_comparison_data($hotel_booking, $resos_booking, $date);
+
+            // Add metadata
+            $response = array(
+                'success' => true,
+                'booking_id' => $booking_id,
+                'date' => $date,
+                'resos_booking_id' => $resos_booking['_id'] ?? $resos_booking['id'] ?? '',
+                'comparison' => $comparison_data
+            );
+
+            return rest_ensure_response($response);
+
+        } catch (Exception $e) {
+            error_log('BMA Comparison Error: ' . $e->getMessage());
+            return new WP_Error(
+                'comparison_error',
+                __('Error generating comparison', 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Helper method to get night match data
+     */
+    private function get_night_match_from_all($hotel_booking, $date) {
+        $matcher = new BMA_Matcher();
+        $all_matches = $matcher->match_booking_all_nights($hotel_booking);
+
+        // Find the match for the requested date
+        foreach ($all_matches['nights'] as $night) {
+            if ($night['date'] === $date) {
+                return $night;
+            }
+        }
+
+        return array('resos_matches' => array());
+    }
+
+    /**
+     * Get comparison endpoint parameters
+     */
+    protected function get_comparison_params() {
+        return array(
+            'booking_id' => array(
+                'description' => __('NewBook booking ID', 'booking-match-api'),
+                'type' => 'integer',
+                'required' => true,
+                'sanitize_callback' => 'absint',
+            ),
+            'date' => array(
+                'description' => __('Date to compare (YYYY-MM-DD)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
+                'validate_callback' => function($param, $request, $key) {
+                    // Validate date format
+                    $date = DateTime::createFromFormat('Y-m-d', $param);
+                    return $date && $date->format('Y-m-d') === $param;
+                },
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'resos_booking_id' => array(
+                'description' => __('Specific Resos booking ID to compare (optional)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+        );
     }
 }
