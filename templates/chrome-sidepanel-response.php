@@ -653,6 +653,7 @@ if (!defined('ABSPATH')) {
     justify-content: center;
     padding: 8px 16px;
     min-height: 36px;
+    height: 36px;
     background: #667eea;
     color: white !important;
     text-decoration: none;
@@ -661,6 +662,7 @@ if (!defined('ABSPATH')) {
     font-weight: 500;
     line-height: 1.5;
     transition: background 0.2s;
+    box-sizing: border-box;
 }
 
 .bma-action-link:hover {
@@ -811,6 +813,7 @@ if (!defined('ABSPATH')) {
     justify-content: center;
     padding: 8px 16px;
     min-height: 36px;
+    height: 36px;
     background: #667eea;
     color: white;
     border: none;
@@ -822,6 +825,7 @@ if (!defined('ABSPATH')) {
     transition: background 0.2s;
     margin-right: 8px;
     margin-top: 8px;
+    box-sizing: border-box;
 }
 
 .bma-action-btn:hover {
@@ -1225,6 +1229,7 @@ if (!defined('ABSPATH')) {
     gap: 4px;
     padding: 8px 16px;
     min-height: 36px;
+    height: 36px;
     font-size: 13px;
     font-weight: 500;
     border: none;
@@ -1233,6 +1238,7 @@ if (!defined('ABSPATH')) {
     transition: all 0.2s;
     white-space: nowrap;
     line-height: 1.5;
+    box-sizing: border-box;
 }
 
 .comparison-actions-buttons button .material-symbols-outlined {
@@ -1246,6 +1252,7 @@ if (!defined('ABSPATH')) {
     gap: 4px;
     padding: 8px 16px;
     min-height: 36px;
+    height: 36px;
     background: #6b7280;
     color: white;
     border: none;
@@ -1255,6 +1262,7 @@ if (!defined('ABSPATH')) {
     cursor: pointer;
     transition: background 0.2s;
     line-height: 1.5;
+    box-sizing: border-box;
 }
 
 .btn-close-comparison:hover,
