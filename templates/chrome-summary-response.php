@@ -108,43 +108,6 @@ if (empty($bookings)) {
     <?php endforeach; ?>
 </div>
 
-<script>
-// Attach event listeners immediately (this script runs when HTML is inserted)
-(function() {
-    // Add click handlers to booking headers
-    const headers = document.querySelectorAll('.bma-summary .booking-header');
-    headers.forEach(header => {
-        header.addEventListener('click', function() {
-            const card = this.closest('.booking-card');
-            const bookingId = card.dataset.bookingId;
-            const details = document.getElementById('details-' + bookingId);
-            const icon = card.querySelector('.expand-icon');
-
-            if (details.style.display === 'none' || !details.style.display) {
-                details.style.display = 'block';
-                icon.textContent = '▲';
-                card.classList.add('expanded');
-            } else {
-                details.style.display = 'none';
-                icon.textContent = '▼';
-                card.classList.remove('expanded');
-            }
-        });
-    });
-
-    // Add click handlers to "Open in NewBook" buttons
-    const openButtons = document.querySelectorAll('.bma-summary .open-booking-btn');
-    openButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.stopPropagation(); // Prevent header click event
-            const bookingId = this.dataset.bookingId;
-            const url = `https://appeu.newbook.cloud/bookings_view/${bookingId}`;
-            chrome.tabs.create({ url: url });
-        });
-    });
-})();
-</script>
-
 <style>
 .bma-summary { padding: 0; }
 
