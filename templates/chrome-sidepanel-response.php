@@ -1194,24 +1194,76 @@ if (!defined('ABSPATH')) {
     font-style: italic;
 }
 
-/* Close comparison button */
-.bma-close-comparison {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    background: #6b7280;
-    color: white;
-    border: none;
-    border-radius: 0 0 6px 6px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-    margin-top: 8px;
+/* Comparison action buttons */
+.comparison-actions-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
 }
 
-.bma-close-comparison:hover {
+.comparison-actions-buttons button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.comparison-actions-buttons button .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.btn-close-comparison {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-close-comparison:hover {
     background: #4b5563;
+}
+
+.btn-exclude-match {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-exclude-match:hover {
+    background: #dc2626;
+}
+
+.btn-view-resos {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-view-resos:hover {
+    background: #2563eb;
+}
+
+.btn-confirm-match {
+    background: #10b981;
+    color: white;
+}
+
+.btn-confirm-match:hover {
+    background: #059669;
+}
+
+.btn-confirm-match.btn-update-confirmed {
+    background: #8b5cf6;
+}
+
+.btn-confirm-match.btn-update-confirmed:hover {
+    background: #7c3aed;
 }
 </style>
 
@@ -1619,10 +1671,44 @@ function buildComparisonHTML(data, date, resosBookingId) {
     html += '</table>';
     html += '</div>'; // comparison-table-wrapper
 
-    // Add close button
+    // Add action buttons section
+    // Determine match type: confirmed match = booking_ref matches
+    const isConfirmedMatch = matches && matches.booking_ref;
+    const hasSuggestions = suggestions && Object.keys(suggestions).length > 0;
     const containerId = 'comparison-' + date + '-' + resosBookingId;
-    html += `<button class="bma-close-comparison" data-action="close-comparison" data-container-id="${containerId}">Close Comparison</button>`;
 
+    html += '<div class="comparison-actions-buttons">';
+
+    // 1. Close button (always shown, first)
+    html += `<button class="btn-close-comparison" data-action="close-comparison" data-container-id="${containerId}">`;
+    html += '<span class="material-symbols-outlined">close</span> Close';
+    html += '</button>';
+
+    // 2. Exclude Match button (only for suggested matches, not confirmed)
+    if (!isConfirmedMatch && resos.id && hotel.booking_id) {
+        html += `<button class="btn-exclude-match" data-action="exclude-match" data-resos-booking-id="${resos.id}" data-hotel-booking-id="${hotel.booking_id}" data-guest-name="${escapeHTML(resos.name || 'Guest')}">`;
+        html += '<span class="material-symbols-outlined">close</span> Exclude Match';
+        html += '</button>';
+    }
+
+    // 3. View in Resos button (always shown if we have IDs)
+    if (resos.id && resos.restaurant_id) {
+        const resosUrl = `https://app.resos.com/${resos.restaurant_id}/bookings/timetable/${date}/${resos.id}`;
+        html += `<button class="btn-view-resos" onclick="window.open('${resosUrl}', '_blank')">`;
+        html += '<span class="material-symbols-outlined">visibility</span> View in Resos';
+        html += '</button>';
+    }
+
+    // 4. Update button (only if there are suggested updates)
+    if (hasSuggestions) {
+        const buttonLabel = isConfirmedMatch ? 'Update Selected' : 'Update Selected & Match';
+        const buttonClass = isConfirmedMatch ? 'btn-confirm-match btn-update-confirmed' : 'btn-confirm-match';
+        html += `<button class="${buttonClass}" data-action="toggle-update" data-date="${date}" data-resos-booking-id="${resos.id}">`;
+        html += `<span class="material-symbols-outlined">check_circle</span> ${buttonLabel}`;
+        html += '</button>';
+    }
+
+    html += '</div>'; // comparison-actions-buttons
     html += '</div>'; // comparison-row-content
 
     return html;
