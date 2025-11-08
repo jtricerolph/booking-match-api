@@ -204,7 +204,11 @@ if (!defined('ABSPATH')) {
                                             data-action="view-comparison"
                                             data-date="<?php echo esc_attr($night['date']); ?>"
                                             data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
-                                            data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">
+                                            data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>"
+                                            data-is-confirmed="<?php echo isset($match['match_info']['match_type']) && $match['match_info']['match_type'] === 'booking_id' ? '1' : '0'; ?>"
+                                            data-is-matched-elsewhere="<?php echo isset($match['match_info']['matched_elsewhere']) && $match['match_info']['matched_elsewhere'] ? '1' : '0'; ?>"
+                                            data-hotel-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                            data-guest-name="<?php echo esc_attr($match['guest_name']); ?>">
                                         <?php if ($match['match_info']['is_primary']): ?>
                                             <span class="material-symbols-outlined">bar_chart</span> View Match
                                         <?php else: ?>
@@ -217,24 +221,6 @@ if (!defined('ABSPATH')) {
                                            class="bma-action-link bma-resos-link" target="_blank">
                                             <span class="material-symbols-outlined">visibility</span> View in ResOS
                                         </a>
-                                    <?php endif; ?>
-
-                                    <!-- Exclude Match Button (for non-confirmed, non-matched-elsewhere matches) -->
-                                    <?php
-                                    // Don't show Exclude button for:
-                                    // 1. Confirmed matches (booking_id match type)
-                                    // 2. Matches that are matched to another booking (matched_elsewhere)
-                                    $is_confirmed = isset($match['match_info']['match_type']) && $match['match_info']['match_type'] === 'booking_id';
-                                    $is_matched_elsewhere = isset($match['match_info']['matched_elsewhere']) && $match['match_info']['matched_elsewhere'];
-                                    if (!$is_confirmed && !$is_matched_elsewhere):
-                                    ?>
-                                        <button class="bma-action-btn exclude"
-                                                data-action="exclude-match"
-                                                data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>"
-                                                data-hotel-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
-                                                data-guest-name="<?php echo esc_attr($match['guest_name']); ?>">
-                                            <span class="material-symbols-outlined">close</span> Exclude
-                                        </button>
                                     <?php endif; ?>
                                 </div>
 
@@ -883,6 +869,9 @@ if (!defined('ABSPATH')) {
     vertical-align: middle;
     margin-right: 4px;
     line-height: 1;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
 }
 
 /* Ensure consistent heights for all action buttons and links */
@@ -1620,6 +1609,13 @@ async function loadComparisonView(date, bookingId, resosBookingId) {
         return;
     }
 
+    // Get button that triggered this to access data attributes
+    const triggerButton = event.target.closest('button[data-action="view-comparison"]');
+    const isConfirmed = triggerButton && triggerButton.dataset.isConfirmed === '1';
+    const isMatchedElsewhere = triggerButton && triggerButton.dataset.isMatchedElsewhere === '1';
+    const hotelBookingId = triggerButton ? triggerButton.dataset.hotelBookingId : '';
+    const guestName = triggerButton ? triggerButton.dataset.guestName : '';
+
     // Show loading state
     container.innerHTML = '<div class="bma-comparison-loading">Loading comparison data...</div>';
     container.style.display = 'block';
@@ -1643,7 +1639,7 @@ async function loadComparisonView(date, bookingId, resosBookingId) {
         const result = await response.json();
 
         if (result.success && result.comparison) {
-            const comparisonHTML = buildComparisonHTML(result.comparison, date, resosBookingId);
+            const comparisonHTML = buildComparisonHTML(result.comparison, date, resosBookingId, isConfirmed, isMatchedElsewhere, hotelBookingId, guestName);
             container.innerHTML = comparisonHTML;
         } else {
             container.innerHTML = `
@@ -1664,7 +1660,7 @@ async function loadComparisonView(date, bookingId, resosBookingId) {
 }
 
 // Build comparison HTML from comparison data
-function buildComparisonHTML(data, date, resosBookingId) {
+function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedElsewhere, hotelBookingId, guestName) {
     const hotel = data.hotel || {};
     const resos = data.resos || {};
     const matches = data.matches || {};
@@ -1714,8 +1710,6 @@ function buildComparisonHTML(data, date, resosBookingId) {
     html += '</div>'; // comparison-table-wrapper
 
     // Add action buttons section
-    // Determine match type: confirmed match = booking_ref matches
-    const isConfirmedMatch = matches && matches.booking_ref;
     const hasSuggestions = suggestions && Object.keys(suggestions).length > 0;
     const containerId = 'comparison-' + date + '-' + resosBookingId;
 
@@ -1726,9 +1720,9 @@ function buildComparisonHTML(data, date, resosBookingId) {
     html += '<span class="material-symbols-outlined">close</span> Close';
     html += '</button>';
 
-    // 2. Exclude Match button (only for suggested matches, not confirmed)
-    if (!isConfirmedMatch && resos.id && hotel.booking_id) {
-        html += `<button class="btn-exclude-match" data-action="exclude-match" data-resos-booking-id="${resos.id}" data-hotel-booking-id="${hotel.booking_id}" data-guest-name="${escapeHTML(resos.name || 'Guest')}">`;
+    // 2. Exclude Match button (only for non-confirmed, non-matched-elsewhere matches)
+    if (!isConfirmed && !isMatchedElsewhere && resosBookingId && hotelBookingId) {
+        html += `<button class="btn-exclude-match" data-action="exclude-match" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-guest-name="${escapeHTML(guestName || 'Guest')}">`;
         html += '<span class="material-symbols-outlined">close</span> Exclude Match';
         html += '</button>';
     }
@@ -1743,8 +1737,8 @@ function buildComparisonHTML(data, date, resosBookingId) {
 
     // 4. Update button (only if there are suggested updates)
     if (hasSuggestions) {
-        const buttonLabel = isConfirmedMatch ? 'Update Selected' : 'Update Selected & Match';
-        const buttonClass = isConfirmedMatch ? 'btn-confirm-match btn-update-confirmed' : 'btn-confirm-match';
+        const buttonLabel = isConfirmed ? 'Update Selected' : 'Update Selected & Match';
+        const buttonClass = isConfirmed ? 'btn-confirm-match btn-update-confirmed' : 'btn-confirm-match';
         html += `<button class="${buttonClass}" data-action="toggle-update" data-date="${date}" data-resos-booking-id="${resos.id}">`;
         html += `<span class="material-symbols-outlined">check_circle</span> ${buttonLabel}`;
         html += '</button>';
