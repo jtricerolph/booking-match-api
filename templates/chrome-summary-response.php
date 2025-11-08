@@ -118,7 +118,7 @@ if (empty($bookings)) {
                                 $match = $matches[0];
                                 $is_primary = $match['match_info']['is_primary'] ?? false;
                                 $time = date('H:i', strtotime($match['time']));
-                                $pax = $match['num_guests'];
+                                $pax = $match['people'] ?? 0;
                                 ?>
                                 <div class="night-row <?php echo !$is_primary ? 'clickable-issue' : ''; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" <?php echo !$is_primary ? 'title="Click to view in Restaurant tab"' : ''; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
@@ -138,7 +138,7 @@ if (empty($bookings)) {
                                 <?php foreach ($matches as $match):
                                     $is_primary = $match['match_info']['is_primary'] ?? false;
                                     $time = date('H:i', strtotime($match['time']));
-                                    $pax = $match['num_guests'];
+                                    $pax = $match['people'] ?? 0;
                                 ?>
                                     <div class="night-row clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
                                         <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
