@@ -1,271 +1,341 @@
 <?php
 /**
- * Chrome Summary Response Template
- *
- * HTML template for chrome-summary context (Summary tab)
- * Displays recent bookings with actions required
- *
- * @package BookingMatchAPI
+ * Chrome Extension Sidepanel - Summary Tab Template
+ * Displays recent bookings with expandable details
  */
 
-// Exit if accessed directly
-if (!defined('ABSPATH')) {
-    exit;
+// $bookings array is passed from formatter
+if (empty($bookings)) {
+    echo '<div class="bma-summary-empty">';
+    echo '<div class="empty-icon">✓</div>';
+    echo '<p>No recent bookings found</p>';
+    echo '<div class="empty-text">All bookings are up to date</div>';
+    echo '</div>';
+    return;
 }
-
-// Variables available: $bookings (array of recent bookings)
 ?>
-<div class="bma-summary-tab">
-    <div class="bma-summary-header">
-        <h3>Recent Bookings</h3>
-        <div class="bma-summary-subtitle">Last 5 bookings requiring attention</div>
-    </div>
 
-    <?php if (empty($bookings)): ?>
-        <div class="bma-no-bookings">
-            <div class="bma-icon-large">✓</div>
-            <p>No bookings requiring attention</p>
-            <div class="bma-muted">All recent bookings are up to date</div>
-        </div>
-    <?php else: ?>
-        <div class="bma-bookings-list">
-            <?php foreach ($bookings as $booking): ?>
-                <?php
-                $actions_count = is_array($booking['actions_required']) ? count($booking['actions_required']) : 0;
-                $has_critical = in_array('missing_restaurant', $booking['actions_required']) ||
-                               in_array('package_alert', $booking['actions_required']);
-                $badge_class = $has_critical ? 'critical' : 'warning';
-                ?>
-                <div class="bma-summary-booking <?php echo $has_critical ? 'critical' : ''; ?>">
-                    <div class="bma-summary-booking-header">
-                        <div class="bma-summary-booking-guest">
-                            <strong><?php echo esc_html($booking['guest_name']); ?></strong>
-                            <span class="bma-booking-id-small">#<?php echo esc_html($booking['booking_id']); ?></span>
-                        </div>
-                        <?php if ($actions_count > 0): ?>
-                            <span class="bma-action-badge <?php echo $badge_class; ?>">
-                                <?php echo esc_html($actions_count); ?>
-                            </span>
-                        <?php endif; ?>
+<div class="bma-summary">
+    <?php foreach ($bookings as $booking): ?>
+        <div class="booking-card" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
+            <!-- Collapsed Summary -->
+            <div class="booking-header" onclick="toggleBookingDetails(<?php echo esc_attr($booking['booking_id']); ?>)">
+                <div class="booking-main-info">
+                    <div class="booking-guest">
+                        <strong><?php echo esc_html($booking['guest_name']); ?></strong>
+                        <span class="booking-id">#<?php echo esc_html($booking['booking_id']); ?></span>
                     </div>
-
-                    <div class="bma-summary-booking-info">
-                        <div class="bma-summary-info-row">
-                            <span class="bma-info-icon">📅</span>
-                            <span>Arrives: <?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival_date']))); ?></span>
-                        </div>
+                    <div class="booking-dates">
+                        <span><?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival_date']))); ?></span>
+                        <span class="nights-badge"><?php echo esc_html($booking['nights']); ?> night<?php echo $booking['nights'] > 1 ? 's' : ''; ?></span>
                     </div>
+                    <div class="booking-status status-<?php echo esc_attr(strtolower($booking['status'])); ?>">
+                        <?php echo esc_html(ucfirst($booking['status'])); ?>
+                    </div>
+                </div>
 
-                    <?php if (!empty($booking['actions_required'])): ?>
-                        <div class="bma-actions-required">
-                            <?php foreach ($booking['actions_required'] as $action): ?>
-                                <?php
-                                // Convert action codes to user-friendly messages
-                                $action_messages = array(
-                                    'missing_restaurant' => '🍽️ Missing restaurant booking',
-                                    'package_alert' => '🍽️ Package booking - no reservation',
-                                    'multiple_matches' => '⚠ Multiple restaurant matches',
-                                    'non_primary_match' => '⚠ Review suggested match',
-                                    'check_required' => '⚠ Manual check required',
-                                );
-                                $message = isset($action_messages[$action]) ? $action_messages[$action] : $action;
-                                $is_critical = in_array($action, array('missing_restaurant', 'package_alert'));
-                                ?>
-                                <div class="bma-action-item <?php echo $is_critical ? 'critical' : ''; ?>">
-                                    <?php echo esc_html($message); ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
+                <!-- Issue Badges -->
+                <div class="booking-badges">
+                    <?php if ($booking['restaurant_issues'] > 0): ?>
+                        <span class="issue-badge restaurant-badge" title="Restaurant issues">
+                            🍽️ <?php echo esc_html($booking['restaurant_issues']); ?>
+                        </span>
+                    <?php endif; ?>
 
-                        <div class="bma-summary-actions">
-                            <a href="<?php echo esc_url(home_url('/bookings/?booking_id=' . $booking['booking_id'])); ?>"
-                               class="bma-action-btn" target="_blank">
-                                View Details
-                            </a>
-                        </div>
+                    <?php if ($booking['check_issues'] > 0): ?>
+                        <span class="issue-badge check-badge" title="Check issues">
+                            ⚠ <?php echo esc_html($booking['check_issues']); ?>
+                        </span>
                     <?php endif; ?>
                 </div>
-            <?php endforeach; ?>
+
+                <span class="expand-icon">▼</span>
+            </div>
+
+            <!-- Expanded Details -->
+            <div class="booking-details" id="details-<?php echo esc_attr($booking['booking_id']); ?>" style="display: none;">
+                <div class="detail-section">
+                    <div class="detail-row">
+                        <span class="detail-label">Source:</span>
+                        <span class="detail-value"><?php echo esc_html($booking['booking_source']); ?></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Check-out:</span>
+                        <span class="detail-value"><?php echo esc_html(date('D, d/m/y', strtotime($booking['departure_date']))); ?></span>
+                    </div>
+                </div>
+
+                <!-- Restaurant Summary -->
+                <?php if ($booking['restaurant_issues'] > 0): ?>
+                    <div class="detail-section restaurant-summary">
+                        <h4>🍽️ Restaurant Matches</h4>
+                        <ul class="issue-list">
+                            <?php
+                            $actions = $booking['actions_required'];
+                            $action_messages = array(
+                                'package_alert' => 'Package booking - missing reservation',
+                                'missing_restaurant' => 'No restaurant booking found',
+                                'multiple_matches' => 'Multiple matches - needs review',
+                                'non_primary_match' => 'Suggested match - low confidence'
+                            );
+
+                            foreach ($actions as $action) {
+                                if (isset($action_messages[$action])) {
+                                    echo '<li>' . esc_html($action_messages[$action]) . '</li>';
+                                }
+                            }
+                            ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Checks Summary -->
+                <?php if ($booking['check_issues'] > 0): ?>
+                    <div class="detail-section checks-summary">
+                        <h4>⚠ Booking Checks</h4>
+                        <p class="placeholder-text">Issue checking coming soon...</p>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Action Button -->
+                <div class="detail-actions">
+                    <button class="open-booking-btn" onclick="openBooking(<?php echo esc_attr($booking['booking_id']); ?>)">
+                        Open Booking in NewBook →
+                    </button>
+                </div>
+            </div>
         </div>
-    <?php endif; ?>
+    <?php endforeach; ?>
 </div>
 
+<script>
+function toggleBookingDetails(bookingId) {
+    const details = document.getElementById('details-' + bookingId);
+    const card = details.closest('.booking-card');
+    const icon = card.querySelector('.expand-icon');
+
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        icon.textContent = '▲';
+        card.classList.add('expanded');
+    } else {
+        details.style.display = 'none';
+        icon.textContent = '▼';
+        card.classList.remove('expanded');
+    }
+}
+
+function openBooking(bookingId) {
+    // Open booking in main NewBook window
+    const url = `https://appeu.newbook.cloud/bookings_view/${bookingId}`;
+    chrome.tabs.create({ url: url });
+}
+</script>
+
 <style>
-/* Summary Tab Styles */
-.bma-summary-tab {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    color: #333;
-    padding: 20px;
-    background: #fff;
-}
+.bma-summary { padding: 0; }
 
-.bma-summary-header {
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #e5e7eb;
-}
-
-.bma-summary-header h3 {
-    margin: 0 0 4px 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: #111827;
-}
-
-.bma-summary-subtitle {
-    font-size: 13px;
-    color: #6b7280;
-}
-
-.bma-no-bookings {
+.bma-summary-empty {
     text-align: center;
-    padding: 40px 20px;
+    padding: 60px 20px;
 }
 
-.bma-icon-large {
+.empty-icon {
     font-size: 64px;
     margin-bottom: 16px;
+    opacity: 0.5;
 }
 
-.bma-no-bookings p {
+.bma-summary-empty p {
     font-size: 16px;
     font-weight: 500;
     color: #374151;
     margin: 0 0 8px 0;
 }
 
-.bma-muted {
+.empty-text {
     font-size: 13px;
     color: #9ca3af;
 }
 
-.bma-bookings-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.bma-summary-booking {
-    background: #f9fafb;
-    border-left: 4px solid #60a5fa;
-    padding: 16px;
-    border-radius: 6px;
+.booking-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 12px;
     transition: all 0.2s;
 }
 
-.bma-summary-booking.critical {
-    border-left-color: #ef4444;
-    background: #fef2f2;
+.booking-card:hover {
+    border-color: #cbd5e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.bma-summary-booking:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.booking-card.expanded {
+    border-color: #3182ce;
 }
 
-.bma-summary-booking-header {
+.booking-header {
+    padding: 12px;
+    cursor: pointer;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
-}
-
-.bma-summary-booking-guest {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.bma-summary-booking-guest strong {
-    font-size: 15px;
-    color: #111827;
-}
-
-.bma-booking-id-small {
-    font-size: 12px;
-    color: #6b7280;
-    font-weight: 500;
-}
-
-.bma-action-badge {
-    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    height: 24px;
-    padding: 0 8px;
+    gap: 12px;
+}
+
+.booking-main-info {
+    flex: 1;
+}
+
+.booking-guest {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.booking-guest strong {
+    font-size: 14px;
+    color: #2d3748;
+}
+
+.booking-id {
+    font-size: 12px;
+    color: #718096;
+}
+
+.booking-dates {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #4a5568;
+}
+
+.nights-badge {
+    background: #edf2f7;
+    padding: 2px 8px;
     border-radius: 12px;
-    font-size: 12px;
-    font-weight: 700;
-    color: white;
-}
-
-.bma-action-badge.warning {
-    background: #f59e0b;
-}
-
-.bma-action-badge.critical {
-    background: #ef4444;
-}
-
-.bma-summary-booking-info {
-    margin-bottom: 12px;
-}
-
-.bma-summary-info-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: #4b5563;
-}
-
-.bma-info-icon {
-    font-size: 16px;
-}
-
-.bma-actions-required {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
-}
-
-.bma-action-item {
-    font-size: 13px;
-    color: #92400e;
-    background: #fef3c7;
-    padding: 6px 10px;
-    border-radius: 4px;
+    font-size: 11px;
     font-weight: 500;
 }
 
-.bma-action-item.critical {
-    color: #991b1b;
-    background: #fecaca;
+.booking-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.status-confirmed { background: #c6f6d5; color: #22543d; }
+.status-provisional { background: #fef5e7; color: #975a16; }
+.status-cancelled { background: #fed7d7; color: #742a2a; }
+.status-unknown { background: #e2e8f0; color: #4a5568; }
+
+.booking-badges {
+    display: flex;
+    gap: 6px;
+}
+
+.issue-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
     font-weight: 600;
 }
 
-.bma-summary-actions {
-    display: flex;
-    gap: 8px;
+.restaurant-badge {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.check-badge {
+    background: #fef5e7;
+    color: #975a16;
+}
+
+.expand-icon {
+    font-size: 12px;
+    color: #a0aec0;
+    transition: transform 0.2s;
+}
+
+.booking-details {
+    padding: 0 12px 12px 12px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.detail-section {
     margin-top: 12px;
 }
 
-.bma-action-btn {
-    display: inline-block;
-    padding: 8px 16px;
-    background: #667eea;
-    color: white !important;
-    text-decoration: none;
-    border-radius: 4px;
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
     font-size: 13px;
+}
+
+.detail-label {
+    color: #718096;
     font-weight: 500;
+}
+
+.detail-value {
+    color: #2d3748;
+}
+
+.restaurant-summary, .checks-summary {
+    background: #f7fafc;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+}
+
+.restaurant-summary h4, .checks-summary h4 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #2d3748;
+}
+
+.issue-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 12px;
+    color: #4a5568;
+}
+
+.issue-list li {
+    margin: 4px 0;
+}
+
+.placeholder-text {
+    font-size: 12px;
+    color: #a0aec0;
+    font-style: italic;
+    margin: 0;
+}
+
+.detail-actions {
+    margin-top: 12px;
+}
+
+.open-booking-btn {
+    width: 100%;
+    padding: 10px;
+    background: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
     transition: background 0.2s;
 }
 
-.bma-action-btn:hover {
-    background: #5568d3;
+.open-booking-btn:hover {
+    background: #2c5aa0;
 }
 </style>

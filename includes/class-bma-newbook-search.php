@@ -271,6 +271,41 @@ class BMA_NewBook_Search {
     }
 
     /**
+     * Fetch recently placed bookings (by booking creation date)
+     *
+     * @param int $limit Maximum number of bookings to return
+     * @param int $hours_back How many hours back to search (default 72)
+     * @return array Array of bookings sorted by booking_id descending
+     */
+    public function fetch_recent_placed_bookings($limit = 5, $hours_back = 72) {
+        $to_date = date('Y-m-d\TH:i:s');
+        $from_date = date('Y-m-d\TH:i:s', strtotime("-{$hours_back} hours"));
+
+        $data = array(
+            'period_from' => $from_date,
+            'period_to' => $to_date,
+            'list_type' => 'placed'  // Use 'placed' to get bookings by creation date
+        );
+
+        $response = $this->call_api('bookings_list', $data);
+
+        if (!$response || !isset($response['data'])) {
+            error_log('BMA: Error fetching recent placed bookings - no data returned');
+            return array();
+        }
+
+        $bookings = $response['data'];
+
+        // Sort by booking_id descending (most recent first)
+        usort($bookings, function($a, $b) {
+            return ($b['booking_id'] ?? 0) - ($a['booking_id'] ?? 0);
+        });
+
+        // Apply limit
+        return array_slice($bookings, 0, $limit);
+    }
+
+    /**
      * Call NewBook API (reuse from existing plugin)
      */
     private function call_api($action, $data = array()) {

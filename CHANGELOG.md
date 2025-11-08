@@ -2,6 +2,44 @@
 
 All notable changes to this plugin will be documented in this file.
 
+## [1.3.0] - 2025-11-08
+
+### Added
+- **Summary Endpoint Implementation**: Fully functional summary of recent bookings
+  - Fetches recently placed bookings from NewBook (last 72 hours by default)
+  - Uses `bookings_list` API with `list_type: 'placed'` to get recently created bookings
+  - Passes bookings through restaurant matching logic for night-by-night analysis
+  - Calculates badge counts for restaurant and check issues
+  - Expandable accordion card design showing basic info + detailed view
+  - Color-coded status badges (confirmed, provisional, cancelled)
+  - Issue count badges for restaurant and check flags
+  - "Open in NewBook" button to view full booking details
+  - Supports `limit` parameter from Chrome extension settings (default: 5)
+
+- **New Classes**:
+  - `BMA_Booking_Source`: Determines booking source/channel (placeholder for future implementation)
+  - `BMA_Issue_Checker`: Validates bookings for issues (placeholder for future implementation)
+
+- **New Method**: `BMA_NewBook_Search::fetch_recent_placed_bookings()`
+  - Fetches bookings by creation date (not arrival date)
+  - Sorts by booking_id descending (most recent first)
+  - Applies limit parameter to return X most recent bookings
+
+### Changed
+- Updated `BMA_REST_Controller::get_summary()`: Full implementation replacing stub data
+- Updated `chrome-summary-response.php`: Redesigned with accordion-style expandable sections
+- Summary endpoint now accepts `limit` parameter from Chrome extension settings
+- Summary endpoint processes real booking data through matcher and issue checker
+
+### Technical Details
+- Restaurant matching analyzes: package bookings without reservations, multiple matches, non-primary matches
+- Placeholder classes ready for future booking source detection and issue checking logic
+- Helper methods added: `extract_guest_name()`, `calculate_nights()`, `process_booking_for_summary()`
+- Template includes inline JavaScript for expand/collapse functionality
+- "Open in NewBook" links to `https://appeu.newbook.cloud/bookings_view/{id}`
+
+---
+
 ## [1.2.1] - 2025-11-08
 
 ### Fixed

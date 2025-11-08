@@ -304,6 +304,13 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     private function get_summary_params() {
         return array(
+            'limit' => array(
+                'description' => __('Number of recent bookings to return', 'booking-match-api'),
+                'type' => 'integer',
+                'required' => false,
+                'default' => 5,
+                'sanitize_callback' => 'absint',
+            ),
             'context' => array(
                 'description' => __('Response format context', 'booking-match-api'),
                 'type' => 'string',
@@ -345,37 +352,50 @@ class BMA_REST_Controller extends WP_REST_Controller {
     public function get_summary($request) {
         try {
             $context = $request->get_param('context') ?: 'json';
+            $limit = $request->get_param('limit') ?: 5;
 
-            // TODO: Implement actual summary logic
-            // For now, return last 5 bookings with stub data
+            // Fetch recently placed bookings from NewBook
+            $searcher = new BMA_NewBook_Search();
+            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit);
 
-            $summary_bookings = array(
-                array(
-                    'booking_id' => '12345',
-                    'guest_name' => 'John Doe',
-                    'arrival_date' => date('Y-m-d'),
-                    'actions_required' => array('missing_restaurant'),
-                    'badge_count' => 1,
-                ),
-                array(
-                    'booking_id' => '12346',
-                    'guest_name' => 'Jane Smith',
-                    'arrival_date' => date('Y-m-d', strtotime('+1 day')),
-                    'actions_required' => array('package_alert'),
-                    'badge_count' => 1,
-                ),
-            );
+            if (empty($recent_bookings)) {
+                // Return empty success response
+                if ($context === 'chrome-summary') {
+                    $formatter = new BMA_Response_Formatter();
+                    return array(
+                        'success' => true,
+                        'html' => $formatter->format_summary_html(array()),
+                        'badge_count' => 0,
+                        'bookings_count' => 0
+                    );
+                }
 
-            $total_badge_count = array_sum(array_column($summary_bookings, 'badge_count'));
+                return array(
+                    'success' => true,
+                    'bookings' => array(),
+                    'badge_count' => 0,
+                    'bookings_count' => 0
+                );
+            }
 
+            // Process each booking
+            $summary_bookings = array();
+            $total_badge_count = 0;
+
+            foreach ($recent_bookings as $nb_booking) {
+                $processed = $this->process_booking_for_summary($nb_booking);
+                $summary_bookings[] = $processed;
+                $total_badge_count += $processed['badge_count'];
+            }
+
+            // Format response based on context
             if ($context === 'chrome-summary') {
-                // Format as HTML for Chrome sidepanel
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
                     'html' => $formatter->format_summary_html($summary_bookings),
                     'badge_count' => $total_badge_count,
-                    'bookings_count' => count($summary_bookings),
+                    'bookings_count' => count($summary_bookings)
                 );
             }
 
@@ -384,7 +404,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'success' => true,
                 'bookings' => $summary_bookings,
                 'badge_count' => $total_badge_count,
-                'bookings_count' => count($summary_bookings),
+                'bookings_count' => count($summary_bookings)
             );
 
         } catch (Exception $e) {
@@ -395,6 +415,105 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 array('status' => 500)
             );
         }
+    }
+
+    /**
+     * Process a booking for summary display
+     */
+    private function process_booking_for_summary($booking) {
+        // Extract basic info
+        $booking_id = $booking['booking_id'];
+        $guest_name = $this->extract_guest_name($booking);
+        $arrival_date = substr($booking['booking_arrival'] ?? '', 0, 10);
+        $departure_date = substr($booking['booking_departure'] ?? '', 0, 10);
+        $nights = $this->calculate_nights($arrival_date, $departure_date);
+        $status = $booking['status'] ?? 'unknown';
+
+        // Match with restaurants
+        $matcher = new BMA_Matcher();
+        $match_result = $matcher->match_booking_all_nights($booking);
+
+        // Determine booking source (placeholder)
+        $source_detector = new BMA_Booking_Source();
+        $booking_source = $source_detector->determine_source($booking);
+
+        // Check for issues (placeholder)
+        $issue_checker = new BMA_Issue_Checker();
+        $issues = $issue_checker->check_booking($booking);
+
+        // Analyze for actions required
+        $actions_required = array();
+        $restaurant_issues = 0;
+        $check_issues = count($issues);
+
+        foreach ($match_result['nights'] as $night) {
+            $has_matches = !empty($night['resos_matches']);
+            $match_count = count($night['resos_matches']);
+            $has_package = $night['has_package'] ?? false;
+
+            if ($has_package && !$has_matches) {
+                $actions_required[] = 'package_alert';
+                $restaurant_issues++;
+            } elseif ($match_count > 1) {
+                $actions_required[] = 'multiple_matches';
+                $restaurant_issues++;
+            } elseif ($match_count === 1) {
+                $is_primary = $night['resos_matches'][0]['match_info']['is_primary'] ?? false;
+                if (!$is_primary) {
+                    $actions_required[] = 'non_primary_match';
+                    $restaurant_issues++;
+                }
+            } elseif (!$has_matches && !$has_package) {
+                $actions_required[] = 'missing_restaurant';
+                $restaurant_issues++;
+            }
+        }
+
+        // Add check issues if any
+        if ($check_issues > 0) {
+            $actions_required[] = 'check_required';
+        }
+
+        return array(
+            'booking_id' => $booking_id,
+            'guest_name' => $guest_name,
+            'arrival_date' => $arrival_date,
+            'departure_date' => $departure_date,
+            'nights' => $nights,
+            'status' => $status,
+            'booking_source' => $booking_source,
+            'actions_required' => array_unique($actions_required),
+            'badge_count' => count(array_unique($actions_required)),
+            'restaurant_issues' => $restaurant_issues,
+            'check_issues' => $check_issues,
+            'match_details' => $match_result
+        );
+    }
+
+    /**
+     * Extract primary guest name from booking
+     */
+    private function extract_guest_name($booking) {
+        if (isset($booking['guests']) && is_array($booking['guests'])) {
+            foreach ($booking['guests'] as $guest) {
+                if (isset($guest['primary_client']) && $guest['primary_client'] == '1') {
+                    return trim(($guest['firstname'] ?? '') . ' ' . ($guest['lastname'] ?? ''));
+                }
+            }
+        }
+        return 'Unknown Guest';
+    }
+
+    /**
+     * Calculate number of nights between dates
+     */
+    private function calculate_nights($arrival, $departure) {
+        if (empty($arrival) || empty($departure)) {
+            return 0;
+        }
+        $start = new DateTime($arrival);
+        $end = new DateTime($departure);
+        return $start->diff($end)->days;
     }
 
     /**
