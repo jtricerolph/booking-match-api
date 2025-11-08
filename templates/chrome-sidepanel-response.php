@@ -1707,7 +1707,8 @@ function closeComparison(containerId) {
 }
 
 // Attach event listeners using event delegation
-document.addEventListener('DOMContentLoaded', function() {
+// Note: Attach immediately since this template is injected after page load
+(function() {
     // Use event delegation on document body for all button clicks
     document.body.addEventListener('click', function(event) {
         const button = event.target.closest('button[data-action]');
@@ -1753,5 +1754,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
         }
     });
-});
+
+    console.log('BMA: Event listeners attached to document.body');
+})();
 </script>
