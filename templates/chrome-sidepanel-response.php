@@ -74,12 +74,6 @@ if (!defined('ABSPATH')) {
                 <strong><?php echo esc_html($booking['guest_name']); ?></strong>
             </div>
 
-            <!-- Arrival Date and Nights Badge -->
-            <div class="bma-arrival-info">
-                <span><?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival']))); ?></span>
-                <span class="bma-nights-badge"><?php echo esc_html($booking['total_nights']); ?> night<?php echo $booking['total_nights'] > 1 ? 's' : ''; ?></span>
-            </div>
-
             <!-- Compact Details Section -->
             <div class="bma-compact-details">
                 <div class="bma-compact-row">
@@ -97,6 +91,7 @@ if (!defined('ABSPATH')) {
                 </div>
                 <div class="bma-compact-row">
                     <span>Dates: <?php echo esc_html(date('D d/m', strtotime($booking['arrival']))); ?> - <?php echo esc_html(date('D d/m', strtotime($booking['departure']))); ?></span>
+                    <span class="bma-nights-badge"><?php echo esc_html($booking['total_nights']); ?> night<?php echo $booking['total_nights'] > 1 ? 's' : ''; ?></span>
                 </div>
                 <div class="bma-compact-row">
                     <span>Tariff: <?php
@@ -295,7 +290,6 @@ if (!defined('ABSPATH')) {
     font-size: 14px;
     line-height: 1.5;
     color: #333;
-    padding: 20px;
     background: #fff;
     max-width: 100%;
 }
@@ -331,23 +325,14 @@ if (!defined('ABSPATH')) {
 .bma-guest-name {
     font-size: 14px;
     color: #2d3748;
-    margin-bottom: 4px;
+    margin-bottom: 12px;
 }
 
 .bma-guest-name strong {
     font-weight: 600;
 }
 
-/* Arrival Info - Date and Nights Badge */
-.bma-arrival-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: #4a5568;
-    margin-bottom: 12px;
-}
-
+/* Nights Badge on Dates Row */
 .bma-nights-badge {
     background: #edf2f7;
     padding: 2px 8px;
@@ -358,7 +343,6 @@ if (!defined('ABSPATH')) {
 
 /* Compact Details Section */
 .bma-compact-details {
-    margin-top: 12px;
     margin-bottom: 16px;
 }
 

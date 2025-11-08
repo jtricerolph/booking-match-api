@@ -538,22 +538,10 @@ class BMA_Matcher {
      * Extract occupants from booking (adults, children, infants)
      */
     private function extract_occupants($booking) {
-        $adults = 0;
-        $children = 0;
-        $infants = 0;
-
-        if (isset($booking['guests']) && is_array($booking['guests'])) {
-            foreach ($booking['guests'] as $guest) {
-                $age_group = $guest['age_group'] ?? '';
-                if ($age_group === 'Adult') {
-                    $adults++;
-                } elseif ($age_group === 'Child') {
-                    $children++;
-                } elseif ($age_group === 'Infant') {
-                    $infants++;
-                }
-            }
-        }
+        // Use direct booking fields from NewBook
+        $adults = intval($booking['booking_adults'] ?? 0);
+        $children = intval($booking['booking_children'] ?? 0);
+        $infants = intval($booking['booking_infants'] ?? 0);
 
         return array(
             'adults' => $adults,
