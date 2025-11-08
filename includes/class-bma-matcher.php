@@ -46,6 +46,12 @@ class BMA_Matcher {
             $night_matches[] = $match;
         }
 
+        // Extract additional booking info for chrome-sidepanel display
+        $occupants = $this->extract_occupants($booking);
+        $tariffs = $this->extract_tariffs($booking);
+        $booking_status = $booking['booking_status'] ?? 'unknown';
+        $booking_source = $this->determine_booking_source($booking);
+
         return array(
             'booking_id' => $booking['booking_id'] ?? null,
             'booking_reference' => $booking['booking_reference_id'] ?? '',
@@ -54,7 +60,11 @@ class BMA_Matcher {
             'arrival' => substr($arrival, 0, 10),
             'departure' => substr($departure, 0, 10),
             'nights' => $night_matches,
-            'total_nights' => count($night_matches)
+            'total_nights' => count($night_matches),
+            'occupants' => $occupants,
+            'tariffs' => $tariffs,
+            'booking_status' => $booking_status,
+            'booking_source' => $booking_source
         );
     }
 
@@ -522,5 +532,67 @@ class BMA_Matcher {
         }
 
         return false;
+    }
+
+    /**
+     * Extract occupants from booking (adults, children, infants)
+     */
+    private function extract_occupants($booking) {
+        $adults = 0;
+        $children = 0;
+        $infants = 0;
+
+        if (isset($booking['guests']) && is_array($booking['guests'])) {
+            foreach ($booking['guests'] as $guest) {
+                $age_group = $guest['age_group'] ?? '';
+                if ($age_group === 'Adult') {
+                    $adults++;
+                } elseif ($age_group === 'Child') {
+                    $children++;
+                } elseif ($age_group === 'Infant') {
+                    $infants++;
+                }
+            }
+        }
+
+        return array(
+            'adults' => $adults,
+            'children' => $children,
+            'infants' => $infants
+        );
+    }
+
+    /**
+     * Extract tariff types from booking
+     */
+    private function extract_tariffs($booking) {
+        $tariffs = array();
+
+        if (isset($booking['tariffs_quoted']) && is_array($booking['tariffs_quoted'])) {
+            foreach ($booking['tariffs_quoted'] as $tariff) {
+                if (isset($tariff['label']) && !empty($tariff['label'])) {
+                    $tariffs[] = $tariff['label'];
+                }
+            }
+        }
+
+        return array_unique($tariffs);
+    }
+
+    /**
+     * Determine booking source
+     */
+    private function determine_booking_source($booking) {
+        // Check for booking source field
+        if (isset($booking['booking_source']) && !empty($booking['booking_source'])) {
+            return $booking['booking_source'];
+        }
+
+        // Check for agent reference as fallback indicator
+        if (isset($booking['booking_reference_id']) && !empty($booking['booking_reference_id'])) {
+            return 'Online';
+        }
+
+        return 'Direct';
     }
 }

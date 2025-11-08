@@ -69,33 +69,44 @@ if (!defined('ABSPATH')) {
         ?>
 
         <div class="bma-booking-summary">
-            <div class="bma-summary-header">
-                <span class="bma-icon-small"><?php echo $header_icon; ?></span>
-                <strong><?php echo esc_html($header_text); ?></strong>
+            <!-- Guest Name (Bold, Prominent) -->
+            <div class="bma-guest-name">
+                <strong><?php echo esc_html($booking['guest_name']); ?></strong>
             </div>
-            <div class="bma-summary-content">
-                <div class="bma-summary-row">
-                    <div class="bma-summary-label">Guest:</div>
-                    <div class="bma-summary-value"><strong><?php echo esc_html($booking['guest_name']); ?></strong></div>
-                </div>
-                <div class="bma-summary-row">
-                    <div class="bma-summary-label">Room:</div>
-                    <div class="bma-summary-value">Room <?php echo esc_html($booking['room']); ?></div>
-                </div>
-                <div class="bma-summary-row">
-                    <div class="bma-summary-label">Booking ID:</div>
-                    <div class="bma-summary-value">#<?php echo esc_html($booking['booking_id']); ?></div>
-                </div>
-                <div class="bma-summary-row">
-                    <div class="bma-summary-label">Dates:</div>
-                    <div class="bma-summary-value">
+
+            <!-- Arrival Date and Nights Badge -->
+            <div class="bma-arrival-info">
+                <span><?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival']))); ?></span>
+                <span class="bma-nights-badge"><?php echo esc_html($booking['total_nights']); ?> night<?php echo $booking['total_nights'] > 1 ? 's' : ''; ?></span>
+            </div>
+
+            <!-- Compact Details Section -->
+            <div class="bma-compact-details">
+                <div class="bma-compact-row">
+                    <span>Booking ID: #<?php echo esc_html($booking['booking_id']); ?></span>
+                    <span class="bma-compact-occupants">
                         <?php
-                        echo esc_html(date('d/m/y', strtotime($booking['arrival'])));
-                        echo ' - ';
-                        echo esc_html(date('d/m/y', strtotime($booking['departure'])));
-                        echo ' (' . $booking['total_nights'] . ' ' . _n('night', 'nights', $booking['total_nights'], 'booking-match-api') . ')';
+                        $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
+                        $parts = array();
+                        if ($occ['adults'] > 0) $parts[] = $occ['adults'] . ' Adult' . ($occ['adults'] > 1 ? 's' : '');
+                        if ($occ['children'] > 0) $parts[] = $occ['children'] . ' Child' . ($occ['children'] > 1 ? 'ren' : '');
+                        if ($occ['infants'] > 0) $parts[] = $occ['infants'] . ' Infant' . ($occ['infants'] > 1 ? 's' : '');
+                        echo esc_html(implode(', ', $parts));
                         ?>
-                    </div>
+                    </span>
+                </div>
+                <div class="bma-compact-row">
+                    <span>Dates: <?php echo esc_html(date('D d/m', strtotime($booking['arrival']))); ?> - <?php echo esc_html(date('D d/m', strtotime($booking['departure']))); ?></span>
+                </div>
+                <div class="bma-compact-row">
+                    <span>Tariff: <?php
+                        $tariffs = $booking['tariffs'] ?? array();
+                        echo esc_html(empty($tariffs) ? 'Standard' : implode(', ', $tariffs));
+                    ?></span>
+                </div>
+                <div class="bma-compact-row">
+                    <span>Status: <?php echo esc_html(ucfirst($booking['booking_status'] ?? 'unknown')); ?></span>
+                    <span><?php echo esc_html($booking['booking_source'] ?? 'Direct'); ?></span>
                 </div>
             </div>
         </div>
@@ -316,34 +327,52 @@ if (!defined('ABSPATH')) {
     color: #ef4444;
 }
 
-.bma-summary-header {
+/* Guest Name - Bold and Prominent */
+.bma-guest-name {
+    font-size: 14px;
+    color: #2d3748;
+    margin-bottom: 4px;
+}
+
+.bma-guest-name strong {
+    font-weight: 600;
+}
+
+/* Arrival Info - Date and Nights Badge */
+.bma-arrival-info {
     display: flex;
     align-items: center;
-    padding: 12px 0 10px 0;
-    border-bottom: 2px solid #e5e7eb;
-    margin-bottom: 16px;
-    font-size: 16px;
+    gap: 8px;
+    font-size: 12px;
+    color: #4a5568;
+    margin-bottom: 12px;
 }
 
-.bma-summary-content {
-    display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 12px 16px;
-}
-
-.bma-summary-row {
-    display: contents;
-}
-
-.bma-summary-label {
-    color: #6b7280;
-    font-size: 13px;
+.bma-nights-badge {
+    background: #edf2f7;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
     font-weight: 500;
 }
 
-.bma-summary-value {
-    color: #111827;
-    font-size: 14px;
+/* Compact Details Section */
+.bma-compact-details {
+    margin-top: 12px;
+    margin-bottom: 16px;
+}
+
+.bma-compact-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 12px;
+    color: #4a5568;
+}
+
+.bma-compact-occupants {
+    font-weight: 500;
+    color: #2d3748;
 }
 
 .bma-muted {
