@@ -139,6 +139,35 @@ class BMA_Response_Formatter {
      */
     private function format_html_response($results, $search_method, $context = 'chrome-extension') {
         $booking_count = count($results);
+        $badge_count = 0;
+
+        // Calculate badge count (issues requiring attention)
+        foreach ($results as $result) {
+            foreach ($result['nights'] as $night) {
+                $has_matches = !empty($night['resos_matches']);
+                $match_count = $has_matches ? count($night['resos_matches']) : 0;
+                $has_package = isset($night['has_package']) && $night['has_package'];
+
+                // Critical: has package but no restaurant booking
+                if ($has_package && !$has_matches) {
+                    $badge_count++;
+                }
+
+                // Issue: multiple matches (needs manual selection)
+                if ($match_count > 1) {
+                    $badge_count++;
+                }
+
+                // Warning: single non-primary match (lower confidence)
+                if ($has_matches && $match_count === 1) {
+                    $primary_match = isset($night['resos_matches'][0]) ? $night['resos_matches'][0] : null;
+                    $is_primary = $primary_match && isset($primary_match['match_info']['is_primary']) && $primary_match['match_info']['is_primary'];
+                    if (!$is_primary) {
+                        $badge_count++;
+                    }
+                }
+            }
+        }
 
         // Start HTML output
         ob_start();
@@ -166,7 +195,8 @@ class BMA_Response_Formatter {
             'context' => $context,
             'html' => $html,
             'bookings_found' => $booking_count,
-            'search_method' => $search_method
+            'search_method' => $search_method,
+            'badge_count' => $badge_count
         );
     }
 

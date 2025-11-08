@@ -3,7 +3,7 @@
  * Plugin Name: Booking Match API
  * Plugin URI: https://yourwebsite.com
  * Description: Core booking matching engine and REST API for hotel/restaurant reservation matching. Provides matching logic and API endpoints for client applications.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Your Name
  * Author URI: https://yourwebsite.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BMA_VERSION', '1.2.0');
+define('BMA_VERSION', '1.2.1');
 define('BMA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BMA_PLUGIN_URL', plugin_dir_url(__FILE__));
 

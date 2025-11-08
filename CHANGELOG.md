@@ -2,6 +2,25 @@
 
 All notable changes to this plugin will be documented in this file.
 
+## [1.2.1] - 2025-11-08
+
+### Fixed
+- **Chrome Sidepanel Badge Counts**: Added `badge_count` to HTML response format (chrome-sidepanel context)
+  - Previously only JSON responses included badge counts
+  - Chrome extension sidepanel now receives badge counts for all tabs (Restaurant, Summary, Checks)
+  - Badge counts indicate issues requiring attention:
+    - Package nights without restaurant bookings (critical)
+    - Multiple matches requiring manual selection
+    - Non-primary (lower confidence) matches
+  - Enables proper icon badge display and tab prioritization in chrome-newbook-assistant extension
+
+### Technical Details
+- Updated `BMA_Response_Formatter::format_html_response()` to calculate and include badge_count
+- Badge calculation logic matches existing JSON response format for consistency
+- All three endpoints now properly return badge_count in all response formats
+
+---
+
 ## [1.1.0] - 2025-11-07
 
 ### Added
