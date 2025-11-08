@@ -217,14 +217,19 @@ if (!defined('ABSPATH')) {
 
                                     <!-- Update Booking Button -->
                                     <button class="bma-action-btn update"
-                                            onclick="toggleUpdateForm('<?php echo esc_js($night['date']); ?>', '<?php echo esc_js($match['resos_booking_id']); ?>')">
+                                            data-action="toggle-update"
+                                            data-date="<?php echo esc_attr($night['date']); ?>"
+                                            data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">
                                         ✏️ Update
                                     </button>
 
                                     <!-- Exclude Match Button (for non-primary or multiple matches) -->
                                     <?php if (!$match['match_info']['is_primary'] || $match_count > 1): ?>
                                         <button class="bma-action-btn exclude"
-                                                onclick="confirmExcludeMatch('<?php echo esc_js($match['resos_booking_id']); ?>', '<?php echo esc_js($booking['booking_id']); ?>', '<?php echo esc_js($match['guest_name']); ?>')">
+                                                data-action="exclude-match"
+                                                data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>"
+                                                data-hotel-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                                data-guest-name="<?php echo esc_attr($match['guest_name']); ?>">
                                             ✖ Exclude
                                         </button>
                                     <?php endif; ?>
@@ -281,8 +286,14 @@ if (!defined('ABSPATH')) {
                                     </div>
 
                                     <div class="bma-form-actions">
-                                        <button type="button" class="bma-btn-cancel" onclick="toggleUpdateForm('<?php echo esc_js($night['date']); ?>', '<?php echo esc_js($match['resos_booking_id']); ?>')">Cancel</button>
-                                        <button type="button" class="bma-btn-submit" onclick="submitUpdateBooking('<?php echo esc_js($night['date']); ?>', '<?php echo esc_js($match['resos_booking_id']); ?>')">Update Booking</button>
+                                        <button type="button" class="bma-btn-cancel"
+                                                data-action="toggle-update"
+                                                data-date="<?php echo esc_attr($night['date']); ?>"
+                                                data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">Cancel</button>
+                                        <button type="button" class="bma-btn-submit"
+                                                data-action="submit-update"
+                                                data-date="<?php echo esc_attr($night['date']); ?>"
+                                                data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">Update Booking</button>
                                     </div>
 
                                     <div class="bma-form-feedback"></div>
@@ -308,7 +319,8 @@ if (!defined('ABSPATH')) {
 
                         <!-- Create Booking Button -->
                         <button class="bma-action-btn create <?php echo $has_package_alert ? 'urgent' : ''; ?>"
-                                onclick="toggleCreateForm('<?php echo esc_js($night['date']); ?>')">
+                                data-action="toggle-create"
+                                data-date="<?php echo esc_attr($night['date']); ?>">
                             <?php echo $has_package_alert ? '+ Create Booking Now' : '+ Create Booking'; ?>
                         </button>
 
@@ -365,8 +377,12 @@ if (!defined('ABSPATH')) {
                             </div>
 
                             <div class="bma-form-actions">
-                                <button type="button" class="bma-btn-cancel" onclick="toggleCreateForm('<?php echo esc_js($night['date']); ?>')">Cancel</button>
-                                <button type="button" class="bma-btn-submit" onclick="submitCreateBooking('<?php echo esc_js($night['date']); ?>')">Create Booking</button>
+                                <button type="button" class="bma-btn-cancel"
+                                        data-action="toggle-create"
+                                        data-date="<?php echo esc_attr($night['date']); ?>">Cancel</button>
+                                <button type="button" class="bma-btn-submit"
+                                        data-action="submit-create"
+                                        data-date="<?php echo esc_attr($night['date']); ?>">Create Booking</button>
                             </div>
 
                             <div class="bma-form-feedback"></div>
@@ -1244,13 +1260,20 @@ function confirmExcludeMatch(resosBookingId, hotelBookingId, guestName) {
         <h4>Exclude This Match?</h4>
         <p>This will add a "NOT-#${hotelBookingId}" note to the ResOS booking for <strong>${guestName}</strong>, marking it as excluded from this hotel booking.</p>
         <div class="bma-modal-actions">
-            <button class="bma-btn-cancel" onclick="this.closest('.bma-modal-overlay').remove()">Cancel</button>
-            <button class="bma-action-btn exclude" onclick="executeExcludeMatch('${resosBookingId}', '${hotelBookingId}')">Exclude Match</button>
+            <button class="bma-btn-cancel" data-action="modal-cancel">Cancel</button>
+            <button class="bma-action-btn exclude" data-action="modal-exclude" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}">Exclude Match</button>
         </div>
     `;
 
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+
+    // Attach event listeners to modal buttons
+    const cancelBtn = modal.querySelector('[data-action="modal-cancel"]');
+    const excludeBtn = modal.querySelector('[data-action="modal-exclude"]');
+
+    cancelBtn.addEventListener('click', () => overlay.remove());
+    excludeBtn.addEventListener('click', () => executeExcludeMatch(resosBookingId, hotelBookingId));
 
     // Close on overlay click
     overlay.addEventListener('click', (e) => {
@@ -1290,26 +1313,40 @@ async function executeExcludeMatch(resosBookingId, hotelBookingId) {
                 <h4>✓ Match Excluded</h4>
                 <p>The NOT-#${hotelBookingId} note has been added to the ResOS booking.</p>
                 <div class="bma-modal-actions">
-                    <button class="bma-btn-submit" onclick="this.closest('.bma-modal-overlay').remove(); if (window.parent && window.parent.reloadRestaurantTab) window.parent.reloadRestaurantTab();">Close</button>
+                    <button class="bma-btn-submit" data-action="modal-close-reload">Close</button>
                 </div>
             `;
+            // Attach event listener to close button
+            const closeBtn = modal.querySelector('[data-action="modal-close-reload"]');
+            closeBtn.addEventListener('click', () => {
+                document.querySelector('.bma-modal-overlay').remove();
+                if (window.parent && window.parent.reloadRestaurantTab) {
+                    window.parent.reloadRestaurantTab();
+                }
+            });
         } else {
             modal.innerHTML = `
                 <h4>Error</h4>
                 <p>${result.message || 'Failed to exclude match'}</p>
                 <div class="bma-modal-actions">
-                    <button class="bma-btn-cancel" onclick="this.closest('.bma-modal-overlay').remove()">Close</button>
+                    <button class="bma-btn-cancel" data-action="modal-close">Close</button>
                 </div>
             `;
+            // Attach event listener to close button
+            const closeBtn = modal.querySelector('[data-action="modal-close"]');
+            closeBtn.addEventListener('click', () => document.querySelector('.bma-modal-overlay').remove());
         }
     } catch (error) {
         modal.innerHTML = `
             <h4>Error</h4>
             <p>${error.message}</p>
             <div class="bma-modal-actions">
-                <button class="bma-btn-cancel" onclick="this.closest('.bma-modal-overlay').remove()">Close</button>
+                <button class="bma-btn-cancel" data-action="modal-close">Close</button>
             </div>
         `;
+        // Attach event listener to close button
+        const closeBtn = modal.querySelector('[data-action="modal-close"]');
+        closeBtn.addEventListener('click', () => document.querySelector('.bma-modal-overlay').remove());
     }
 }
 
@@ -1320,4 +1357,41 @@ function showFeedback(feedbackElement, message, type) {
     feedbackElement.className = `bma-form-feedback ${type}`;
     feedbackElement.style.display = 'block';
 }
+
+// Attach event listeners using event delegation
+document.addEventListener('DOMContentLoaded', function() {
+    // Use event delegation on document body for all button clicks
+    document.body.addEventListener('click', function(event) {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
+
+        const action = button.dataset.action;
+
+        switch(action) {
+            case 'toggle-create':
+                toggleCreateForm(button.dataset.date);
+                break;
+
+            case 'toggle-update':
+                toggleUpdateForm(button.dataset.date, button.dataset.resosBookingId);
+                break;
+
+            case 'submit-create':
+                submitCreateBooking(button.dataset.date);
+                break;
+
+            case 'submit-update':
+                submitUpdateBooking(button.dataset.date, button.dataset.resosBookingId);
+                break;
+
+            case 'exclude-match':
+                confirmExcludeMatch(
+                    button.dataset.resosBookingId,
+                    button.dataset.hotelBookingId,
+                    button.dataset.guestName
+                );
+                break;
+        }
+    });
+});
 </script>
