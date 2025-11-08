@@ -75,6 +75,19 @@ class BMA_Matcher {
         // Fetch Resos bookings for this date
         $resos_bookings = $this->fetch_resos_bookings($date);
 
+        // Fetch ALL hotel bookings for this date (for "matched elsewhere" checking)
+        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date);
+
+        // Build array of all hotel booking IDs for this date (excluding current booking)
+        $current_booking_id = $booking['booking_id'] ?? '';
+        $other_booking_ids = array();
+        foreach ($all_hotel_bookings as $hb) {
+            $hb_id = $hb['booking_id'] ?? '';
+            if (!empty($hb_id) && $hb_id != $current_booking_id) {
+                $other_booking_ids[] = strval($hb_id);
+            }
+        }
+
         // Check if this booking has a package for this date
         $has_package = $this->check_has_package($booking, $date);
 
@@ -93,7 +106,7 @@ class BMA_Matcher {
         $all_matches = array();
 
         foreach ($resos_bookings as $resos_booking) {
-            $match_info = $this->match_resos_to_hotel($resos_booking, $booking, $date);
+            $match_info = $this->match_resos_to_hotel($resos_booking, $booking, $date, $other_booking_ids);
 
             if ($match_info['matched']) {
                 $result['match_count']++;
@@ -156,8 +169,13 @@ class BMA_Matcher {
     /**
      * Match Resos booking to hotel booking (reuse existing logic)
      * Made public so other plugins can use this matcher
+     *
+     * @param array $resos_booking Resos booking data
+     * @param array $hotel_booking Hotel booking data
+     * @param string $date Date being matched (YYYY-MM-DD)
+     * @param array $other_booking_ids Array of OTHER hotel booking IDs for this date (for "matched elsewhere" checking)
      */
-    public function match_resos_to_hotel($resos_booking, $hotel_booking, $date) {
+    public function match_resos_to_hotel($resos_booking, $hotel_booking, $date, $other_booking_ids = array()) {
         $hotel_booking_id = $hotel_booking['booking_id'] ?? '';
         $hotel_ref = $hotel_booking['booking_reference_id'] ?? '';
         $hotel_room = $hotel_booking['site_name'] ?? '';
@@ -174,6 +192,25 @@ class BMA_Matcher {
                     'excluded' => true,
                     'exclusion_reason' => 'Manual exclusion note found'
                 );
+            }
+        }
+
+        // Check if this Resos booking's "Booking #" field matches ANY OTHER hotel booking ID
+        // If so, it's "matched elsewhere" and should not be considered for this booking
+        if (!empty($other_booking_ids)) {
+            $custom_fields = $resos_booking['customFields'] ?? array();
+            foreach ($custom_fields as $field) {
+                if (($field['name'] ?? '') === 'Booking #') {
+                    $value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
+                    if (!empty($value) && in_array(strval($value), $other_booking_ids, true)) {
+                        // This Resos booking is matched to a different hotel booking
+                        return array(
+                            'matched' => false,
+                            'matched_elsewhere' => true,
+                            'matched_to_booking_id' => $value
+                        );
+                    }
+                }
             }
         }
 
@@ -396,6 +433,54 @@ class BMA_Matcher {
         }
 
         return $filtered;
+    }
+
+    /**
+     * Fetch ALL hotel bookings for a specific date
+     * Used for "matched elsewhere" checking
+     */
+    private function fetch_hotel_bookings_for_date($date) {
+        // Get NewBook API credentials
+        $username = get_option('hotel_booking_newbook_username');
+        $password = get_option('hotel_booking_newbook_password');
+        $api_key = get_option('hotel_booking_newbook_api_key');
+        $region = get_option('hotel_booking_newbook_region', 'au');
+        $hotel_id = get_option('hotel_booking_default_hotel_id', '1');
+
+        if (empty($username) || empty($password) || empty($api_key)) {
+            return array();
+        }
+
+        // Build NewBook API URL
+        $url = "https://api.{$region}.newbook.cloud/rest/v1/site/{$hotel_id}/bookings";
+        $url .= '?from_date=' . urlencode($date);
+        $url .= '&to_date=' . urlencode($date);
+        $url .= '&expand=guests,guests.contact_details,tariffs_quoted,inventory_items';
+
+        $args = array(
+            'headers' => array(
+                'Authorization' => 'Basic ' . base64_encode($username . ':' . $password),
+                'x-api-key' => $api_key
+            ),
+            'timeout' => 30
+        );
+
+        $response = wp_remote_get($url, $args);
+
+        if (is_wp_error($response)) {
+            error_log('BMA_Matcher: Failed to fetch hotel bookings for date ' . $date . ': ' . $response->get_error_message());
+            return array();
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+
+        if (!is_array($data)) {
+            error_log('BMA_Matcher: Invalid response when fetching hotel bookings for date ' . $date);
+            return array();
+        }
+
+        return $data;
     }
 
     /**

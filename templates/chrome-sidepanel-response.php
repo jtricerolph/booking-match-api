@@ -206,39 +206,44 @@ if (!defined('ABSPATH')) {
                                             data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                             data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">
                                         <?php if ($match['match_info']['is_primary']): ?>
-                                            📊 View Match
+                                            <span class="material-symbols-outlined">bar_chart</span> View Match
                                         <?php else: ?>
-                                            🔍 Check Match
+                                            <span class="material-symbols-outlined">search</span> Check Match
                                         <?php endif; ?>
                                     </button>
 
                                     <?php if ($match['match_info']['is_primary'] && !empty($match['resos_booking_id']) && !empty($match['restaurant_id'])): ?>
                                         <a href="https://app.resos.com/<?php echo esc_attr($match['restaurant_id']); ?>/bookings/timetable/<?php echo esc_attr($night['date']); ?>/<?php echo esc_attr($match['resos_booking_id']); ?>"
                                            class="bma-action-link bma-resos-link" target="_blank">
-                                            View in ResOS
+                                            <span class="material-symbols-outlined">visibility</span> View in ResOS
                                         </a>
                                     <?php endif; ?>
 
-                                    <!-- Update Booking Button -->
-                                    <button class="bma-action-btn update"
-                                            data-action="toggle-update"
-                                            data-date="<?php echo esc_attr($night['date']); ?>"
-                                            data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">
-                                        ✏️ Update
-                                    </button>
+                                    <!-- Update Booking Button (only for primary matches with potential updates) -->
+                                    <?php if ($match['match_info']['is_primary']): ?>
+                                        <button class="bma-action-btn update"
+                                                data-action="toggle-update"
+                                                data-date="<?php echo esc_attr($night['date']); ?>"
+                                                data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">
+                                            <span class="material-symbols-outlined">edit</span> Update
+                                        </button>
+                                    <?php endif; ?>
 
-                                    <!-- Exclude Match Button (for non-confirmed matches) -->
+                                    <!-- Exclude Match Button (for non-confirmed, non-matched-elsewhere matches) -->
                                     <?php
-                                    // Don't show Exclude button for confirmed matches (booking_id match type)
+                                    // Don't show Exclude button for:
+                                    // 1. Confirmed matches (booking_id match type)
+                                    // 2. Matches that are matched to another booking (matched_elsewhere)
                                     $is_confirmed = isset($match['match_info']['match_type']) && $match['match_info']['match_type'] === 'booking_id';
-                                    if (!$is_confirmed):
+                                    $is_matched_elsewhere = isset($match['match_info']['matched_elsewhere']) && $match['match_info']['matched_elsewhere'];
+                                    if (!$is_confirmed && !$is_matched_elsewhere):
                                     ?>
                                         <button class="bma-action-btn exclude"
                                                 data-action="exclude-match"
                                                 data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>"
                                                 data-hotel-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                                 data-guest-name="<?php echo esc_attr($match['guest_name']); ?>">
-                                            ✖ Exclude
+                                            <span class="material-symbols-outlined">close</span> Exclude
                                         </button>
                                     <?php endif; ?>
                                 </div>
@@ -871,6 +876,25 @@ if (!defined('ABSPATH')) {
 
 .bma-action-btn.exclude:hover {
     background: #dc2626;
+}
+
+/* Material Symbols icons in buttons and links */
+.bma-action-btn .material-symbols-outlined,
+.bma-action-link .material-symbols-outlined {
+    font-size: 16px;
+    vertical-align: middle;
+    margin-right: 4px;
+    line-height: 1;
+}
+
+/* Ensure consistent heights for all action buttons and links */
+.bma-action-btn,
+.bma-action-link {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.5;
 }
 
 @keyframes pulse {
