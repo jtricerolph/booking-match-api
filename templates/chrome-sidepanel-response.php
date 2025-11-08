@@ -199,14 +199,18 @@ if (!defined('ABSPATH')) {
                                 </div>
 
                                 <div class="bma-match-actions">
-                                    <a href="<?php echo esc_url($this->generate_deep_link($booking['booking_id'], $night['date'], $match['resos_booking_id'])); ?>"
-                                       class="bma-action-link" target="_blank">
+                                    <!-- View Comparison Button (primary action) -->
+                                    <button class="bma-action-btn view-comparison"
+                                            data-action="view-comparison"
+                                            data-date="<?php echo esc_attr($night['date']); ?>"
+                                            data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                            data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">
                                         <?php if ($match['match_info']['is_primary']): ?>
-                                            View Match
+                                            📊 View Match
                                         <?php else: ?>
-                                            Check Match
+                                            🔍 Check Match
                                         <?php endif; ?>
-                                    </a>
+                                    </button>
 
                                     <?php if ($match['match_info']['is_primary'] && !empty($match['resos_booking_id']) && !empty($match['restaurant_id'])): ?>
                                         <a href="https://app.resos.com/<?php echo esc_attr($match['restaurant_id']); ?>/bookings/timetable/<?php echo esc_attr($night['date']); ?>/<?php echo esc_attr($match['resos_booking_id']); ?>"
@@ -233,6 +237,13 @@ if (!defined('ABSPATH')) {
                                             ✖ Exclude
                                         </button>
                                     <?php endif; ?>
+                                </div>
+
+                                <!-- Comparison View Container (Initially Hidden) -->
+                                <div id="comparison-<?php echo esc_attr($night['date']); ?>-<?php echo esc_attr($match['resos_booking_id']); ?>"
+                                     class="bma-comparison-container"
+                                     style="display:none;">
+                                    <div class="bma-comparison-loading">Loading comparison...</div>
                                 </div>
 
                                 <!-- Update Booking Form (Initially Hidden) -->
@@ -1058,6 +1069,150 @@ if (!defined('ABSPATH')) {
     gap: 8px;
     justify-content: flex-end;
 }
+
+/* Comparison View Styles */
+.bma-action-btn.view-comparison {
+    background: #667eea;
+}
+
+.bma-action-btn.view-comparison:hover {
+    background: #5568d3;
+}
+
+.bma-comparison-container {
+    margin-top: 16px;
+    animation: slideDown 0.3s ease-out;
+}
+
+.bma-comparison-loading {
+    text-align: center;
+    padding: 20px;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.bma-comparison-error {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 12px;
+    border-radius: 4px;
+    margin: 12px 0;
+    border: 1px solid #ef4444;
+}
+
+.comparison-row-content {
+    background: #fff;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.comparison-table-wrapper {
+    overflow-x: auto;
+}
+
+.comparison-header {
+    background: #667eea;
+    color: white;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.comparison-table thead th {
+    background: #f3f4f6;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #d1d5db;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.comparison-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+}
+
+.comparison-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.comparison-table tbody td:first-child {
+    font-weight: 600;
+    color: #374151;
+    background: #f9fafb;
+    width: 20%;
+}
+
+.comparison-table tbody td:nth-child(2),
+.comparison-table tbody td:nth-child(3) {
+    width: 27%;
+}
+
+.comparison-table tbody td:nth-child(4) {
+    width: 26%;
+    background: #fffbeb;
+}
+
+/* Match highlighting - green background */
+.comparison-table tbody tr.match-row {
+    background: #d4edda;
+}
+
+.comparison-table tbody tr.match-row td:nth-child(4) {
+    background: #d4edda;
+}
+
+/* Suggestion cell highlighting */
+.comparison-table .suggestion-cell.has-suggestion {
+    background: #fff3cd;
+    font-weight: 500;
+}
+
+/* Material Symbols icons in comparison table */
+.comparison-table .material-symbols-outlined {
+    font-size: 16px;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+/* Empty values styling */
+.comparison-table em {
+    color: #adb5bd;
+    font-style: italic;
+}
+
+/* Close comparison button */
+.bma-close-comparison {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 0 0 6px 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 8px;
+}
+
+.bma-close-comparison:hover {
+    background: #4b5563;
+}
 </style>
 
 <!-- Load Material Symbols font for status icons -->
@@ -1358,6 +1513,199 @@ function showFeedback(feedbackElement, message, type) {
     feedbackElement.style.display = 'block';
 }
 
+// Load and display comparison view
+async function loadComparisonView(date, bookingId, resosBookingId) {
+    const containerId = 'comparison-' + date + '-' + resosBookingId;
+    const container = document.getElementById(containerId);
+
+    if (!container) return;
+
+    // If already visible, hide it
+    if (container.style.display === 'block') {
+        container.style.display = 'none';
+        return;
+    }
+
+    // Show loading state
+    container.innerHTML = '<div class="bma-comparison-loading">Loading comparison data...</div>';
+    container.style.display = 'block';
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    try {
+        const config = getAPIConfig();
+        const response = await fetch(`${config.baseUrl}/comparison`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': config.authHeader
+            },
+            body: JSON.stringify({
+                booking_id: bookingId,
+                resos_booking_id: resosBookingId,
+                date: date
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.comparison) {
+            const comparisonHTML = buildComparisonHTML(result.comparison, date, resosBookingId);
+            container.innerHTML = comparisonHTML;
+        } else {
+            container.innerHTML = `
+                <div class="bma-comparison-error">
+                    Error loading comparison: ${result.message || 'Unknown error'}
+                </div>
+                <button class="bma-close-comparison" data-action="close-comparison" data-container-id="${containerId}">Close</button>
+            `;
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div class="bma-comparison-error">
+                Error: ${error.message}
+            </div>
+            <button class="bma-close-comparison" data-action="close-comparison" data-container-id="${containerId}">Close</button>
+        `;
+    }
+}
+
+// Build comparison HTML from comparison data
+function buildComparisonHTML(data, date, resosBookingId) {
+    const hotel = data.hotel || {};
+    const resos = data.resos || {};
+    const matches = data.matches || {};
+    const suggestions = data.suggested_updates || {};
+
+    let html = '<div class="comparison-row-content">';
+    html += '<div class="comparison-table-wrapper">';
+    html += '<div class="comparison-header">Match Comparison</div>';
+    html += '<table class="comparison-table">';
+    html += '<thead><tr>';
+    html += '<th>Field</th>';
+    html += '<th>Newbook</th>';
+    html += '<th>ResOS</th>';
+    html += '<th style="background-color: #fff3cd;">Suggested Updates</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+
+    // Guest Name row
+    html += buildComparisonRow('Guest Name', 'name', hotel.name, resos.name, matches.name, suggestions.name);
+
+    // Phone row
+    html += buildComparisonRow('Phone', 'phone', hotel.phone, resos.phone, matches.phone, suggestions.phone);
+
+    // Email row
+    html += buildComparisonRow('Email', 'email', hotel.email, resos.email, matches.email, suggestions.email);
+
+    // People row
+    html += buildComparisonRow('People', 'people', hotel.people, resos.people, matches.people, suggestions.people);
+
+    // Tariff/Package row
+    html += buildComparisonRow('Tariff/Package', 'dbb', hotel.rate_type, resos.dbb, matches.dbb, suggestions.dbb);
+
+    // Booking # row
+    html += buildComparisonRow('Booking #', 'booking_ref', hotel.booking_id, resos.booking_ref, matches.booking_ref, suggestions.booking_ref);
+
+    // Hotel Guest row
+    const hotelGuestValue = hotel.is_hotel_guest ? 'Yes' : '-';
+    html += buildComparisonRow('Hotel Guest', 'hotel_guest', hotelGuestValue, resos.hotel_guest, false, suggestions.hotel_guest);
+
+    // Status row
+    const statusIcon = getStatusIcon(resos.status || 'request');
+    const resosStatusHTML = `<span class="material-symbols-outlined">${statusIcon}</span> ${escapeHTML((resos.status || 'request').charAt(0).toUpperCase() + (resos.status || 'request').slice(1))}`;
+    html += buildComparisonRow('Status', 'status', hotel.status, resosStatusHTML, false, suggestions.status, true);
+
+    html += '</tbody>';
+    html += '</table>';
+    html += '</div>'; // comparison-table-wrapper
+
+    // Add close button
+    const containerId = 'comparison-' + date + '-' + resosBookingId;
+    html += `<button class="bma-close-comparison" data-action="close-comparison" data-container-id="${containerId}">Close Comparison</button>`;
+
+    html += '</div>'; // comparison-row-content
+
+    return html;
+}
+
+// Build a single comparison table row
+function buildComparisonRow(label, field, hotelValue, resosValue, isMatch, suggestionValue, isHTML = false) {
+    const matchClass = isMatch ? ' class="match-row"' : '';
+    const hasSuggestion = suggestionValue !== undefined && suggestionValue !== null;
+    const suggestionCellClass = hasSuggestion ? 'suggestion-cell has-suggestion' : 'suggestion-cell';
+
+    let hotelDisplay = hotelValue !== undefined && hotelValue !== null && hotelValue !== ''
+        ? (isHTML ? hotelValue : escapeHTML(String(hotelValue)))
+        : '<em style="color: #adb5bd;">-</em>';
+
+    let resosDisplay = resosValue !== undefined && resosValue !== null && resosValue !== ''
+        ? (isHTML ? resosValue : escapeHTML(String(resosValue)))
+        : '<em style="color: #adb5bd;">-</em>';
+
+    let suggestionDisplay;
+    if (!hasSuggestion) {
+        suggestionDisplay = '<em style="color: #adb5bd;">-</em>';
+    } else if (suggestionValue === '') {
+        suggestionDisplay = '<em style="color: #999;">(Remove)</em>';
+    } else {
+        suggestionDisplay = escapeHTML(String(suggestionValue));
+    }
+
+    let html = `<tr${matchClass}>`;
+    html += `<td><strong>${escapeHTML(label)}</strong></td>`;
+    html += `<td>${hotelDisplay}</td>`;
+    html += `<td>${resosDisplay}</td>`;
+    html += `<td class="${suggestionCellClass}">${suggestionDisplay}</td>`;
+    html += '</tr>';
+
+    return html;
+}
+
+// Get status icon for Material Symbols
+function getStatusIcon(status) {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+        case 'approved':
+        case 'confirmed':
+            return 'check_circle';
+        case 'request':
+            return 'help';
+        case 'declined':
+            return 'cancel';
+        case 'waitlist':
+            return 'schedule';
+        case 'arrived':
+            return 'login';
+        case 'seated':
+            return 'event_seat';
+        case 'left':
+            return 'logout';
+        case 'no_show':
+        case 'no-show':
+            return 'person_off';
+        case 'canceled':
+        case 'cancelled':
+            return 'block';
+        default:
+            return 'help';
+    }
+}
+
+// Escape HTML to prevent XSS
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Close comparison view
+function closeComparison(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
 // Attach event listeners using event delegation
 document.addEventListener('DOMContentLoaded', function() {
     // Use event delegation on document body for all button clicks
@@ -1390,6 +1738,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     button.dataset.hotelBookingId,
                     button.dataset.guestName
                 );
+                break;
+
+            case 'view-comparison':
+                loadComparisonView(
+                    button.dataset.date,
+                    button.dataset.bookingId,
+                    button.dataset.resosBookingId
+                );
+                break;
+
+            case 'close-comparison':
+                closeComparison(button.dataset.containerId);
                 break;
         }
     });
