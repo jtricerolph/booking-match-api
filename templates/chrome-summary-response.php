@@ -99,7 +99,7 @@ if (empty($bookings)) {
                         ?>
                             <?php if ($match_count === 0): ?>
                                 <!-- No booking -->
-                                <div class="night-row <?php echo $has_package ? 'clickable-issue' : ''; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" <?php echo $has_package ? 'title="Click to view in Restaurant tab"' : ''; ?>>
+                                <div class="night-row clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-status">No booking</span>
                                     <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
