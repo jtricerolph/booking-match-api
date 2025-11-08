@@ -16,6 +16,11 @@ if (!defined('ABSPATH')) {
 class BMA_Matcher {
 
     /**
+     * Cache for hotel bookings by date to prevent duplicate API calls
+     */
+    private $hotel_bookings_cache = array();
+
+    /**
      * Match a booking across all its nights
      *
      * @param array $booking NewBook booking data
@@ -438,8 +443,15 @@ class BMA_Matcher {
     /**
      * Fetch ALL hotel bookings for a specific date
      * Used for "matched elsewhere" checking
+     * Uses caching to prevent duplicate API calls for the same date
      */
     private function fetch_hotel_bookings_for_date($date) {
+        // Check cache first
+        if (isset($this->hotel_bookings_cache[$date])) {
+            error_log('BMA_Matcher: Using cached hotel bookings for date ' . $date);
+            return $this->hotel_bookings_cache[$date];
+        }
+
         // Get NewBook API credentials
         $username = get_option('hotel_booking_newbook_username');
         $password = get_option('hotel_booking_newbook_password');
@@ -465,10 +477,12 @@ class BMA_Matcher {
             'timeout' => 30
         );
 
+        error_log('BMA_Matcher: Fetching hotel bookings for date ' . $date . ' from NewBook API');
         $response = wp_remote_get($url, $args);
 
         if (is_wp_error($response)) {
             error_log('BMA_Matcher: Failed to fetch hotel bookings for date ' . $date . ': ' . $response->get_error_message());
+            $this->hotel_bookings_cache[$date] = array(); // Cache empty result to prevent retry
             return array();
         }
 
@@ -477,8 +491,13 @@ class BMA_Matcher {
 
         if (!is_array($data)) {
             error_log('BMA_Matcher: Invalid response when fetching hotel bookings for date ' . $date);
+            $this->hotel_bookings_cache[$date] = array(); // Cache empty result to prevent retry
             return array();
         }
+
+        // Cache the result
+        $this->hotel_bookings_cache[$date] = $data;
+        error_log('BMA_Matcher: Cached ' . count($data) . ' hotel bookings for date ' . $date);
 
         return $data;
     }
