@@ -437,6 +437,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $nights = $this->calculate_nights($arrival_date, $departure_date);
         $status = $booking['status'] ?? 'unknown';
 
+        // Debug: Log available booking keys
+        error_log("BMA Summary: Booking #$booking_id keys: " . implode(', ', array_keys($booking)));
+        error_log("BMA Summary: Booking #$booking_id status field = " . var_export($status, true));
+        if (isset($booking['guests'])) {
+            error_log("BMA Summary: Booking #$booking_id has " . count($booking['guests']) . " guests");
+        }
+        if (isset($booking['rooms'])) {
+            error_log("BMA Summary: Booking #$booking_id has " . count($booking['rooms']) . " rooms");
+        }
+
         // Extract occupants
         $occupants = $this->extract_occupants($booking);
 
