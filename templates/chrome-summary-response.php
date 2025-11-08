@@ -109,10 +109,10 @@ if (empty($bookings)) {
 </div>
 
 <script>
-// Attach event listeners after DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+// Attach event listeners immediately (this script runs when HTML is inserted)
+(function() {
     // Add click handlers to booking headers
-    const headers = document.querySelectorAll('.booking-header');
+    const headers = document.querySelectorAll('.bma-summary .booking-header');
     headers.forEach(header => {
         header.addEventListener('click', function() {
             const card = this.closest('.booking-card');
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Add click handlers to "Open in NewBook" buttons
-    const openButtons = document.querySelectorAll('.open-booking-btn');
+    const openButtons = document.querySelectorAll('.bma-summary .open-booking-btn');
     openButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.stopPropagation(); // Prevent header click event
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
             chrome.tabs.create({ url: url });
         });
     });
-});
+})();
 </script>
 
 <style>
