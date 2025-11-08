@@ -362,23 +362,53 @@ class BMA_Booking_Actions {
             );
 
             if ($is_multiple_choice) {
-                // For multiple choice fields, find the choice ID
-                $choice_id = null;
-                if (isset($field_definition['multipleChoiceSelections']) && is_array($field_definition['multipleChoiceSelections'])) {
-                    foreach ($field_definition['multipleChoiceSelections'] as $choice) {
-                        if (isset($choice['name']) && $choice['name'] === $new_value) {
-                            $choice_id = $choice['_id'];
-                            break;
+                // Special handling for multiselect checkboxes (e.g., dietary requirements)
+                if ($field_type === 'checkbox') {
+                    // Expect comma-separated choice IDs
+                    $selected_ids = array_filter(array_map('trim', explode(',', $new_value)));
+                    $choice_objects = array();
+
+                    if (isset($field_definition['multipleChoiceSelections']) && is_array($field_definition['multipleChoiceSelections'])) {
+                        foreach ($selected_ids as $selected_id) {
+                            // Match by choice ID
+                            foreach ($field_definition['multipleChoiceSelections'] as $choice) {
+                                if (isset($choice['_id']) && $choice['_id'] === $selected_id) {
+                                    $choice_objects[] = array(
+                                        '_id' => $choice['_id'],
+                                        'name' => $choice['name'],
+                                        'value' => true
+                                    );
+                                    break;
+                                }
+                            }
                         }
                     }
-                }
 
-                if ($choice_id) {
-                    $field_value_data['value'] = $choice_id;
-                    $field_value_data['multipleChoiceValueName'] = $new_value;
+                    if (!empty($choice_objects)) {
+                        $field_value_data['value'] = $choice_objects;  // Array of objects for multiselect
+                    } else {
+                        error_log("BMA: WARNING: No valid choices found for checkbox field {$field_definition['name']}");
+                        continue;
+                    }
                 } else {
-                    error_log("BMA: WARNING: Could not find choice ID for {$field_definition['name']} with value '{$new_value}'");
-                    continue;
+                    // For single choice fields (radio/dropdown), find the choice ID
+                    $choice_id = null;
+                    if (isset($field_definition['multipleChoiceSelections']) && is_array($field_definition['multipleChoiceSelections'])) {
+                        foreach ($field_definition['multipleChoiceSelections'] as $choice) {
+                            if (isset($choice['name']) && $choice['name'] === $new_value) {
+                                $choice_id = $choice['_id'];
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($choice_id) {
+                        $field_value_data['value'] = $choice_id;
+                        $field_value_data['multipleChoiceValueName'] = $new_value;
+                    } else {
+                        error_log("BMA: WARNING: Could not find choice ID for {$field_definition['name']} with value '{$new_value}'");
+                        continue;
+                    }
                 }
             } else {
                 // For regular fields, just set the value
