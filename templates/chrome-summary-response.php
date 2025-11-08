@@ -108,7 +108,7 @@ if (empty($bookings)) {
                                     </span>
                                 </div>
                                 <?php if ($has_package): ?>
-                                    <div class="night-alert critical-alert clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
+                                    <div class="night-alert critical-alert">
                                         <span class="material-symbols-outlined">flag</span>
                                         Package booking - missing reservation
                                     </div>
@@ -129,7 +129,7 @@ if (empty($bookings)) {
                                     </span>
                                 </div>
                                 <?php if (!$is_primary): ?>
-                                    <div class="night-alert warning-alert clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
+                                    <div class="night-alert warning-alert">
                                         <span class="material-symbols-outlined">warning</span>
                                         Suggested match - low confidence
                                     </div>
@@ -149,7 +149,7 @@ if (empty($bookings)) {
                                         </span>
                                     </div>
                                 <?php endforeach; ?>
-                                <div class="night-alert warning-alert clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
+                                <div class="night-alert warning-alert">
                                     <span class="material-symbols-outlined">warning</span>
                                     Multiple matches - needs review
                                 </div>
