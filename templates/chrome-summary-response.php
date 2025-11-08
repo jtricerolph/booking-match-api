@@ -87,12 +87,6 @@ if (!defined('ABSPATH')) {
                 </div>
             <?php endforeach; ?>
         </div>
-
-        <div class="bma-summary-footer">
-            <div class="bma-refresh-info">
-                Auto-refreshing every 60 seconds
-            </div>
-        </div>
     <?php endif; ?>
 </div>
 
@@ -273,18 +267,5 @@ if (!defined('ABSPATH')) {
 
 .bma-action-btn:hover {
     background: #5568d3;
-}
-
-.bma-summary-footer {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid #e5e7eb;
-}
-
-.bma-refresh-info {
-    text-align: center;
-    font-size: 12px;
-    color: #9ca3af;
-    font-style: italic;
 }
 </style>
