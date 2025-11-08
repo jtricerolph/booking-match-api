@@ -48,12 +48,12 @@ if (empty($bookings)) {
                 </div>
 
                 <span class="expand-icon">▼</span>
-            </div>
 
-            <!-- Time Since Placed -->
-            <?php if (!empty($booking['booking_placed'])): ?>
-                <div class="time-since-placed" data-placed-time="<?php echo esc_attr($booking['booking_placed']); ?>"></div>
-            <?php endif; ?>
+                <!-- Time Since Placed -->
+                <?php if (!empty($booking['booking_placed'])): ?>
+                    <div class="time-since-placed" data-placed-time="<?php echo esc_attr($booking['booking_placed']); ?>"></div>
+                <?php endif; ?>
+            </div>
 
             <!-- Expanded Details -->
             <div class="booking-details" id="details-<?php echo esc_attr($booking['booking_id']); ?>" style="display: none;">
@@ -99,7 +99,7 @@ if (empty($bookings)) {
                         ?>
                             <?php if ($match_count === 0): ?>
                                 <!-- No booking -->
-                                <div class="night-row">
+                                <div class="night-row <?php echo $has_package ? 'clickable-issue' : ''; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" <?php echo $has_package ? 'title="Click to view in Restaurant tab"' : ''; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-status">No booking</span>
                                     <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
@@ -107,7 +107,7 @@ if (empty($bookings)) {
                                     </span>
                                 </div>
                                 <?php if ($has_package): ?>
-                                    <div class="night-alert critical-alert">
+                                    <div class="night-alert critical-alert clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
                                         <span class="material-symbols-outlined">flag</span>
                                         Package booking - missing reservation
                                     </div>
@@ -120,7 +120,7 @@ if (empty($bookings)) {
                                 $time = date('H:i', strtotime($match['time']));
                                 $pax = $match['num_guests'];
                                 ?>
-                                <div class="night-row">
+                                <div class="night-row <?php echo !$is_primary ? 'clickable-issue' : ''; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" <?php echo !$is_primary ? 'title="Click to view in Restaurant tab"' : ''; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                     <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
@@ -128,7 +128,7 @@ if (empty($bookings)) {
                                     </span>
                                 </div>
                                 <?php if (!$is_primary): ?>
-                                    <div class="night-alert warning-alert">
+                                    <div class="night-alert warning-alert clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
                                         <span class="material-symbols-outlined">warning</span>
                                         Suggested match - low confidence
                                     </div>
@@ -140,7 +140,7 @@ if (empty($bookings)) {
                                     $time = date('H:i', strtotime($match['time']));
                                     $pax = $match['num_guests'];
                                 ?>
-                                    <div class="night-row">
+                                    <div class="night-row clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
                                         <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                         <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                         <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
@@ -148,7 +148,7 @@ if (empty($bookings)) {
                                         </span>
                                     </div>
                                 <?php endforeach; ?>
-                                <div class="night-alert warning-alert">
+                                <div class="night-alert warning-alert clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
                                     <span class="material-symbols-outlined">warning</span>
                                     Multiple matches - needs review
                                 </div>
@@ -240,6 +240,7 @@ if (empty($bookings)) {
     display: flex;
     align-items: center;
     gap: 12px;
+    position: relative;
 }
 
 .booking-main-info {
@@ -433,6 +434,21 @@ if (empty($bookings)) {
 .warning-alert {
     background: #fef3c7;
     color: #92400e;
+}
+
+/* Clickable Issue Rows */
+.clickable-issue {
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.clickable-issue:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    transform: translateX(2px);
+}
+
+.clickable-issue:active {
+    transform: translateX(0);
 }
 
 /* Checks Section */
