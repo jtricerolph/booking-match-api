@@ -219,16 +219,6 @@ if (!defined('ABSPATH')) {
                                         </a>
                                     <?php endif; ?>
 
-                                    <!-- Update Booking Button (only for primary matches with potential updates) -->
-                                    <?php if ($match['match_info']['is_primary']): ?>
-                                        <button class="bma-action-btn update"
-                                                data-action="toggle-update"
-                                                data-date="<?php echo esc_attr($night['date']); ?>"
-                                                data-resos-booking-id="<?php echo esc_attr($match['resos_booking_id']); ?>">
-                                            <span class="material-symbols-outlined">edit</span> Update
-                                        </button>
-                                    <?php endif; ?>
-
                                     <!-- Exclude Match Button (for non-confirmed, non-matched-elsewhere matches) -->
                                     <?php
                                     // Don't show Exclude button for:
@@ -545,29 +535,29 @@ if (!defined('ABSPATH')) {
 
 .bma-night {
     background: #f9fafb;
-    border-left: 4px solid #d1d5db;
-    padding: 16px;
+    border-top: 4px solid #d1d5db;
+    padding: 12px 4px;
     margin-bottom: 16px;
     border-radius: 6px;
 }
 
 .bma-night.matched {
-    border-left-color: #10b981;
+    border-top-color: #10b981;
     background: #f0fdf4;
 }
 
 .bma-night.unmatched {
-    border-left-color: #60a5fa;
+    border-top-color: #60a5fa;
     background: #eff6ff;
 }
 
 .bma-night.has-warnings {
-    border-left-color: #f59e0b;
+    border-top-color: #f59e0b;
     background: #fffbeb;
 }
 
 .bma-night.has-package-alert {
-    border-left-color: #ef4444;
+    border-top-color: #ef4444;
     background: #fee2e2;
 }
 
@@ -672,14 +662,18 @@ if (!defined('ABSPATH')) {
 }
 
 .bma-action-link {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 8px 16px;
+    min-height: 36px;
     background: #667eea;
     color: white !important;
     text-decoration: none;
     border-radius: 4px;
     font-size: 13px;
     font-weight: 500;
+    line-height: 1.5;
     transition: background 0.2s;
 }
 
@@ -770,7 +764,7 @@ if (!defined('ABSPATH')) {
 .bma-match-item {
     background: #fff;
     border: 1px solid #e5e7eb;
-    padding: 12px;
+    padding: 12px 6px;
     margin-bottom: 10px;
     border-radius: 6px;
 }
@@ -826,14 +820,18 @@ if (!defined('ABSPATH')) {
 
 /* Action Buttons */
 .bma-action-btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 8px 16px;
+    min-height: 36px;
     background: #667eea;
     color: white;
     border: none;
     border-radius: 4px;
     font-size: 13px;
     font-weight: 500;
+    line-height: 1.5;
     cursor: pointer;
     transition: background 0.2s;
     margin-right: 8px;
@@ -1236,7 +1234,8 @@ if (!defined('ABSPATH')) {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 8px 14px;
+    padding: 8px 16px;
+    min-height: 36px;
     font-size: 13px;
     font-weight: 500;
     border: none;
@@ -1244,18 +1243,33 @@ if (!defined('ABSPATH')) {
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+    line-height: 1.5;
 }
 
 .comparison-actions-buttons button .material-symbols-outlined {
     font-size: 16px;
 }
 
-.btn-close-comparison {
+.btn-close-comparison,
+.bma-close-comparison {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    min-height: 36px;
     background: #6b7280;
     color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    line-height: 1.5;
 }
 
-.btn-close-comparison:hover {
+.btn-close-comparison:hover,
+.bma-close-comparison:hover {
     background: #4b5563;
 }
 
