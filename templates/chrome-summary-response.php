@@ -34,14 +34,14 @@ if (empty($bookings)) {
                 <div class="booking-badges">
                     <?php if ($booking['critical_count'] > 0): ?>
                         <span class="issue-badge critical-badge" title="Critical issues">
-                            <span class="material-symbols-outlined">flag</span>
+                            <span class="material-symbols-outlined">warning</span>
                             <?php echo esc_html($booking['critical_count']); ?>
                         </span>
                     <?php endif; ?>
 
                     <?php if ($booking['warning_count'] > 0): ?>
                         <span class="issue-badge warning-badge" title="Warnings">
-                            <span class="material-symbols-outlined">warning</span>
+                            <span class="material-symbols-outlined">flag</span>
                             <?php echo esc_html($booking['warning_count']); ?>
                         </span>
                     <?php endif; ?>
