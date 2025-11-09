@@ -18,6 +18,46 @@ Authorization: Basic base64(username:application_password)
 Content-Type: application/json
 ```
 
+### ⚠️ CRITICAL: Resos API Authentication Requirements
+
+The WordPress plugin acts as a proxy between the Chrome extension and the Resos API. The Resos API has specific authentication requirements:
+
+**Resos API Authentication:**
+- **Scheme:** Basic Authentication (NOT Bearer tokens)
+- **Format:** `Authorization: Basic base64(api_key + ':')`
+- **Important:** The API key must be base64 encoded with a trailing colon
+- **Example:** `base64_encode($resos_api_key . ':')`
+
+**Common Issue (Fixed in commit de4a091):**
+
+Early versions incorrectly used `Bearer` token authentication for fetch operations:
+```php
+// ❌ WRONG - Causes 401 Unauthorized
+'Authorization' => 'Bearer ' . $resos_api_key
+```
+
+**Correct implementation:**
+```php
+// ✅ CORRECT - Required for Resos API
+'Authorization' => 'Basic ' . base64_encode($resos_api_key . ':')
+```
+
+This affects all methods in `BMA_Booking_Actions` that communicate with Resos API:
+- `fetch_opening_hours()`
+- `fetch_available_times()`
+- `fetch_special_events()`
+- `fetch_dietary_choices()`
+- `create_resos_booking()`
+- `update_resos_booking()`
+- `exclude_resos_match()`
+
+**Verification:**
+```bash
+# Test with curl (replace YOUR_API_KEY with actual key)
+curl "https://api.resos.com/v1/customFields" \
+  -H "Authorization: Basic $(echo -n 'YOUR_API_KEY:' | base64)"
+```
+
 ---
 
 ## GET/POST `/opening-hours`

@@ -227,14 +227,32 @@ POST /bma/v1/bookings/create
 ## Resos API Integration
 
 ### Authentication
-All Resos API calls use Bearer token authentication:
+
+⚠️ **CRITICAL:** Resos API requires **Basic Authentication** with base64 encoding, NOT Bearer tokens.
+
+**Correct Implementation:**
 ```php
 $resos_api_key = get_option('hotel_booking_resos_api_key');
 
 $headers = array(
-    'Authorization' => 'Bearer ' . $resos_api_key,
+    'Authorization' => 'Basic ' . base64_encode($resos_api_key . ':'),
     'Content-Type' => 'application/json',
 );
+```
+
+**Important Notes:**
+- Must use `Basic` authentication scheme
+- API key must be base64 encoded with a trailing colon (`:`)
+- Using `Bearer` tokens will result in 401 Unauthorized errors
+- This format is required for ALL Resos API endpoints
+
+**Common Mistake (Fixed in commit de4a091):**
+```php
+// ❌ WRONG - Will return 401 Unauthorized
+'Authorization' => 'Bearer ' . $resos_api_key
+
+// ✅ CORRECT - Required format
+'Authorization' => 'Basic ' . base64_encode($resos_api_key . ':')
 ```
 
 ### Base URL
@@ -510,7 +528,57 @@ update_option('hotel_booking_resos_api_key', $api_key);
 
 ## Troubleshooting
 
-### Endpoint Returns 401
+### Resos API Returns 401 Unauthorized
+
+**Symptom:**
+- Opening hours, dietary choices, or available times fail to load
+- Console shows: `BMA: Opening hours fetch failed with status: 401`
+- Error message: "Unauthorized: API key is malformed"
+
+**Root Cause:**
+Resos API requires Basic authentication with base64-encoded API key, but the code was using Bearer tokens.
+
+**Error Message from Resos:**
+```
+Unauthorized: API key is malformed (Remember to pass it as the username, not the password. Remember to base64 encode it.)
+```
+
+**Solution:**
+Update all Resos API calls in `class-bma-booking-actions.php`:
+
+```php
+// Before (WRONG):
+'Authorization' => 'Bearer ' . $resos_api_key,
+
+// After (CORRECT):
+'Authorization' => 'Basic ' . base64_encode($resos_api_key . ':'),
+```
+
+**Affected Methods:**
+- `fetch_opening_hours()` - Line 852
+- `fetch_available_times()` - Line 925
+- `fetch_special_events()` - Line 1012
+- `fetch_dietary_choices()` - Line 1071
+- All booking creation/update methods
+
+**Verification:**
+Test the API key directly with curl:
+```bash
+# Replace YOUR_API_KEY with your actual Resos API key
+curl "https://api.resos.com/v1/customFields" \
+  -H "Authorization: Basic $(echo -n 'YOUR_API_KEY:' | base64)"
+```
+
+Expected result: HTTP 200 with JSON array of custom fields
+
+**History:**
+- Issue discovered: 2025-01-09
+- Fixed in commit: de4a091
+- Documented in: CHANGELOG.md (lines 15-22)
+
+---
+
+### WordPress Endpoint Returns 401
 - Check Application Password is correct
 - Verify Authorization header is present
 - Ensure user has appropriate capabilities
