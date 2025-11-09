@@ -381,14 +381,6 @@ if (!defined('ABSPATH')) {
                                 </span>
                             </div>
 
-                            <!-- Service Period Tabs -->
-                            <div class="bma-form-row">
-                                <label>Select Service Period *</label>
-                                <div id="service-period-tabs-<?php echo esc_attr($night['date']); ?>" class="service-period-tabs">
-                                    <p style="padding: 10px; text-align: center; color: #666;">Loading service periods...</p>
-                                </div>
-                            </div>
-
                             <!-- Gantt Chart (Compact Mode) -->
                             <div class="bma-gantt-container" id="gantt-container-<?php echo esc_attr($night['date']); ?>">
                                 <div class="gantt-controls">
@@ -401,10 +393,11 @@ if (!defined('ABSPATH')) {
                                 </div>
                             </div>
 
-                            <!-- Time Slot Sections (one per service period) -->
-                            <div class="bma-time-slots-wrapper">
-                                <div id="time-slots-sections-<?php echo esc_attr($night['date']); ?>" class="time-slots-sections">
-                                    <p style="padding: 10px; text-align: center; color: #666;">Select service period to view available times</p>
+                            <!-- Service Period Accordion Sections -->
+                            <div class="bma-form-row">
+                                <label>Select Service Period & Time *</label>
+                                <div id="service-period-sections-<?php echo esc_attr($night['date']); ?>" class="service-period-sections">
+                                    <p style="padding: 10px; text-align: center; color: #666;">Loading service periods...</p>
                                 </div>
                             </div>
 
