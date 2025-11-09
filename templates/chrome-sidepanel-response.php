@@ -1809,15 +1809,7 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
         html += '</button>';
     }
 
-    // 3. View in Resos button (always shown if we have IDs)
-    if (resos.id && resos.restaurant_id) {
-        const resosUrl = `https://app.resos.com/${resos.restaurant_id}/bookings/timetable/${date}/${resos.id}`;
-        html += `<button class="btn-view-resos" onclick="window.open('${resosUrl}', '_blank')">`;
-        html += '<span class="material-symbols-outlined">visibility</span> View in Resos';
-        html += '</button>';
-    }
-
-    // 4. Update button (only if there are suggested updates)
+    // 3. Update button (only if there are suggested updates)
     if (hasSuggestions) {
         const buttonLabel = isConfirmed ? 'Update Selected' : 'Update Selected & Match';
         const buttonClass = isConfirmed ? 'btn-confirm-match btn-update-confirmed' : 'btn-confirm-match';
