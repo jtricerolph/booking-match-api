@@ -849,7 +849,7 @@ class BMA_Booking_Actions {
         $args = array(
             'timeout' => 15,
             'headers' => array(
-                'Authorization' => 'Bearer ' . $resos_api_key,
+                'Authorization' => 'Basic ' . base64_encode( $resos_api_key . ':' ),
                 'Content-Type' => 'application/json',
             ),
         );
@@ -922,7 +922,7 @@ class BMA_Booking_Actions {
         $args = array(
             'timeout' => 15,
             'headers' => array(
-                'Authorization' => 'Bearer ' . $resos_api_key,
+                'Authorization' => 'Basic ' . base64_encode( $resos_api_key . ':' ),
                 'Content-Type' => 'application/json',
             ),
         );
@@ -1009,7 +1009,7 @@ class BMA_Booking_Actions {
         $args = array(
             'timeout' => 15,
             'headers' => array(
-                'Authorization' => 'Bearer ' . $resos_api_key,
+                'Authorization' => 'Basic ' . base64_encode( $resos_api_key . ':' ),
                 'Content-Type' => 'application/json',
             ),
         );
@@ -1068,7 +1068,7 @@ class BMA_Booking_Actions {
         $args = array(
             'timeout' => 15,
             'headers' => array(
-                'Authorization' => 'Bearer ' . $resos_api_key,
+                'Authorization' => 'Basic ' . base64_encode( $resos_api_key . ':' ),
                 'Content-Type' => 'application/json',
             ),
         );
