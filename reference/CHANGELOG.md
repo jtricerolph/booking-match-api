@@ -5,11 +5,27 @@ All notable changes to the Booking Match API plugin.
 ## [Unreleased] - Implementation in Progress
 
 ### Added (Latest)
-- Automatic form initialization script in Chrome extension template (lines 527-643)
+- **Gantt chart visualization for booking creation**
+  - Added `buildGanttChart()` function in sidepanel.js
+  - Displays opening hours as colored bands on visual timeline
+  - Shows closed periods as grey overlay blocks
+  - Automatically generated when opening hours are loaded
+  - Compact mode suitable for Chrome extension sidebar
+
+- **Tab-based service period selector UI**
+  - Replaced dropdown selector with tab button interface
+  - Each service period shown as clickable tab button
+  - Separate time slot sections for each period
+  - Latest period (dinner) pre-selected and expanded by default
+  - Lazy loading of available times when tab is clicked
+  - `switchTimeTab()` function for smooth tab switching
+
+- Automatic form initialization script in Chrome extension template (lines 549-683)
   - MutationObserver watches for form visibility
-  - Auto-fetches opening hours and populates dropdown on form open
+  - Auto-fetches opening hours and generates service period tabs
   - Auto-fetches dietary choices and populates checkboxes
-  - Loads available times when service period is selected
+  - Loads available times for default period on initialization
+  - Lazy loads times for other periods when tabs are clicked
   - Adds click handlers to time slot buttons for selection
 
 ### Fixed (Latest)
