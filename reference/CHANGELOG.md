@@ -13,6 +13,15 @@ All notable changes to the Booking Match API plugin.
   - Adds click handlers to time slot buttons for selection
 
 ### Fixed (Latest)
+- **CRITICAL**: Opening hours 404 error - incorrect API endpoint format
+  - Fixed 404 Not Found errors when fetching opening hours for specific dates
+  - Changed from date-specific endpoint `/openingHours/{date}` to general `/openingHours`
+  - Added client-side filtering by day-of-week (1=Monday through 7=Sunday)
+  - Added special date override detection (e.g., Christmas hours)
+  - New helper methods: `get_all_opening_hours()` and `filter_opening_hours_for_date()`
+  - Now matches management plugin's approach
+  - Single cache for all hours (`bma_opening_hours_all`) instead of per-date caches
+
 - **CRITICAL**: Resos API authentication in fetch methods (commit de4a091)
   - Fixed 401 Unauthorized errors on all fetch operations
   - Changed from `Bearer` to `Basic` authentication scheme

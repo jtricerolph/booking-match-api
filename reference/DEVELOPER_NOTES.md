@@ -264,21 +264,27 @@ https://api.resos.com/v1/
 
 | Data Type | Cache Duration | Reason |
 |-----------|----------------|--------|
-| Opening Hours | 1 hour | Changes infrequently |
+| Opening Hours (All) | 1 hour | Changes infrequently |
 | Dietary Choices | 24 hours | Rarely changes |
 | Special Events | 30 minutes | May be time-sensitive |
 | Available Times | None | Real-time availability |
 
 **Cache Keys:**
 ```php
-'bma_opening_hours_' . $date          // Per date or 'general'
+'bma_opening_hours_all'               // All opening hours (filtered per date)
 'bma_dietary_choices'                 // Global
 'bma_special_events_' . $date         // Per date
 ```
 
+**Opening Hours Implementation:**
+- Fetches ALL opening hours from `/openingHours` (no date in URL)
+- Filters client-side by day-of-week (1=Monday through 7=Sunday)
+- Checks for special date overrides first (e.g., Christmas hours)
+- Returns sorted hours for the requested date
+
 **Clearing Cache:**
 ```php
-delete_transient('bma_opening_hours_2025-01-15');
+delete_transient('bma_opening_hours_all');
 delete_transient('bma_dietary_choices');
 ```
 
@@ -575,6 +581,56 @@ Expected result: HTTP 200 with JSON array of custom fields
 - Issue discovered: 2025-01-09
 - Fixed in commit: de4a091
 - Documented in: CHANGELOG.md (lines 15-22)
+
+---
+
+### Opening Hours Returns 404 Not Found
+
+**Symptom:**
+- Opening hours endpoint returns 404 error
+- Console shows: `Opening hours response: {success: false, message: 'No opening hours found', data: []}`
+- Server logs show: `BMA: Opening hours fetch failed with status: 404`
+
+**Root Cause:**
+The Resos API does NOT support date-specific endpoints like `/openingHours/2026-01-31`. The plugin was incorrectly constructing URLs with the date in the path.
+
+**Incorrect Implementation:**
+```php
+$url = 'https://api.resos.com/v1/openingHours/' . $date;  // Returns 404
+```
+
+**Correct Implementation:**
+```php
+// Fetch ALL opening hours (no date in URL)
+$url = 'https://api.resos.com/v1/openingHours?showDeleted=false&onlySpecial=false&type=restaurant';
+
+// Then filter client-side by day-of-week
+$day_of_week = date('N', strtotime($date));  // 1=Monday, 7=Sunday
+```
+
+**Solution:**
+The plugin now:
+1. Fetches ALL opening hours from the general endpoint
+2. Caches the complete list (1 hour)
+3. Filters by day-of-week when specific date requested
+4. Checks for special date overrides first
+
+**Affected Methods:**
+- `fetch_opening_hours()` - Now calls helper methods
+- `get_all_opening_hours()` - Fetches and caches all hours (NEW)
+- `filter_opening_hours_for_date()` - Filters by date (NEW)
+
+**Verification:**
+After deploying the fix, check server logs for:
+```
+BMA: Cached X opening hours entries
+BMA: Found X regular opening hours for 2026-01-31 (day 6)
+```
+
+**History:**
+- Issue discovered: 2025-01-09
+- Fixed in: (current update)
+- Management plugin uses same approach
 
 ---
 

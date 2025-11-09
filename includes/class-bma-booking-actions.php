@@ -826,11 +826,33 @@ class BMA_Booking_Actions {
      * @return array Opening hours data or empty array on failure
      */
     public function fetch_opening_hours( $date = null ) {
-        $cache_key = 'bma_opening_hours_' . ( $date ? $date : 'general' );
+        // First, get all opening hours (cached separately)
+        $all_hours = $this->get_all_opening_hours();
+
+        if ( empty( $all_hours ) ) {
+            return array();
+        }
+
+        // If no date specified, return all hours
+        if ( ! $date ) {
+            return $all_hours;
+        }
+
+        // Filter hours for specific date
+        return $this->filter_opening_hours_for_date( $all_hours, $date );
+    }
+
+    /**
+     * Get all opening hours from Resos API (cached)
+     *
+     * @return array All opening hours or empty array on failure
+     */
+    private function get_all_opening_hours() {
+        $cache_key = 'bma_opening_hours_all';
         $cached = get_transient( $cache_key );
 
         if ( $cached !== false ) {
-            error_log( 'BMA: Returning cached opening hours for: ' . ( $date ? $date : 'general' ) );
+            error_log( 'BMA: Returning cached opening hours (all)' );
             return $cached;
         }
 
@@ -840,11 +862,7 @@ class BMA_Booking_Actions {
             return array();
         }
 
-        $url = 'https://api.resos.com/v1/openingHours';
-        if ( $date ) {
-            $url .= '/' . urlencode( $date );
-        }
-        $url .= '?showDeleted=false&onlySpecial=false&type=restaurant';
+        $url = 'https://api.resos.com/v1/openingHours?showDeleted=false&onlySpecial=false&type=restaurant';
 
         $args = array(
             'timeout' => 15,
@@ -854,7 +872,7 @@ class BMA_Booking_Actions {
             ),
         );
 
-        error_log( 'BMA: Fetching opening hours from Resos API: ' . $url );
+        error_log( 'BMA: Fetching all opening hours from Resos API: ' . $url );
         $response = wp_remote_get( $url, $args );
 
         if ( is_wp_error( $response ) ) {
@@ -878,9 +896,77 @@ class BMA_Booking_Actions {
 
         // Cache for 1 hour
         set_transient( $cache_key, $data, HOUR_IN_SECONDS );
-        error_log( 'BMA: Cached opening hours for: ' . ( $date ? $date : 'general' ) );
+        error_log( 'BMA: Cached ' . count( $data ) . ' opening hours entries' );
 
         return $data;
+    }
+
+    /**
+     * Filter opening hours for a specific date
+     *
+     * @param array $all_hours All opening hours from Resos
+     * @param string $date Date in YYYY-MM-DD format
+     * @return array Filtered opening hours for the date
+     */
+    private function filter_opening_hours_for_date( $all_hours, $date ) {
+        // Get day of week (1=Monday through 7=Sunday, matching Resos format)
+        $day_of_week = date( 'N', strtotime( $date ) );
+        $target_date = date( 'Y-m-d', strtotime( $date ) );
+
+        // First, check for special date overrides
+        $special_hours = array();
+        foreach ( $all_hours as $hours ) {
+            $is_special = isset( $hours['special'] ) && $hours['special'] === true;
+
+            if ( $is_special && isset( $hours['date'] ) ) {
+                $event_date = date( 'Y-m-d', strtotime( $hours['date'] ) );
+
+                if ( $event_date === $target_date ) {
+                    // Check if it's an OPEN special event (not a closure)
+                    $is_open = isset( $hours['isOpen'] ) && ! empty( $hours['isOpen'] );
+
+                    if ( $is_open && isset( $hours['open'] ) && isset( $hours['close'] ) ) {
+                        $special_hours[] = $hours;
+                    }
+                }
+            }
+        }
+
+        // If special hours found for this date, return those
+        if ( ! empty( $special_hours ) ) {
+            usort( $special_hours, function( $a, $b ) {
+                return intval( $a['open'] ) - intval( $b['open'] );
+            });
+            error_log( 'BMA: Found ' . count( $special_hours ) . ' special opening hours for ' . $date );
+            return $special_hours;
+        }
+
+        // No special hours, filter by day of week
+        $day_hours = array();
+        foreach ( $all_hours as $hours ) {
+            // Skip special events - only want regular recurring hours
+            $is_special = isset( $hours['special'] ) && $hours['special'] === true;
+            if ( $is_special ) {
+                continue;
+            }
+
+            // Match day of week
+            if ( isset( $hours['day'] ) && intval( $hours['day'] ) === intval( $day_of_week ) ) {
+                $day_hours[] = $hours;
+            }
+        }
+
+        // Sort by opening time
+        if ( ! empty( $day_hours ) ) {
+            usort( $day_hours, function( $a, $b ) {
+                return intval( $a['open'] ) - intval( $b['open'] );
+            });
+            error_log( 'BMA: Found ' . count( $day_hours ) . ' regular opening hours for ' . $date . ' (day ' . $day_of_week . ')' );
+        } else {
+            error_log( 'BMA: No opening hours found for ' . $date . ' (day ' . $day_of_week . ')' );
+        }
+
+        return $day_hours;
     }
 
     /**
