@@ -523,6 +523,124 @@ if (!defined('ABSPATH')) {
                             </div>
 
                             <div class="bma-form-feedback" id="feedback-create-<?php echo esc_attr($night['date']); ?>"></div>
+
+                            <script>
+                            (function() {
+                                const formId = 'create-form-<?php echo esc_js($night['date']); ?>';
+                                const date = '<?php echo esc_js($night['date']); ?>';
+                                const form = document.getElementById(formId);
+                                let initialized = false;
+
+                                // Watch for form visibility and initialize on first show
+                                const observer = new MutationObserver(function(mutations) {
+                                    mutations.forEach(function(mutation) {
+                                        if (mutation.attributeName === 'style') {
+                                            const isVisible = form.style.display !== 'none';
+                                            if (isVisible && !initialized) {
+                                                initialized = true;
+                                                initializeCreateForm(date);
+                                            }
+                                        }
+                                    });
+                                });
+
+                                observer.observe(form, { attributes: true, attributeFilter: ['style'] });
+
+                                async function initializeCreateForm(date) {
+                                    console.log('Initializing create form for date:', date);
+
+                                    // Fetch and populate opening hours
+                                    try {
+                                        const openingHoursData = await fetchOpeningHours(date);
+                                        const selector = document.getElementById('opening-hour-selector-' + date);
+
+                                        if (openingHoursData.success && openingHoursData.html) {
+                                            selector.innerHTML = '<option value="">Select service period...</option>' + openingHoursData.html;
+                                        } else if (openingHoursData.success && openingHoursData.data) {
+                                            selector.innerHTML = '<option value="">Select service period...</option>';
+                                            openingHoursData.data.forEach(period => {
+                                                const option = document.createElement('option');
+                                                option.value = period._id;
+                                                option.textContent = `${period.name} (${formatTime(period.open)}-${formatTime(period.close)})`;
+                                                selector.appendChild(option);
+                                            });
+                                        }
+
+                                        // Add event listener to fetch available times when opening hour is selected
+                                        selector.addEventListener('change', async function() {
+                                            if (this.value) {
+                                                const people = parseInt(form.querySelector('.form-people').value) || 2;
+                                                await loadAvailableTimes(date, people, this.value);
+                                            }
+                                        });
+                                    } catch (error) {
+                                        console.error('Error loading opening hours:', error);
+                                        const selector = document.getElementById('opening-hour-selector-' + date);
+                                        selector.innerHTML = '<option value="">Error loading service periods</option>';
+                                    }
+
+                                    // Fetch and populate dietary choices
+                                    try {
+                                        const dietaryData = await fetchDietaryChoices();
+                                        const container = document.getElementById('dietary-checkboxes-' + date);
+
+                                        if (dietaryData.success && dietaryData.html) {
+                                            container.innerHTML = dietaryData.html;
+                                        } else if (dietaryData.success && dietaryData.choices) {
+                                            container.innerHTML = '';
+                                            dietaryData.choices.forEach(choice => {
+                                                const label = document.createElement('label');
+                                                label.style.display = 'block';
+                                                label.style.marginBottom = '8px';
+                                                label.innerHTML = `<input type="checkbox" class="diet-checkbox" data-choice-id="${choice._id}" data-choice-name="${choice.name}"> ${choice.name}`;
+                                                container.appendChild(label);
+                                            });
+                                        }
+                                    } catch (error) {
+                                        console.error('Error loading dietary choices:', error);
+                                        const container = document.getElementById('dietary-checkboxes-' + date);
+                                        container.innerHTML = '<p style="color: #ef4444;">Error loading dietary options</p>';
+                                    }
+                                }
+
+                                async function loadAvailableTimes(date, people, openingHourId) {
+                                    try {
+                                        const timesData = await fetchAvailableTimes(date, people, openingHourId);
+                                        const container = document.getElementById('time-slots-grid-' + date);
+
+                                        if (timesData.success && timesData.html) {
+                                            container.innerHTML = timesData.html;
+
+                                            // Add click handlers to time slot buttons
+                                            const timeButtons = container.querySelectorAll('.time-slot-btn');
+                                            timeButtons.forEach(btn => {
+                                                btn.addEventListener('click', function() {
+                                                    // Remove selected class from all buttons
+                                                    timeButtons.forEach(b => b.classList.remove('selected'));
+                                                    // Add selected class to clicked button
+                                                    this.classList.add('selected');
+                                                    // Update hidden field
+                                                    const timeValue = this.dataset.time || this.textContent.trim();
+                                                    document.getElementById('time-selected-' + date).value = timeValue;
+                                                });
+                                            });
+                                        } else {
+                                            container.innerHTML = '<p style="padding: 10px; text-align: center; color: #666;">No available times</p>';
+                                        }
+                                    } catch (error) {
+                                        console.error('Error loading available times:', error);
+                                        const container = document.getElementById('time-slots-grid-' + date);
+                                        container.innerHTML = '<p style="color: #ef4444;">Error loading times</p>';
+                                    }
+                                }
+
+                                function formatTime(hhmm) {
+                                    const hours = Math.floor(hhmm / 100);
+                                    const minutes = hhmm % 100;
+                                    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                                }
+                            })();
+                            </script>
                         </div>
                     <?php endif; ?>
                 </div>
