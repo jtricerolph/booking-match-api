@@ -997,9 +997,10 @@ class BMA_Booking_Actions {
             );
         }
 
-        $url = 'https://api.resos.com/v1/openingHours/' . urlencode( $date ) .
-               '?people=' . intval( $people ) .
-               '&expand=availableTimes';
+        // Use bookingFlow/times endpoint (NOT openingHours/{date})
+        $url = 'https://api.resos.com/v1/bookingFlow/times';
+        $url .= '?date=' . urlencode( $date );
+        $url .= '&people=' . intval( $people );
 
         if ( $area_id ) {
             $url .= '&areaId=' . urlencode( $area_id );

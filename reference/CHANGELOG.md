@@ -13,6 +13,13 @@ All notable changes to the Booking Match API plugin.
   - Adds click handlers to time slot buttons for selection
 
 ### Fixed (Latest)
+- **CRITICAL**: Available times 404 error - incorrect API endpoint
+  - Fixed 404 Not Found errors when fetching available times for booking form
+  - Changed from `/openingHours/{date}?expand=availableTimes` to `/bookingFlow/times?date={date}`
+  - Time slot buttons now populate correctly in create booking form
+  - Gantt chart should now display available times
+  - Updated `fetch_available_times()` method
+
 - **CRITICAL**: Opening hours 404 error - incorrect API endpoint format
   - Fixed 404 Not Found errors when fetching opening hours for specific dates
   - Changed from date-specific endpoint `/openingHours/{date}` to general `/openingHours`

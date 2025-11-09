@@ -282,6 +282,12 @@ https://api.resos.com/v1/
 - Checks for special date overrides first (e.g., Christmas hours)
 - Returns sorted hours for the requested date
 
+**Available Times Implementation:**
+- Uses `/bookingFlow/times` endpoint (NOT `/openingHours/{date}`)
+- Date passed as query parameter: `?date=2026-01-30&people=4&areaId=X`
+- Returns array of opening hour periods with `availableTimes` arrays
+- Merges all `availableTimes` from all periods into single array
+
 **Clearing Cache:**
 ```php
 delete_transient('bma_opening_hours_all');
@@ -631,6 +637,52 @@ BMA: Found X regular opening hours for 2026-01-31 (day 6)
 - Issue discovered: 2025-01-09
 - Fixed in: (current update)
 - Management plugin uses same approach
+
+---
+
+### Available Times Returns 404 Not Found
+
+**Symptom:**
+- Time slot buttons don't populate in create booking form
+- Server logs show: `BMA: Available times fetch failed with status: 404`
+- URL in logs: `https://api.resos.com/v1/openingHours/2026-01-30?people=4&expand=availableTimes&areaId=X`
+
+**Root Cause:**
+The Resos API does NOT support the `/openingHours/{date}` endpoint with `expand=availableTimes` parameter. The correct endpoint is `/bookingFlow/times`.
+
+**Incorrect Implementation:**
+```php
+$url = 'https://api.resos.com/v1/openingHours/' . $date . '?people=4&expand=availableTimes';
+```
+
+**Correct Implementation:**
+```php
+$url = 'https://api.resos.com/v1/bookingFlow/times';
+$url .= '?date=' . urlencode($date);
+$url .= '&people=' . intval($people);
+if ($area_id) {
+    $url .= '&areaId=' . urlencode($area_id);
+}
+```
+
+**Solution:**
+Changed from `/openingHours/{date}` to `/bookingFlow/times` with date as query parameter.
+
+**Affected Methods:**
+- `fetch_available_times()` - Line ~1000-1007
+
+**Verification:**
+After deploying, check server logs for:
+```
+BMA: Fetching available times from Resos API: https://api.resos.com/v1/bookingFlow/times?date=2026-01-30&people=4&areaId=X
+```
+
+Should return HTTP 200 with array of opening hour periods containing `availableTimes` arrays.
+
+**History:**
+- Issue discovered: 2025-01-09
+- Fixed in: (current update)
+- Related to opening hours 404 fix
 
 ---
 
