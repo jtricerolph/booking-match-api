@@ -331,7 +331,7 @@ if (!defined('ABSPATH')) {
 
                     <?php else: ?>
                         <?php if ($has_package_alert): ?>
-                            <div class="bma-night-status unmatched package-alert">
+                            <div class="bma-night-status unmatched package-alert" id="status-<?php echo esc_attr($night['date']); ?>">
                                 <span class="bma-status-icon">🍽️</span>
                                 <span><strong>PACKAGE BOOKING - No Restaurant Reservation</strong></span>
                             </div>
@@ -339,11 +339,23 @@ if (!defined('ABSPATH')) {
                                 This guest has a dinner package but no restaurant booking yet.
                             </div>
                         <?php else: ?>
-                            <div class="bma-night-status unmatched">
+                            <div class="bma-night-status unmatched" id="status-<?php echo esc_attr($night['date']); ?>">
                                 <span class="bma-status-icon">⚠</span>
                                 <span>No restaurant booking</span>
                             </div>
                         <?php endif; ?>
+
+                        <!-- Gantt Chart Placeholder -->
+                        <div class="bma-gantt-placeholder" id="gantt-<?php echo esc_attr($night['date']); ?>">
+                            <div class="gantt-header">
+                                <span class="material-symbols-outlined">calendar_view_day</span>
+                                <span>Restaurant Timeline for <?php echo esc_html(date('l, d/m', strtotime($night['date']))); ?></span>
+                            </div>
+                            <div class="gantt-content">
+                                <p class="gantt-placeholder-text">Gantt chart view coming soon...</p>
+                                <small>Visual timeline of all restaurant bookings for this date</small>
+                            </div>
+                        </div>
 
                         <!-- Create Booking Button -->
                         <button class="bma-action-btn create <?php echo $has_package_alert ? 'urgent' : ''; ?>"
@@ -992,6 +1004,46 @@ if (!defined('ABSPATH')) {
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.85; }
+}
+
+/* Gantt Chart Placeholder */
+.bma-gantt-placeholder {
+    background: #f0f9ff;
+    border: 2px dashed #3b82f6;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 12px 0;
+}
+
+.bma-gantt-placeholder .gantt-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.bma-gantt-placeholder .gantt-header .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.bma-gantt-placeholder .gantt-content {
+    text-align: center;
+    padding: 16px;
+}
+
+.bma-gantt-placeholder .gantt-placeholder-text {
+    margin: 0 0 4px 0;
+    color: #3b82f6;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.bma-gantt-placeholder small {
+    color: #6b7280;
+    font-size: 11px;
 }
 
 /* Booking Forms */
@@ -1718,17 +1770,25 @@ function showToast(message, type = 'success', duration = 4000) {
 function toggleCreateForm(date) {
     const formId = 'create-form-' + date;
     const btnId = 'create-btn-' + date;
+    const statusId = 'status-' + date;
+    const ganttId = 'gantt-' + date;
     const form = document.getElementById(formId);
     const btn = document.getElementById(btnId);
+    const status = document.getElementById(statusId);
+    const gantt = document.getElementById(ganttId);
 
     if (form && btn) {
         if (form.style.display === 'none' || !form.style.display) {
             form.style.display = 'block';
             btn.style.display = 'none'; // Hide button when form is open
+            if (status) status.style.display = 'none'; // Hide status message
+            if (gantt) gantt.style.display = 'none'; // Hide gantt placeholder
             form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } else {
             form.style.display = 'none';
             btn.style.display = ''; // Show button when form is closed
+            if (status) status.style.display = ''; // Show status message
+            if (gantt) gantt.style.display = ''; // Show gantt placeholder
         }
     }
 }
