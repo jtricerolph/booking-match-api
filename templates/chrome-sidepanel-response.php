@@ -1197,23 +1197,23 @@ if (!defined('ABSPATH')) {
 .comparison-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 10px;
 }
 
 .comparison-table thead th {
     background: #f3f4f6;
-    padding: 10px 12px;
+    padding: 6px 8px;
     text-align: left;
     font-weight: 600;
     color: #374151;
     border-bottom: 2px solid #d1d5db;
-    font-size: 12px;
+    font-size: 8px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
 .comparison-table tbody td {
-    padding: 10px 12px;
+    padding: 6px 8px;
     border-bottom: 1px solid #e5e7eb;
     vertical-align: top;
 }
@@ -1226,17 +1226,14 @@ if (!defined('ABSPATH')) {
     font-weight: 600;
     color: #374151;
     background: #f9fafb;
-    width: 20%;
+    width: 25%;
+    font-size: 8px;
 }
 
 .comparison-table tbody td:nth-child(2),
 .comparison-table tbody td:nth-child(3) {
-    width: 27%;
-}
-
-.comparison-table tbody td:nth-child(4) {
-    width: 26%;
-    background: #fffbeb;
+    width: 37.5%;
+    font-size: 10px;
 }
 
 /* Match highlighting - green background */
@@ -1244,14 +1241,34 @@ if (!defined('ABSPATH')) {
     background: #d4edda;
 }
 
-.comparison-table tbody tr.match-row td:nth-child(4) {
-    background: #d4edda;
+/* Suggestion row styling */
+.comparison-table tbody tr.suggestion-row {
+    background: #fff3cd;
 }
 
-/* Suggestion cell highlighting */
-.comparison-table .suggestion-cell.has-suggestion {
-    background: #fff3cd;
-    font-weight: 500;
+.comparison-table tbody tr.suggestion-row td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.comparison-table .suggestion-content {
+    display: flex;
+    align-items: center;
+    font-size: 10px;
+}
+
+.comparison-table .suggestion-content label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin: 0;
+}
+
+.comparison-table .suggestion-checkbox {
+    margin: 0 6px 0 0;
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
 }
 
 /* Material Symbols icons in comparison table */
@@ -1736,31 +1753,30 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     html += '<th>Field</th>';
     html += '<th>Newbook</th>';
     html += '<th>ResOS</th>';
-    html += '<th style="background-color: #fff3cd;">Suggested Updates</th>';
     html += '</tr></thead>';
     html += '<tbody>';
 
     // Guest Name row
-    html += buildComparisonRow('Guest Name', 'name', hotel.name, resos.name, matches.name, suggestions.name);
+    html += buildComparisonRow('Name', 'name', hotel.name, resos.name, matches.name, suggestions.name, false);
 
     // Phone row
-    html += buildComparisonRow('Phone', 'phone', hotel.phone, resos.phone, matches.phone, suggestions.phone);
+    html += buildComparisonRow('Phone', 'phone', hotel.phone, resos.phone, matches.phone, suggestions.phone, false);
 
     // Email row
-    html += buildComparisonRow('Email', 'email', hotel.email, resos.email, matches.email, suggestions.email);
+    html += buildComparisonRow('Email', 'email', hotel.email, resos.email, matches.email, suggestions.email, false);
 
     // People row
-    html += buildComparisonRow('People', 'people', hotel.people, resos.people, matches.people, suggestions.people);
+    html += buildComparisonRow('People', 'people', hotel.people, resos.people, matches.people, suggestions.people, false);
 
     // Tariff/Package row
-    html += buildComparisonRow('Tariff/Package', 'dbb', hotel.rate_type, resos.dbb, matches.dbb, suggestions.dbb);
+    html += buildComparisonRow('Package', 'dbb', hotel.rate_type, resos.dbb, matches.dbb, suggestions.dbb, false);
 
     // Booking # row
-    html += buildComparisonRow('Booking #', 'booking_ref', hotel.booking_id, resos.booking_ref, matches.booking_ref, suggestions.booking_ref);
+    html += buildComparisonRow('#', 'booking_ref', hotel.booking_id, resos.booking_ref, matches.booking_ref, suggestions.booking_ref, false);
 
     // Hotel Guest row
     const hotelGuestValue = hotel.is_hotel_guest ? 'Yes' : '-';
-    html += buildComparisonRow('Hotel Guest', 'hotel_guest', hotelGuestValue, resos.hotel_guest, false, suggestions.hotel_guest);
+    html += buildComparisonRow('Resident', 'hotel_guest', hotelGuestValue, resos.hotel_guest, false, suggestions.hotel_guest, false);
 
     // Status row
     const statusIcon = getStatusIcon(resos.status || 'request');
@@ -1801,7 +1817,7 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     if (hasSuggestions) {
         const buttonLabel = isConfirmed ? 'Update Selected' : 'Update Selected & Match';
         const buttonClass = isConfirmed ? 'btn-confirm-match btn-update-confirmed' : 'btn-confirm-match';
-        html += `<button class="${buttonClass}" data-action="toggle-update" data-date="${date}" data-resos-booking-id="${resos.id}">`;
+        html += `<button class="${buttonClass}" data-action="submit-suggestions" data-date="${date}" data-resos-booking-id="${resos.id}" data-hotel-booking-id="${hotelBookingId}" data-is-confirmed="${isConfirmed}">`;
         html += `<span class="material-symbols-outlined">check_circle</span> ${buttonLabel}`;
         html += '</button>';
     }
@@ -1816,7 +1832,6 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
 function buildComparisonRow(label, field, hotelValue, resosValue, isMatch, suggestionValue, isHTML = false) {
     const matchClass = isMatch ? ' class="match-row"' : '';
     const hasSuggestion = suggestionValue !== undefined && suggestionValue !== null;
-    const suggestionCellClass = hasSuggestion ? 'suggestion-cell has-suggestion' : 'suggestion-cell';
 
     let hotelDisplay = hotelValue !== undefined && hotelValue !== null && hotelValue !== ''
         ? (isHTML ? hotelValue : escapeHTML(String(hotelValue)))
@@ -1826,21 +1841,36 @@ function buildComparisonRow(label, field, hotelValue, resosValue, isMatch, sugge
         ? (isHTML ? resosValue : escapeHTML(String(resosValue)))
         : '<em style="color: #adb5bd;">-</em>';
 
-    let suggestionDisplay;
-    if (!hasSuggestion) {
-        suggestionDisplay = '<em style="color: #adb5bd;">-</em>';
-    } else if (suggestionValue === '') {
-        suggestionDisplay = '<em style="color: #999;">(Remove)</em>';
-    } else {
-        suggestionDisplay = escapeHTML(String(suggestionValue));
-    }
-
+    // Main comparison row (3 columns: Field, Newbook, ResOS)
     let html = `<tr${matchClass}>`;
     html += `<td><strong>${escapeHTML(label)}</strong></td>`;
     html += `<td>${hotelDisplay}</td>`;
     html += `<td>${resosDisplay}</td>`;
-    html += `<td class="${suggestionCellClass}">${suggestionDisplay}</td>`;
     html += '</tr>';
+
+    // If there's a suggestion, add a suggestion row below
+    if (hasSuggestion) {
+        const isCheckedByDefault = field !== 'people'; // Uncheck "people" by default, check all others
+        const checkedAttr = isCheckedByDefault ? ' checked' : '';
+
+        let suggestionDisplay;
+        if (suggestionValue === '') {
+            suggestionDisplay = '<em style="color: #999;">(Remove)</em>';
+        } else {
+            suggestionDisplay = escapeHTML(String(suggestionValue));
+        }
+
+        html += `<tr class="suggestion-row">`;
+        html += `<td colspan="3">`;
+        html += `<div class="suggestion-content">`;
+        html += `<label>`;
+        html += `<input type="checkbox" class="suggestion-checkbox" name="suggestion_${field}" value="${escapeHTML(String(suggestionValue))}"${checkedAttr}> `;
+        html += `Update to: ${suggestionDisplay}`;
+        html += `</label>`;
+        html += `</div>`;
+        html += `</td>`;
+        html += `</tr>`;
+    }
 
     return html;
 }
@@ -1890,6 +1920,121 @@ function closeComparison(containerId) {
     }
 }
 
+// Submit selected suggestions from comparison checkboxes
+async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirmed) {
+    const containerId = 'comparison-' + date + '-' + resosBookingId;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Find all checked suggestion checkboxes in this comparison container
+    const checkboxes = container.querySelectorAll('.suggestion-checkbox:checked');
+
+    if (checkboxes.length === 0) {
+        alert('Please select at least one suggestion to update.');
+        return;
+    }
+
+    // Build updates object from checked checkboxes
+    const updates = {};
+    checkboxes.forEach(checkbox => {
+        const name = checkbox.name.replace('suggestion_', '');
+        let value = checkbox.value;
+
+        // Handle special mappings
+        if (name === 'name') {
+            updates.guest_name = value;
+        } else if (name === 'booking_ref') {
+            updates.booking_ref = value;
+        } else if (name === 'hotel_guest') {
+            updates.hotel_guest = value;
+        } else if (name === 'dbb') {
+            updates.dbb = value; // Empty string means remove
+        } else if (name === 'people') {
+            updates.people = parseInt(value);
+        } else if (name === 'status') {
+            updates.status = value;
+        } else {
+            updates[name] = value;
+        }
+    });
+
+    // Find the submit button to show loading state
+    const submitBtn = container.querySelector('.btn-confirm-match');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Updating...';
+    }
+
+    try {
+        const config = getAPIConfig();
+        const response = await fetch(`${config.baseUrl}/bookings/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': config.authHeader
+            },
+            body: JSON.stringify({
+                booking_id: resosBookingId,
+                updates: updates
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Show success message
+            showToast('✓ Booking updated successfully!', 'success');
+
+            // Reload the tab after 1 second to show updated data
+            setTimeout(() => {
+                if (window.parent && window.parent.reloadRestaurantTab) {
+                    window.parent.reloadRestaurantTab();
+                }
+            }, 1000);
+        } else {
+            showToast(`Error: ${result.message || 'Failed to update booking'}`, 'error');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = isConfirmed ? 'Update Selected' : 'Update Selected & Match';
+            }
+        }
+    } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = isConfirmed ? 'Update Selected' : 'Update Selected & Match';
+        }
+    }
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'bma-toast bma-toast-' + type;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 10000;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        animation: slideIn 0.3s ease-out;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 // Attach event listeners using event delegation
 // Note: Attach immediately since this template is injected after page load
 (function() {
@@ -1935,6 +2080,15 @@ function closeComparison(containerId) {
 
             case 'close-comparison':
                 closeComparison(button.dataset.containerId);
+                break;
+
+            case 'submit-suggestions':
+                submitSuggestions(
+                    button.dataset.date,
+                    button.dataset.resosBookingId,
+                    button.dataset.hotelBookingId,
+                    button.dataset.isConfirmed === 'true'
+                );
                 break;
         }
     });
