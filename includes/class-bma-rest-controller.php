@@ -1254,7 +1254,15 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $opening_hours = $actions->fetch_opening_hours($date);
             $special_events = $actions->fetch_special_events($date);
 
-            $html = $this->format_time_slots_html($result['times'], $opening_hours, $special_events);
+            // Filter to specific period if opening_hour_id provided
+            if ($opening_hour_id && !empty($opening_hours)) {
+                $opening_hours = array_filter($opening_hours, function($period) use ($opening_hour_id) {
+                    return isset($period['_id']) && $period['_id'] === $opening_hour_id;
+                });
+                $opening_hours = array_values($opening_hours); // Re-index
+            }
+
+            $html = $this->format_time_slots_html($result['times'], $opening_hours, $special_events, !empty($opening_hour_id));
             return array(
                 'success' => true,
                 'html' => $html,
@@ -1372,11 +1380,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
      * @param array $available_times Array of available time strings
      * @param array $opening_hours Array of opening hour objects
      * @param array $special_events Array of special event objects
+     * @param bool $skip_period_headers Whether to skip period section wrappers (true for single period)
      * @return string HTML for time slot grid
      */
-    private function format_time_slots_html($available_times, $opening_hours, $special_events) {
+    private function format_time_slots_html($available_times, $opening_hours, $special_events, $skip_period_headers = false) {
         // This is a simplified version - full implementation would match the JavaScript buildTimeSlots function
-        $html = '<div class="bma-time-slots-grid">';
+        $html = '';
 
         // Convert available times to set for fast lookup
         $available_set = array_flip($available_times);
@@ -1405,9 +1414,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 }
                 $last_seating = $close_hour * 100 + $close_min;
 
-                $html .= '<div class="time-slot-period">';
-                $html .= '<div class="time-slot-period-header">' . esc_html($period_name) . '</div>';
-                $html .= '<div class="time-slot-buttons">';
+                // Only add period wrappers if not skipping (i.e., when showing all periods)
+                if (!$skip_period_headers) {
+                    $html .= '<div class="time-slot-period">';
+                    $html .= '<div class="time-slot-period-header">' . esc_html($period_name) . '</div>';
+                    $html .= '<div class="time-slot-buttons">';
+                }
 
                 // Generate time slots
                 $current_hour = floor($period_start / 100);
@@ -1441,11 +1453,13 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     }
                 }
 
-                $html .= '</div></div>';
+                // Only close period wrappers if we opened them
+                if (!$skip_period_headers) {
+                    $html .= '</div></div>';
+                }
             }
         }
 
-        $html .= '</div>';
         return $html;
     }
 
