@@ -4,6 +4,14 @@ All notable changes to the Booking Match API plugin.
 
 ## [Unreleased] - Implementation in Progress
 
+### Added (Latest)
+- Automatic form initialization script in Chrome extension template (lines 527-643)
+  - MutationObserver watches for form visibility
+  - Auto-fetches opening hours and populates dropdown on form open
+  - Auto-fetches dietary choices and populates checkboxes
+  - Loads available times when service period is selected
+  - Adds click handlers to time slot buttons for selection
+
 ### Added
 - Gantt Chart generator class (`class-bma-gantt-chart.php`)
   - Three display modes: full, medium, compact
