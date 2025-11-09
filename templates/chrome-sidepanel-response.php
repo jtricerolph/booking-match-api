@@ -161,7 +161,7 @@ if (!defined('ABSPATH')) {
                         <?php endif; ?>
 
                         <?php foreach ($night['resos_matches'] as $index => $match): ?>
-                            <div class="bma-match-item <?php echo $index === 0 ? 'primary' : 'secondary'; ?>">
+                            <div class="bma-match-item <?php echo $match['match_info']['is_primary'] ? 'primary' : 'secondary'; ?>">
                                 <?php if ($match_count > 1): ?>
                                     <div class="bma-match-header">
                                         <strong>Match <?php echo $index + 1; ?></strong>
@@ -224,7 +224,7 @@ if (!defined('ABSPATH')) {
 
                                 <div class="bma-match-actions">
                                     <!-- View Comparison Button (primary action) -->
-                                    <button class="bma-action-btn view-comparison"
+                                    <button class="bma-action-btn view-comparison <?php echo $match['match_info']['is_primary'] ? '' : 'suggested'; ?>"
                                             data-action="view-comparison"
                                             data-date="<?php echo esc_attr($night['date']); ?>"
                                             data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
@@ -920,6 +920,14 @@ if (!defined('ABSPATH')) {
     background: #dc2626;
 }
 
+.bma-action-btn.suggested {
+    background: #f59e0b;
+}
+
+.bma-action-btn.suggested:hover {
+    background: #d97706;
+}
+
 /* Material Symbols icons in buttons and links */
 .bma-action-btn .material-symbols-outlined,
 .bma-action-link .material-symbols-outlined {
@@ -1364,12 +1372,12 @@ if (!defined('ABSPATH')) {
 }
 
 .btn-confirm-match {
-    background: #10b981;
+    background: #f59e0b;
     color: white;
 }
 
 .btn-confirm-match:hover {
-    background: #059669;
+    background: #d97706;
 }
 
 .btn-confirm-match.btn-update-confirmed {
@@ -1379,7 +1387,204 @@ if (!defined('ABSPATH')) {
 .btn-confirm-match.btn-update-confirmed:hover {
     background: #7c3aed;
 }
+
+/* Custom Modal for Confirmations */
+#bma-custom-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+#bma-custom-modal.show {
+    display: flex;
+}
+
+.bma-modal-content {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bma-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.bma-modal-icon {
+    font-size: 32px;
+    color: #f59e0b;
+}
+
+.bma-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.bma-modal-message {
+    font-size: 14px;
+    color: #4b5563;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.bma-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.bma-modal-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.bma-modal-btn.cancel {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.bma-modal-btn.cancel:hover {
+    background: #e5e7eb;
+}
+
+.bma-modal-btn.confirm {
+    background: #ef4444;
+    color: white;
+}
+
+.bma-modal-btn.confirm:hover {
+    background: #dc2626;
+}
+
+.bma-modal-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Toast Notifications */
+#bma-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 350px;
+}
+
+.bma-toast {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: toastSlideIn 0.3s ease-out;
+    border-left: 4px solid;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.bma-toast.success {
+    border-left-color: #10b981;
+}
+
+.bma-toast.error {
+    border-left-color: #ef4444;
+}
+
+.bma-toast.info {
+    border-left-color: #3b82f6;
+}
+
+.bma-toast-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.bma-toast.success .bma-toast-icon {
+    color: #10b981;
+}
+
+.bma-toast.error .bma-toast-icon {
+    color: #ef4444;
+}
+
+.bma-toast.info .bma-toast-icon {
+    color: #3b82f6;
+}
+
+.bma-toast-content {
+    flex: 1;
+}
+
+.bma-toast-message {
+    font-size: 14px;
+    color: #374151;
+    margin: 0;
+    line-height: 1.5;
+}
 </style>
+
+<!-- Custom Modal Structure -->
+<div id="bma-custom-modal">
+    <div class="bma-modal-content">
+        <div class="bma-modal-header">
+            <span class="material-symbols-outlined bma-modal-icon">warning</span>
+            <h3 class="bma-modal-title" id="bma-modal-title">Confirm Action</h3>
+        </div>
+        <p class="bma-modal-message" id="bma-modal-message"></p>
+        <div class="bma-modal-actions">
+            <button class="bma-modal-btn cancel" id="bma-modal-cancel">Cancel</button>
+            <button class="bma-modal-btn confirm" id="bma-modal-confirm">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="bma-toast-container"></div>
 
 <!-- Load Material Symbols font for status icons -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
@@ -1403,6 +1608,71 @@ function getAPIConfig() {
         baseUrl: `${protocol}//${host}${port}/wp-json/bma/v1`,
         authHeader: '' // Will be set by parent context
     };
+}
+
+// Custom Modal System
+function showModal(title, message, confirmText = 'Confirm', cancelText = 'Cancel') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('bma-custom-modal');
+        const titleEl = document.getElementById('bma-modal-title');
+        const messageEl = document.getElementById('bma-modal-message');
+        const confirmBtn = document.getElementById('bma-modal-confirm');
+        const cancelBtn = document.getElementById('bma-modal-cancel');
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        confirmBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
+
+        modal.classList.add('show');
+
+        const handleConfirm = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        const cleanup = () => {
+            modal.classList.remove('show');
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+        };
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+    });
+}
+
+// Toast Notification System
+function showToast(message, type = 'success', duration = 4000) {
+    const container = document.getElementById('bma-toast-container');
+
+    const toast = document.createElement('div');
+    toast.className = `bma-toast ${type}`;
+
+    const iconMap = {
+        success: 'check_circle',
+        error: 'error',
+        info: 'info'
+    };
+
+    toast.innerHTML = `
+        <span class="material-symbols-outlined bma-toast-icon">${iconMap[type] || 'info'}</span>
+        <div class="bma-toast-content">
+            <p class="bma-toast-message">${message}</p>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'toastSlideIn 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
 }
 
 // Toggle create booking form
@@ -1570,48 +1840,21 @@ async function submitUpdateBooking(date, resosBookingId) {
 }
 
 // Confirm and exclude match
-function confirmExcludeMatch(resosBookingId, hotelBookingId, guestName) {
-    // Create modal overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'bma-modal-overlay';
+async function confirmExcludeMatch(resosBookingId, hotelBookingId, guestName) {
+    const confirmed = await showModal(
+        'Exclude This Match?',
+        `This will add a "NOT-#${hotelBookingId}" note to the ResOS booking for ${guestName}, marking it as excluded from this hotel booking.`,
+        'Exclude Match',
+        'Cancel'
+    );
 
-    const modal = document.createElement('div');
-    modal.className = 'bma-modal';
-    modal.innerHTML = `
-        <h4>Exclude This Match?</h4>
-        <p>This will add a "NOT-#${hotelBookingId}" note to the ResOS booking for <strong>${guestName}</strong>, marking it as excluded from this hotel booking.</p>
-        <div class="bma-modal-actions">
-            <button class="bma-btn-cancel" data-action="modal-cancel">Cancel</button>
-            <button class="bma-action-btn exclude" data-action="modal-exclude" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}">Exclude Match</button>
-        </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    // Attach event listeners to modal buttons
-    const cancelBtn = modal.querySelector('[data-action="modal-cancel"]');
-    const excludeBtn = modal.querySelector('[data-action="modal-exclude"]');
-
-    cancelBtn.addEventListener('click', () => overlay.remove());
-    excludeBtn.addEventListener('click', () => executeExcludeMatch(resosBookingId, hotelBookingId));
-
-    // Close on overlay click
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-            overlay.remove();
-        }
-    });
+    if (confirmed) {
+        await executeExcludeMatch(resosBookingId, hotelBookingId);
+    }
 }
 
 // Execute exclude match
 async function executeExcludeMatch(resosBookingId, hotelBookingId) {
-    const modal = document.querySelector('.bma-modal');
-    const submitBtn = modal.querySelector('.bma-action-btn.exclude');
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Excluding...';
-
     try {
         const config = getAPIConfig();
         const response = await fetch(`${config.baseUrl}/bookings/exclude`, {
@@ -1629,45 +1872,16 @@ async function executeExcludeMatch(resosBookingId, hotelBookingId) {
         const result = await response.json();
 
         if (result.success) {
-            // Show success message and reload
-            modal.innerHTML = `
-                <h4>✓ Match Excluded</h4>
-                <p>The NOT-#${hotelBookingId} note has been added to the ResOS booking.</p>
-                <div class="bma-modal-actions">
-                    <button class="bma-btn-submit" data-action="modal-close-reload">Close</button>
-                </div>
-            `;
-            // Attach event listener to close button
-            const closeBtn = modal.querySelector('[data-action="modal-close-reload"]');
-            closeBtn.addEventListener('click', () => {
-                document.querySelector('.bma-modal-overlay').remove();
-                if (window.parent && window.parent.reloadRestaurantTab) {
-                    window.parent.reloadRestaurantTab();
-                }
-            });
+            showToast(`Match excluded successfully! NOT-#${hotelBookingId} note added.`, 'success');
+            // Reload the tab
+            if (window.parent && window.parent.reloadRestaurantTab) {
+                window.parent.reloadRestaurantTab();
+            }
         } else {
-            modal.innerHTML = `
-                <h4>Error</h4>
-                <p>${result.message || 'Failed to exclude match'}</p>
-                <div class="bma-modal-actions">
-                    <button class="bma-btn-cancel" data-action="modal-close">Close</button>
-                </div>
-            `;
-            // Attach event listener to close button
-            const closeBtn = modal.querySelector('[data-action="modal-close"]');
-            closeBtn.addEventListener('click', () => document.querySelector('.bma-modal-overlay').remove());
+            showToast(`Error: ${result.message || 'Failed to exclude match'}`, 'error');
         }
     } catch (error) {
-        modal.innerHTML = `
-            <h4>Error</h4>
-            <p>${error.message}</p>
-            <div class="bma-modal-actions">
-                <button class="bma-btn-cancel" data-action="modal-close">Close</button>
-            </div>
-        `;
-        // Attach event listener to close button
-        const closeBtn = modal.querySelector('[data-action="modal-close"]');
-        closeBtn.addEventListener('click', () => document.querySelector('.bma-modal-overlay').remove());
+        showToast(`Error: ${error.message}`, 'error');
     }
 }
 
@@ -1934,7 +2148,7 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
     const checkboxes = container.querySelectorAll('.suggestion-checkbox:checked');
 
     if (checkboxes.length === 0) {
-        alert('Please select at least one suggestion to update.');
+        showToast('Please select at least one suggestion to update', 'error');
         return;
     }
 
@@ -2009,34 +2223,6 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
             submitBtn.textContent = isConfirmed ? 'Update Selected' : 'Update Selected & Match';
         }
     }
-}
-
-// Show toast notification
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = 'bma-toast bma-toast-' + type;
-    toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 12px 20px;
-        background: ${type === 'success' ? '#10b981' : '#ef4444'};
-        color: white;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        z-index: 10000;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        animation: slideIn 0.3s ease-out;
-    `;
-
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
 }
 
 // Attach event listeners using event delegation
