@@ -206,7 +206,7 @@ if (empty($bookings)) {
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     transition: all 0.2s;
     position: relative;
 }
@@ -236,11 +236,11 @@ if (empty($bookings)) {
 }
 
 .booking-header {
-    padding: 12px;
+    padding: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     position: relative;
 }
 
@@ -311,13 +311,13 @@ if (empty($bookings)) {
 }
 
 .booking-details {
-    padding: 0 12px 12px 12px;
+    padding: 0 8px 8px 8px;
     border-top: 1px solid #e2e8f0;
 }
 
 /* Compact Details Section */
 .compact-details {
-    margin-top: 12px;
+    margin-top: 8px;
 }
 
 .compact-row {
@@ -337,16 +337,16 @@ if (empty($bookings)) {
 .detail-separator {
     height: 1px;
     background: #e2e8f0;
-    margin: 12px 0;
+    margin: 8px 0;
 }
 
 /* Detail Sections */
 .detail-section {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .detail-section h4 {
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     font-size: 13px;
     color: #2d3748;
     font-weight: 600;
@@ -418,7 +418,7 @@ if (empty($bookings)) {
     align-items: center;
     gap: 6px;
     padding: 6px 8px;
-    margin: 4px 0 8px 0;
+    margin: 4px 0 6px 0;
     border-radius: 4px;
     font-size: 11px;
 }
