@@ -120,8 +120,19 @@ if (empty($bookings)) {
                                 $is_primary = $match['match_info']['is_primary'] ?? false;
                                 $time = date('H:i', strtotime($match['time']));
                                 $pax = $match['people'] ?? 0;
+                                $resos_id = $match['resos_booking_id'] ?? '';
+                                $restaurant_id = $match['restaurant_id'] ?? '';
                                 ?>
-                                <div class="night-row <?php echo !$is_primary ? 'clickable-issue' : ''; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" <?php echo !$is_primary ? 'title="Click to view in Restaurant tab"' : ''; ?>>
+                                <div class="night-row <?php echo $is_primary ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                     data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                     <?php if ($is_primary): ?>
+                                         data-resos-id="<?php echo esc_attr($resos_id); ?>"
+                                         data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
+                                         data-date="<?php echo esc_attr($night_date); ?>"
+                                         title="Click to view in ResOS"
+                                     <?php else: ?>
+                                         title="Click to view in Restaurant tab"
+                                     <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                     <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
@@ -140,8 +151,19 @@ if (empty($bookings)) {
                                     $is_primary = $match['match_info']['is_primary'] ?? false;
                                     $time = date('H:i', strtotime($match['time']));
                                     $pax = $match['people'] ?? 0;
+                                    $resos_id = $match['resos_booking_id'] ?? '';
+                                    $restaurant_id = $match['restaurant_id'] ?? '';
                                 ?>
-                                    <div class="night-row clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
+                                    <div class="night-row <?php echo $is_primary ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                         data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                         <?php if ($is_primary): ?>
+                                             data-resos-id="<?php echo esc_attr($resos_id); ?>"
+                                             data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
+                                             data-date="<?php echo esc_attr($night_date); ?>"
+                                             title="Click to view in ResOS"
+                                         <?php else: ?>
+                                             title="Click to view in Restaurant tab"
+                                         <?php endif; ?>>
                                         <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                         <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                         <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
@@ -450,6 +472,21 @@ if (empty($bookings)) {
 }
 
 .clickable-issue:active {
+    transform: translateX(0);
+}
+
+/* ResOS Deep Link Rows */
+.resos-deep-link {
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.resos-deep-link:hover {
+    background-color: rgba(16, 185, 129, 0.1);
+    transform: translateX(2px);
+}
+
+.resos-deep-link:active {
     transform: translateX(0);
 }
 
