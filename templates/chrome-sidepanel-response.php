@@ -1234,6 +1234,10 @@ if (!defined('ABSPATH')) {
 .comparison-table tbody td:nth-child(3) {
     width: 37.5%;
     font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0; /* Force ellipsis to work with percentage widths */
 }
 
 /* Match highlighting - green background */
@@ -1243,7 +1247,7 @@ if (!defined('ABSPATH')) {
 
 /* Suggestion row styling */
 .comparison-table tbody tr.suggestion-row {
-    background: #fff3cd;
+    background: linear-gradient(to right, rgba(251, 191, 36, 0.3), rgba(251, 191, 36, 0.15));
 }
 
 .comparison-table tbody tr.suggestion-row td {
@@ -1841,11 +1845,19 @@ function buildComparisonRow(label, field, hotelValue, resosValue, isMatch, sugge
         ? (isHTML ? resosValue : escapeHTML(String(resosValue)))
         : '<em style="color: #adb5bd;">-</em>';
 
+    // Get plain text values for title attributes (tooltips)
+    const hotelTitle = hotelValue !== undefined && hotelValue !== null && hotelValue !== ''
+        ? String(hotelValue)
+        : '';
+    const resosTitle = resosValue !== undefined && resosValue !== null && resosValue !== ''
+        ? String(resosValue)
+        : '';
+
     // Main comparison row (3 columns: Field, Newbook, ResOS)
     let html = `<tr${matchClass}>`;
     html += `<td><strong>${escapeHTML(label)}</strong></td>`;
-    html += `<td>${hotelDisplay}</td>`;
-    html += `<td>${resosDisplay}</td>`;
+    html += hotelTitle ? `<td title="${escapeHTML(hotelTitle)}">${hotelDisplay}</td>` : `<td>${hotelDisplay}</td>`;
+    html += resosTitle ? `<td title="${escapeHTML(resosTitle)}">${resosDisplay}</td>` : `<td>${resosDisplay}</td>`;
     html += '</tr>';
 
     // If there's a suggestion, add a suggestion row below
