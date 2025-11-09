@@ -347,6 +347,7 @@ if (!defined('ABSPATH')) {
 
                         <!-- Create Booking Button -->
                         <button class="bma-action-btn create <?php echo $has_package_alert ? 'urgent' : ''; ?>"
+                                id="create-btn-<?php echo esc_attr($night['date']); ?>"
                                 data-action="toggle-create"
                                 data-date="<?php echo esc_attr($night['date']); ?>">
                             <?php echo $has_package_alert ? '+ Create Booking Now' : '+ Create Booking'; ?>
@@ -998,7 +999,7 @@ if (!defined('ABSPATH')) {
     background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
-    padding: 16px;
+    padding: 12px 8px;
     margin-top: 12px;
     animation: slideDown 0.3s ease-out;
 }
@@ -1015,22 +1016,22 @@ if (!defined('ABSPATH')) {
 }
 
 .bma-booking-form h5 {
-    margin: 0 0 16px 0;
-    font-size: 15px;
+    margin: 0 0 12px 0;
+    font-size: 14px;
     font-weight: 600;
     color: #374151;
 }
 
 .bma-form-row {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .bma-form-row label {
     display: block;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     color: #4b5563;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
 .bma-form-row input[type="text"],
@@ -1040,10 +1041,10 @@ if (!defined('ABSPATH')) {
 .bma-form-row input[type="number"],
 .bma-form-row textarea {
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border: 1px solid #d1d5db;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 13px;
     font-family: inherit;
     box-sizing: border-box;
 }
@@ -1065,17 +1066,17 @@ if (!defined('ABSPATH')) {
 
 .bma-form-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 16px;
+    gap: 6px;
+    margin-top: 12px;
 }
 
 .bma-btn-cancel {
-    padding: 10px 20px;
+    padding: 8px 16px;
     background: #6b7280;
     color: white;
     border: none;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: background 0.2s;
@@ -1086,12 +1087,12 @@ if (!defined('ABSPATH')) {
 }
 
 .bma-btn-submit {
-    padding: 10px 20px;
+    padding: 8px 16px;
     background: #10b981;
     color: white;
     border: none;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: background 0.2s;
@@ -1107,10 +1108,10 @@ if (!defined('ABSPATH')) {
 }
 
 .bma-form-feedback {
-    margin-top: 12px;
-    padding: 12px;
+    margin-top: 10px;
+    padding: 10px;
     border-radius: 4px;
-    font-size: 13px;
+    font-size: 12px;
     display: none;
 }
 
@@ -1716,13 +1717,18 @@ function showToast(message, type = 'success', duration = 4000) {
 // Toggle create booking form
 function toggleCreateForm(date) {
     const formId = 'create-form-' + date;
+    const btnId = 'create-btn-' + date;
     const form = document.getElementById(formId);
-    if (form) {
-        if (form.style.display === 'none') {
+    const btn = document.getElementById(btnId);
+
+    if (form && btn) {
+        if (form.style.display === 'none' || !form.style.display) {
             form.style.display = 'block';
+            btn.style.display = 'none'; // Hide button when form is open
             form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } else {
             form.style.display = 'none';
+            btn.style.display = ''; // Show button when form is closed
         }
     }
 }
@@ -1796,10 +1802,13 @@ async function submitCreateBooking(date) {
             }, 2000);
         } else {
             showFeedback(feedback, `Error: ${result.message || 'Failed to create booking'}`, 'error');
+            // Re-enable button on error
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Booking';
         }
     } catch (error) {
         showFeedback(feedback, `Error: ${error.message}`, 'error');
-    } finally {
+        // Re-enable button on error
         submitBtn.disabled = false;
         submitBtn.textContent = 'Create Booking';
     }
