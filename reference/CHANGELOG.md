@@ -12,6 +12,15 @@ All notable changes to the Booking Match API plugin.
   - Loads available times when service period is selected
   - Adds click handlers to time slot buttons for selection
 
+### Fixed (Latest)
+- **CRITICAL**: Resos API authentication in fetch methods (commit de4a091)
+  - Fixed 401 Unauthorized errors on all fetch operations
+  - Changed from `Bearer` to `Basic` authentication scheme
+  - Added base64 encoding of API key in Authorization header
+  - Updated `fetch_opening_hours()`, `fetch_available_times()`, `fetch_special_events()`, and `fetch_dietary_choices()`
+  - Now consistent with booking create/update operations
+  - Verified working with curl tests against Resos API
+
 ### Added
 - Gantt Chart generator class (`class-bma-gantt-chart.php`)
   - Three display modes: full, medium, compact
