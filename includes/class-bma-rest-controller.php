@@ -90,6 +90,92 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'args' => $this->get_create_booking_params(),
             ),
         ));
+
+        // New endpoints for booking form data
+        register_rest_route($this->namespace, '/opening-hours', array(
+            array(
+                'methods' => array(WP_REST_Server::READABLE, WP_REST_Server::CREATABLE),
+                'callback' => array($this, 'get_opening_hours'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => array(
+                    'date' => array(
+                        'required' => false,
+                        'type' => 'string',
+                        'description' => 'Optional date in YYYY-MM-DD format',
+                    ),
+                    'context' => array(
+                        'required' => false,
+                        'type' => 'string',
+                        'description' => 'Response format context (e.g., chrome-extension for HTML)',
+                    ),
+                ),
+            ),
+        ));
+
+        register_rest_route($this->namespace, '/available-times', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'get_available_times'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => array(
+                    'date' => array(
+                        'required' => true,
+                        'type' => 'string',
+                        'description' => 'Date in YYYY-MM-DD format',
+                    ),
+                    'people' => array(
+                        'required' => true,
+                        'type' => 'integer',
+                        'description' => 'Number of people',
+                    ),
+                    'opening_hour_id' => array(
+                        'required' => false,
+                        'type' => 'string',
+                        'description' => 'Optional opening hour period ID filter',
+                    ),
+                    'context' => array(
+                        'required' => false,
+                        'type' => 'string',
+                        'description' => 'Response format context (e.g., chrome-extension for HTML)',
+                    ),
+                ),
+            ),
+        ));
+
+        register_rest_route($this->namespace, '/dietary-choices', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_dietary_choices'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => array(
+                    'context' => array(
+                        'required' => false,
+                        'type' => 'string',
+                        'description' => 'Response format context (e.g., chrome-extension for HTML)',
+                    ),
+                ),
+            ),
+        ));
+
+        register_rest_route($this->namespace, '/special-events', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_special_events'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => array(
+                    'date' => array(
+                        'required' => true,
+                        'type' => 'string',
+                        'description' => 'Date in YYYY-MM-DD format',
+                    ),
+                    'context' => array(
+                        'required' => false,
+                        'type' => 'string',
+                        'description' => 'Response format context (e.g., chrome-extension for HTML)',
+                    ),
+                ),
+            ),
+        ));
     }
 
     /**
@@ -1099,5 +1185,315 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'sanitize_callback' => 'sanitize_text_field',
             ),
         );
+    }
+
+    /**
+     * Get opening hours endpoint
+     *
+     * @param WP_REST_Request $request Full request object
+     * @return array Response data
+     */
+    public function get_opening_hours($request) {
+        $date = $request->get_param('date');
+        $context = $request->get_param('context');
+
+        error_log("BMA Opening Hours: date = " . ($date ? $date : 'all') . ", context = " . ($context ? $context : 'json'));
+
+        $actions = new BMA_Booking_Actions();
+        $data = $actions->fetch_opening_hours($date);
+
+        if (empty($data)) {
+            return array(
+                'success' => false,
+                'message' => 'No opening hours found',
+                'data' => array()
+            );
+        }
+
+        // If context is chrome-extension, return formatted HTML
+        if ($context === 'chrome-extension') {
+            $html = $this->format_opening_hours_html($data);
+            return array(
+                'success' => true,
+                'html' => $html,
+                'data' => $data
+            );
+        }
+
+        // Return raw JSON
+        return array(
+            'success' => true,
+            'data' => $data
+        );
+    }
+
+    /**
+     * Get available times endpoint
+     *
+     * @param WP_REST_Request $request Full request object
+     * @return array Response data
+     */
+    public function get_available_times($request) {
+        $date = $request->get_param('date');
+        $people = $request->get_param('people');
+        $opening_hour_id = $request->get_param('opening_hour_id');
+        $context = $request->get_param('context');
+
+        error_log("BMA Available Times: date = $date, people = $people, context = " . ($context ? $context : 'json'));
+
+        $actions = new BMA_Booking_Actions();
+        $result = $actions->fetch_available_times($date, $people, $opening_hour_id);
+
+        if (!$result['success']) {
+            return $result;
+        }
+
+        // If context is chrome-extension, return formatted HTML
+        if ($context === 'chrome-extension') {
+            // Also fetch opening hours and special events for complete time slot rendering
+            $opening_hours = $actions->fetch_opening_hours($date);
+            $special_events = $actions->fetch_special_events($date);
+
+            $html = $this->format_time_slots_html($result['times'], $opening_hours, $special_events);
+            return array(
+                'success' => true,
+                'html' => $html,
+                'times' => $result['times'],
+                'periods' => $result['periods']
+            );
+        }
+
+        // Return raw JSON
+        return $result;
+    }
+
+    /**
+     * Get dietary choices endpoint
+     *
+     * @param WP_REST_Request $request Full request object
+     * @return array Response data
+     */
+    public function get_dietary_choices($request) {
+        $context = $request->get_param('context');
+
+        error_log("BMA Dietary Choices: context = " . ($context ? $context : 'json'));
+
+        $actions = new BMA_Booking_Actions();
+        $choices = $actions->fetch_dietary_choices();
+
+        // If context is chrome-extension, return formatted HTML
+        if ($context === 'chrome-extension') {
+            $html = $this->format_dietary_choices_html($choices);
+            return array(
+                'success' => true,
+                'html' => $html,
+                'choices' => $choices
+            );
+        }
+
+        // Return raw JSON
+        return array(
+            'success' => true,
+            'choices' => $choices
+        );
+    }
+
+    /**
+     * Get special events endpoint
+     *
+     * @param WP_REST_Request $request Full request object
+     * @return array Response data
+     */
+    public function get_special_events($request) {
+        $date = $request->get_param('date');
+        $context = $request->get_param('context');
+
+        error_log("BMA Special Events: date = $date, context = " . ($context ? $context : 'json'));
+
+        $actions = new BMA_Booking_Actions();
+        $events = $actions->fetch_special_events($date);
+
+        // If context is chrome-extension, return formatted HTML
+        if ($context === 'chrome-extension') {
+            $html = $this->format_special_events_html($events);
+            return array(
+                'success' => true,
+                'html' => $html,
+                'events' => $events
+            );
+        }
+
+        // Return raw JSON
+        return array(
+            'success' => true,
+            'events' => $events
+        );
+    }
+
+    /**
+     * Format opening hours as HTML select options
+     *
+     * @param array $opening_hours Array of opening hour objects
+     * @return string HTML options
+     */
+    private function format_opening_hours_html($opening_hours) {
+        $html = '';
+
+        foreach ($opening_hours as $period) {
+            $id = isset($period['_id']) ? $period['_id'] : '';
+            $name = isset($period['name']) ? $period['name'] : '';
+            $open = isset($period['open']) ? $period['open'] : 1800;
+            $close = isset($period['close']) ? $period['close'] : 2200;
+
+            // Format times for display
+            $open_hour = floor($open / 100);
+            $open_min = $open % 100;
+            $close_hour = floor($close / 100);
+            $close_min = $close % 100;
+
+            $open_str = sprintf('%d:%02d', $open_hour, $open_min);
+            $close_str = sprintf('%d:%02d', $close_hour, $close_min);
+
+            $label = $name ? "$name ($open_str-$close_str)" : "$open_str-$close_str";
+
+            $html .= sprintf(
+                '<option value="%s">%s</option>',
+                esc_attr($id),
+                esc_html($label)
+            );
+        }
+
+        return $html;
+    }
+
+    /**
+     * Format time slots as HTML button grid
+     *
+     * @param array $available_times Array of available time strings
+     * @param array $opening_hours Array of opening hour objects
+     * @param array $special_events Array of special event objects
+     * @return string HTML for time slot grid
+     */
+    private function format_time_slots_html($available_times, $opening_hours, $special_events) {
+        // This is a simplified version - full implementation would match the JavaScript buildTimeSlots function
+        $html = '<div class="bma-time-slots-grid">';
+
+        // Convert available times to set for fast lookup
+        $available_set = array_flip($available_times);
+
+        if (empty($opening_hours)) {
+            $html .= '<p>No time slots available</p>';
+        } else {
+            foreach ($opening_hours as $period) {
+                $period_name = isset($period['name']) ? $period['name'] : 'Service';
+                $period_start = isset($period['open']) ? $period['open'] : 1800;
+                $period_close = isset($period['close']) ? $period['close'] : 2200;
+                $interval = isset($period['interval']) ? $period['interval'] : 15;
+                $duration = isset($period['duration']) ? $period['duration'] : 120;
+
+                // Calculate last seating time
+                $close_hour = floor($period_close / 100);
+                $close_min = $period_close % 100;
+                $duration_hours = floor($duration / 60);
+                $duration_mins = $duration % 60;
+
+                $close_min -= $duration_mins;
+                $close_hour -= $duration_hours;
+                if ($close_min < 0) {
+                    $close_min += 60;
+                    $close_hour--;
+                }
+                $last_seating = $close_hour * 100 + $close_min;
+
+                $html .= '<div class="time-slot-period">';
+                $html .= '<div class="time-slot-period-header">' . esc_html($period_name) . '</div>';
+                $html .= '<div class="time-slot-buttons">';
+
+                // Generate time slots
+                $current_hour = floor($period_start / 100);
+                $current_min = $period_start % 100;
+
+                while (true) {
+                    $current_time = $current_hour * 100 + $current_min;
+                    if ($current_time > $last_seating) {
+                        break;
+                    }
+
+                    $time_str = $current_hour . ':' . ($current_min < 10 ? '0' . $current_min : $current_min);
+                    $is_available = isset($available_set[$time_str]);
+
+                    $btn_class = 'time-slot-btn' . ($is_available ? '' : ' unavailable');
+                    $tooltip = $is_available ? '' : ' data-tooltip="Fully booked - Override allowed"';
+
+                    $html .= sprintf(
+                        '<button type="button" class="%s" data-time="%s"%s>%s</button>',
+                        esc_attr($btn_class),
+                        esc_attr(str_replace(':', '', $time_str)),
+                        $tooltip,
+                        esc_html($time_str)
+                    );
+
+                    // Increment by interval
+                    $current_min += $interval;
+                    if ($current_min >= 60) {
+                        $current_min -= 60;
+                        $current_hour++;
+                    }
+                }
+
+                $html .= '</div></div>';
+            }
+        }
+
+        $html .= '</div>';
+        return $html;
+    }
+
+    /**
+     * Format dietary choices as HTML checkboxes
+     *
+     * @param array $choices Array of dietary choice objects
+     * @return string HTML checkboxes
+     */
+    private function format_dietary_choices_html($choices) {
+        $html = '';
+
+        foreach ($choices as $choice) {
+            $id = isset($choice['_id']) ? $choice['_id'] : '';
+            $name = isset($choice['name']) ? $choice['name'] : '';
+
+            $html .= sprintf(
+                '<label><input type="checkbox" class="diet-checkbox" data-choice-id="%s" data-choice-name="%s"> %s</label>',
+                esc_attr($id),
+                esc_attr($name),
+                esc_html($name)
+            );
+        }
+
+        return $html;
+    }
+
+    /**
+     * Format special events as HTML alert banners
+     *
+     * @param array $events Array of special event objects
+     * @return string HTML alerts
+     */
+    private function format_special_events_html($events) {
+        $html = '';
+
+        foreach ($events as $event) {
+            if (isset($event['isOpen']) && $event['isOpen'] === true) {
+                continue; // Skip open events
+            }
+
+            $name = isset($event['name']) ? $event['name'] : 'Special Event';
+            $html .= sprintf(
+                '<div class="bma-special-event-alert">%s</div>',
+                esc_html($name)
+            );
+        }
+
+        return $html;
     }
 }

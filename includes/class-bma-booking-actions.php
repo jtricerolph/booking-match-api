@@ -818,4 +818,301 @@ class BMA_Booking_Actions {
             'booking_data' => $data
         );
     }
+
+    /**
+     * Fetch opening hours from Resos API with caching
+     *
+     * @param string|null $date Optional date in YYYY-MM-DD format
+     * @return array Opening hours data or empty array on failure
+     */
+    public function fetch_opening_hours( $date = null ) {
+        $cache_key = 'bma_opening_hours_' . ( $date ? $date : 'general' );
+        $cached = get_transient( $cache_key );
+
+        if ( $cached !== false ) {
+            error_log( 'BMA: Returning cached opening hours for: ' . ( $date ? $date : 'general' ) );
+            return $cached;
+        }
+
+        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+        if ( empty( $resos_api_key ) ) {
+            error_log( 'BMA: Resos API key not configured' );
+            return array();
+        }
+
+        $url = 'https://api.resos.com/v1/openingHours';
+        if ( $date ) {
+            $url .= '/' . urlencode( $date );
+        }
+        $url .= '?showDeleted=false&onlySpecial=false&type=restaurant';
+
+        $args = array(
+            'timeout' => 15,
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $resos_api_key,
+                'Content-Type' => 'application/json',
+            ),
+        );
+
+        error_log( 'BMA: Fetching opening hours from Resos API: ' . $url );
+        $response = wp_remote_get( $url, $args );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( 'BMA: Opening hours fetch error: ' . $response->get_error_message() );
+            return array();
+        }
+
+        $response_code = wp_remote_retrieve_response_code( $response );
+        if ( $response_code !== 200 ) {
+            error_log( 'BMA: Opening hours fetch failed with status: ' . $response_code );
+            return array();
+        }
+
+        $body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $body, true );
+
+        if ( ! is_array( $data ) ) {
+            error_log( 'BMA: Invalid opening hours response format' );
+            return array();
+        }
+
+        // Cache for 1 hour
+        set_transient( $cache_key, $data, HOUR_IN_SECONDS );
+        error_log( 'BMA: Cached opening hours for: ' . ( $date ? $date : 'general' ) );
+
+        return $data;
+    }
+
+    /**
+     * Fetch available times from Resos API
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @param int $people Number of people
+     * @param string|null $area_id Optional area/table ID filter
+     * @return array Response with success status, times array, and periods
+     */
+    public function fetch_available_times( $date, $people, $area_id = null ) {
+        if ( empty( $date ) || empty( $people ) ) {
+            return array(
+                'success' => false,
+                'message' => 'Date and people are required',
+                'times' => array(),
+                'periods' => array(),
+            );
+        }
+
+        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+        if ( empty( $resos_api_key ) ) {
+            return array(
+                'success' => false,
+                'message' => 'Resos API key not configured',
+                'times' => array(),
+                'periods' => array(),
+            );
+        }
+
+        $url = 'https://api.resos.com/v1/openingHours/' . urlencode( $date ) .
+               '?people=' . intval( $people ) .
+               '&expand=availableTimes';
+
+        if ( $area_id ) {
+            $url .= '&areaId=' . urlencode( $area_id );
+        }
+
+        $args = array(
+            'timeout' => 15,
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $resos_api_key,
+                'Content-Type' => 'application/json',
+            ),
+        );
+
+        error_log( 'BMA: Fetching available times from Resos API: ' . $url );
+        $response = wp_remote_get( $url, $args );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( 'BMA: Available times fetch error: ' . $response->get_error_message() );
+            return array(
+                'success' => false,
+                'message' => $response->get_error_message(),
+                'times' => array(),
+                'periods' => array(),
+            );
+        }
+
+        $response_code = wp_remote_retrieve_response_code( $response );
+        if ( $response_code !== 200 ) {
+            error_log( 'BMA: Available times fetch failed with status: ' . $response_code );
+            return array(
+                'success' => false,
+                'message' => 'API request failed with status: ' . $response_code,
+                'times' => array(),
+                'periods' => array(),
+            );
+        }
+
+        $body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $body, true );
+
+        if ( ! is_array( $data ) ) {
+            error_log( 'BMA: Invalid available times response format' );
+            return array(
+                'success' => false,
+                'message' => 'Invalid response format',
+                'times' => array(),
+                'periods' => array(),
+            );
+        }
+
+        // Extract all available times from all opening hour periods
+        $all_available_times = array();
+        foreach ( $data as $opening_hour ) {
+            if ( isset( $opening_hour['availableTimes'] ) && is_array( $opening_hour['availableTimes'] ) ) {
+                $all_available_times = array_merge( $all_available_times, $opening_hour['availableTimes'] );
+            }
+        }
+
+        return array(
+            'success' => true,
+            'times' => $all_available_times,
+            'periods' => $data,
+        );
+    }
+
+    /**
+     * Fetch special events from Resos API with caching
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @return array Special events data or empty array on failure
+     */
+    public function fetch_special_events( $date ) {
+        if ( empty( $date ) ) {
+            return array();
+        }
+
+        $cache_key = 'bma_special_events_' . $date;
+        $cached = get_transient( $cache_key );
+
+        if ( $cached !== false ) {
+            error_log( 'BMA: Returning cached special events for: ' . $date );
+            return $cached;
+        }
+
+        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+        if ( empty( $resos_api_key ) ) {
+            error_log( 'BMA: Resos API key not configured' );
+            return array();
+        }
+
+        $url = 'https://api.resos.com/v1/specialEvents?date=' . urlencode( $date );
+
+        $args = array(
+            'timeout' => 15,
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $resos_api_key,
+                'Content-Type' => 'application/json',
+            ),
+        );
+
+        error_log( 'BMA: Fetching special events from Resos API: ' . $url );
+        $response = wp_remote_get( $url, $args );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( 'BMA: Special events fetch error: ' . $response->get_error_message() );
+            return array();
+        }
+
+        $response_code = wp_remote_retrieve_response_code( $response );
+        if ( $response_code !== 200 ) {
+            error_log( 'BMA: Special events fetch failed with status: ' . $response_code );
+            return array();
+        }
+
+        $body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $body, true );
+
+        if ( ! is_array( $data ) ) {
+            error_log( 'BMA: Invalid special events response format' );
+            return array();
+        }
+
+        // Cache for 30 minutes
+        set_transient( $cache_key, $data, 30 * MINUTE_IN_SECONDS );
+        error_log( 'BMA: Cached special events for: ' . $date );
+
+        return $data;
+    }
+
+    /**
+     * Fetch dietary choices custom field with caching
+     *
+     * @return array Array of dietary choice objects
+     */
+    public function fetch_dietary_choices() {
+        $cache_key = 'bma_dietary_choices';
+        $cached = get_transient( $cache_key );
+
+        if ( $cached !== false ) {
+            error_log( 'BMA: Returning cached dietary choices' );
+            return $cached;
+        }
+
+        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+        if ( empty( $resos_api_key ) ) {
+            error_log( 'BMA: Resos API key not configured' );
+            return array();
+        }
+
+        $url = 'https://api.resos.com/v1/customFields';
+
+        $args = array(
+            'timeout' => 15,
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $resos_api_key,
+                'Content-Type' => 'application/json',
+            ),
+        );
+
+        error_log( 'BMA: Fetching custom fields from Resos API' );
+        $response = wp_remote_get( $url, $args );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( 'BMA: Custom fields fetch error: ' . $response->get_error_message() );
+            return array();
+        }
+
+        $response_code = wp_remote_retrieve_response_code( $response );
+        if ( $response_code !== 200 ) {
+            error_log( 'BMA: Custom fields fetch failed with status: ' . $response_code );
+            return array();
+        }
+
+        $body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $body, true );
+
+        if ( ! is_array( $data ) ) {
+            error_log( 'BMA: Invalid custom fields response format' );
+            return array();
+        }
+
+        // Find the " Dietary Requirements" field (note leading space!)
+        $dietary_field = null;
+        foreach ( $data as $field ) {
+            if ( isset( $field['name'] ) && $field['name'] === ' Dietary Requirements' ) {
+                $dietary_field = $field;
+                break;
+            }
+        }
+
+        $choices = array();
+        if ( $dietary_field && isset( $dietary_field['multipleChoiceSelections'] ) && is_array( $dietary_field['multipleChoiceSelections'] ) ) {
+            $choices = $dietary_field['multipleChoiceSelections'];
+        }
+
+        // Cache for 24 hours
+        set_transient( $cache_key, $choices, DAY_IN_SECONDS );
+        error_log( 'BMA: Cached ' . count( $choices ) . ' dietary choices' );
+
+        return $choices;
+    }
 }

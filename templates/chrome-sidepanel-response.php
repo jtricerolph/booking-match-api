@@ -137,6 +137,8 @@ if (!defined('ABSPATH')) {
                 }
                 ?>
 
+                <!-- Date Section Wrapper for Navigation -->
+                <div class="bma-date-section" id="date-section-<?php echo esc_attr($night['date']); ?>" data-date="<?php echo esc_attr($night['date']); ?>">
                 <div class="bma-night <?php echo $has_matches ? 'matched' : 'unmatched'; ?> <?php echo $has_warnings ? 'has-warnings' : ''; ?> <?php echo $has_package_alert ? 'has-package-alert' : ''; ?>">
                     <div class="bma-night-header">
                         <div class="bma-night-date">
@@ -367,54 +369,148 @@ if (!defined('ABSPATH')) {
 
                             <h5>Create Restaurant Booking</h5>
 
-                            <!-- Gantt Chart Placeholder -->
-                            <div class="bma-gantt-placeholder" id="gantt-<?php echo esc_attr($night['date']); ?>">
-                                <div class="gantt-header">
-                                    <span class="material-symbols-outlined">calendar_view_day</span>
-                                    <span>Restaurant Timeline for <?php echo esc_html(date('l, d/m', strtotime($night['date']))); ?></span>
+                            <!-- Compact Booking Header -->
+                            <div class="bma-booking-header">
+                                <span class="bma-booking-summary">
+                                    <strong><?php echo esc_html($booking['guest_name']); ?></strong> -
+                                    #<?php echo esc_html($booking['booking_id']); ?>
+                                    (<?php
+                                        $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
+                                        echo esc_html($occ['adults'] + $occ['children'] + $occ['infants']);
+                                    ?> pax)
+                                </span>
+                            </div>
+
+                            <!-- Opening Hour Selector -->
+                            <div class="bma-form-row">
+                                <label>Service Period *</label>
+                                <select id="opening-hour-selector-<?php echo esc_attr($night['date']); ?>"
+                                        class="form-opening-hour" required>
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
+
+                            <!-- Gantt Chart (Compact Mode) -->
+                            <div class="bma-gantt-container" id="gantt-container-<?php echo esc_attr($night['date']); ?>">
+                                <div class="gantt-controls">
+                                    <button type="button" class="gantt-scroll-btn" data-direction="left" data-chart-id="gantt-<?php echo esc_attr($night['date']); ?>">◄</button>
+                                    <span class="gantt-title">Restaurant Timeline</span>
+                                    <button type="button" class="gantt-scroll-btn" data-direction="right" data-chart-id="gantt-<?php echo esc_attr($night['date']); ?>">►</button>
                                 </div>
-                                <div class="gantt-content">
-                                    <p class="gantt-placeholder-text">Gantt chart view coming soon...</p>
-                                    <small>Visual timeline of all restaurant bookings for this date</small>
+                                <div class="gantt-viewport" id="gantt-<?php echo esc_attr($night['date']); ?>" style="overflow-x: auto; overflow-y: hidden; height: 120px; position: relative;">
+                                    <p style="padding: 20px; text-align: center; color: #666;">Loading timeline...</p>
                                 </div>
                             </div>
 
-                            <div class="bma-form-row">
-                                <label>Date</label>
-                                <input type="text" class="form-date" value="<?php echo esc_attr($night['date']); ?>" readonly>
+                            <!-- Time Slot Button Grid -->
+                            <div class="bma-time-slots-wrapper">
+                                <div id="time-slots-grid-<?php echo esc_attr($night['date']); ?>"
+                                     class="bma-time-slots-grid">
+                                    <p style="padding: 10px; text-align: center; color: #666;">Select service period to load times</p>
+                                </div>
                             </div>
 
-                            <div class="bma-form-row">
-                                <label>Guest Name *</label>
-                                <input type="text" class="form-guest-name" value="<?php echo esc_attr($booking['guest_name']); ?>" required>
+                            <!-- Hidden field for selected time -->
+                            <input type="hidden" class="form-time-selected" id="time-selected-<?php echo esc_attr($night['date']); ?>">
+
+                            <!-- Collapsible Section 1: Booking Details -->
+                            <div class="bma-expandable-section">
+                                <button type="button" class="bma-section-toggle" data-target="booking-details-<?php echo esc_attr($night['date']); ?>">
+                                    <span class="material-symbols-outlined">expand_more</span>
+                                    Booking Details
+                                </button>
+                                <div id="booking-details-<?php echo esc_attr($night['date']); ?>"
+                                     class="bma-section-content" style="display:none;">
+
+                                    <div class="bma-form-row">
+                                        <label>Date</label>
+                                        <input type="text" class="form-date" value="<?php echo esc_attr($night['date']); ?>" readonly>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>Guest Name *</label>
+                                        <input type="text" class="form-guest-name" value="<?php echo esc_attr($booking['guest_name']); ?>" required>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>People *</label>
+                                        <input type="number" class="form-people" min="1" value="<?php
+                                            $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
+                                            echo esc_attr($occ['adults'] + $occ['children'] + $occ['infants']);
+                                        ?>" required>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>Phone</label>
+                                        <input type="tel" class="form-phone" value="<?php echo esc_attr($booking['phone'] ?? ''); ?>">
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>Email</label>
+                                        <input type="email" class="form-email" value="<?php echo esc_attr($booking['email'] ?? ''); ?>">
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>
+                                            <input type="checkbox" class="form-hotel-guest" checked>
+                                            Hotel Guest
+                                        </label>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>
+                                            <input type="checkbox" class="form-dbb" <?php echo ($has_package ? 'checked' : ''); ?>>
+                                            DBB/Package
+                                        </label>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>
+                                            <input type="checkbox" class="form-notification-sms" <?php echo (!empty($booking['phone']) ? 'checked' : ''); ?>>
+                                            Allow SMS
+                                        </label>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>
+                                            <input type="checkbox" class="form-notification-email" <?php echo (!empty($booking['email']) ? 'checked' : ''); ?>>
+                                            Allow Email
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="bma-form-row">
-                                <label>Time *</label>
-                                <input type="time" class="form-time" value="19:00" required>
+                            <!-- Collapsible Section 2: Allergies & Dietary -->
+                            <div class="bma-expandable-section">
+                                <button type="button" class="bma-section-toggle" data-target="allergies-<?php echo esc_attr($night['date']); ?>">
+                                    <span class="material-symbols-outlined">expand_more</span>
+                                    Allergies & Dietary
+                                </button>
+                                <div id="allergies-<?php echo esc_attr($night['date']); ?>"
+                                     class="bma-section-content" style="display:none;">
+
+                                    <div id="dietary-checkboxes-<?php echo esc_attr($night['date']); ?>">
+                                        <p style="padding: 10px; text-align: center; color: #666;">Loading dietary options...</p>
+                                    </div>
+
+                                    <div class="bma-form-row">
+                                        <label>Other Dietary Requirements</label>
+                                        <input type="text" class="form-diet-other" placeholder="Additional dietary notes...">
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="bma-form-row">
-                                <label>People *</label>
-                                <input type="number" class="form-people" min="1" value="<?php
-                                    $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
-                                    echo esc_attr($occ['adults'] + $occ['children'] + $occ['infants']);
-                                ?>" required>
-                            </div>
-
-                            <div class="bma-form-row">
-                                <label>Phone</label>
-                                <input type="tel" class="form-phone" value="<?php echo esc_attr($booking['phone'] ?? ''); ?>">
-                            </div>
-
-                            <div class="bma-form-row">
-                                <label>Email</label>
-                                <input type="email" class="form-email" value="<?php echo esc_attr($booking['email'] ?? ''); ?>">
-                            </div>
-
-                            <div class="bma-form-row">
-                                <label>Notes</label>
-                                <textarea class="form-notes" rows="2" placeholder="e.g., Room <?php echo esc_attr($booking['room'] ?? ''); ?>, Booking #<?php echo esc_attr($booking['booking_id']); ?>"></textarea>
+                            <!-- Collapsible Section 3: Add Note -->
+                            <div class="bma-expandable-section">
+                                <button type="button" class="bma-section-toggle" data-target="note-<?php echo esc_attr($night['date']); ?>">
+                                    <span class="material-symbols-outlined">expand_more</span>
+                                    Add Note
+                                </button>
+                                <div id="note-<?php echo esc_attr($night['date']); ?>"
+                                     class="bma-section-content" style="display:none;">
+                                    <textarea class="form-booking-note" rows="3"
+                                              placeholder="Internal restaurant notes..."></textarea>
+                                </div>
                             </div>
 
                             <div class="bma-form-actions">
@@ -426,10 +522,11 @@ if (!defined('ABSPATH')) {
                                         data-date="<?php echo esc_attr($night['date']); ?>">Create Booking</button>
                             </div>
 
-                            <div class="bma-form-feedback"></div>
+                            <div class="bma-form-feedback" id="feedback-create-<?php echo esc_attr($night['date']); ?>"></div>
                         </div>
                     <?php endif; ?>
                 </div>
+                </div><!-- Close bma-date-section -->
             <?php endforeach; ?>
         </div>
 
