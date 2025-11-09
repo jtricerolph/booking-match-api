@@ -168,7 +168,8 @@ if (empty($bookings)) {
                 <!-- Action Button -->
                 <div class="detail-actions">
                     <button class="open-booking-btn" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
-                        Open Booking in NewBook →
+                        <span class="material-symbols-outlined">arrow_back</span>
+                        Open Booking in NewBook
                     </button>
                 </div>
             </div>
@@ -476,10 +477,18 @@ if (empty($bookings)) {
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .open-booking-btn:hover {
     background: #2c5aa0;
+}
+
+.open-booking-btn .material-symbols-outlined {
+    font-size: 18px;
 }
 
 /* Time Since Placed */

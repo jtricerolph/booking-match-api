@@ -104,6 +104,14 @@ if (!defined('ABSPATH')) {
                     <span><?php echo esc_html($booking['booking_source'] ?? 'Direct'); ?></span>
                 </div>
             </div>
+
+            <!-- Action Button -->
+            <div class="bma-top-actions">
+                <button class="open-booking-btn" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Open Booking in NewBook
+                </button>
+            </div>
         </div>
 
         <div class="bma-nights">
@@ -528,6 +536,36 @@ if (!defined('ABSPATH')) {
 .bma-muted {
     color: #6b7280;
     font-size: 13px;
+}
+
+/* Top Action Button */
+.bma-top-actions {
+    margin-top: 16px;
+}
+
+.open-booking-btn {
+    width: 100%;
+    padding: 10px;
+    background: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.open-booking-btn:hover {
+    background: #2c5aa0;
+}
+
+.open-booking-btn .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .bma-nights {
@@ -2228,6 +2266,26 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
 // Attach event listeners using event delegation
 // Note: Attach immediately since this template is injected after page load
 (function() {
+    // Event listener for "Open Booking in NewBook" buttons
+    document.body.addEventListener('click', function(event) {
+        const button = event.target.closest('.open-booking-btn');
+        if (button && button.dataset.bookingId) {
+            const bookingId = button.dataset.bookingId;
+            const newbookUrl = `https://appeu.newbook.cloud/bookings_view/${bookingId}`;
+
+            // Send message to background script to open in current tab
+            if (window.parent && window.parent.chrome && window.parent.chrome.runtime) {
+                window.parent.chrome.runtime.sendMessage({
+                    action: 'openNewBookBooking',
+                    url: newbookUrl
+                });
+            } else {
+                // Fallback: open in current window/tab
+                window.open(newbookUrl, '_self');
+            }
+        }
+    });
+
     // Use event delegation on document body for all button clicks
     document.body.addEventListener('click', function(event) {
         const button = event.target.closest('button[data-action]');
