@@ -51,6 +51,13 @@ All notable changes to the Booking Match API plugin.
   - Adds click handlers to time slot buttons for selection and period ID capture
 
 ### Fixed (Latest)
+- **Navigation context persisting and re-triggering**
+  - Fixed navigation context not being cleared after processing
+  - Prevented auto-expand/scroll from triggering on planner clicks
+  - Navigation context now cleared in all scenarios (success or early return)
+  - Fixes issue where clicking planner bookings incorrectly auto-expanded last date's create form
+  - Commit: 6148eaf
+
 - **Restaurant tab scroll alignment for last night**
   - Added 60vh bottom padding to restaurant tab content
   - Allows last night in the list to properly scroll to top of sidepanel
