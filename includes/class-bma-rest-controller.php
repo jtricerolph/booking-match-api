@@ -157,6 +157,21 @@ class BMA_REST_Controller extends WP_REST_Controller {
             ),
         ));
 
+        register_rest_route($this->namespace, '/all-bookings-for-date', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_all_bookings_for_date'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => array(
+                    'date' => array(
+                        'required' => true,
+                        'type' => 'string',
+                        'description' => 'Date in YYYY-MM-DD format',
+                    ),
+                ),
+            ),
+        ));
+
         register_rest_route($this->namespace, '/special-events', array(
             array(
                 'methods' => WP_REST_Server::READABLE,
@@ -1303,6 +1318,32 @@ class BMA_REST_Controller extends WP_REST_Controller {
         return array(
             'success' => true,
             'choices' => $choices
+        );
+    }
+
+    /**
+     * Get all bookings for a specific date endpoint
+     *
+     * @param WP_REST_Request $request Full request object
+     * @return array Response data
+     */
+    public function get_all_bookings_for_date($request) {
+        $date = $request->get_param('date');
+
+        if (empty($date)) {
+            return new WP_Error('missing_date', 'Date parameter is required', array('status' => 400));
+        }
+
+        error_log("BMA All Bookings: Fetching all bookings for date = $date");
+
+        $matcher = new BMA_Matcher();
+        $bookings = $matcher->fetch_all_bookings_for_gantt($date);
+
+        return array(
+            'success' => true,
+            'date' => $date,
+            'bookings' => $bookings,
+            'count' => count($bookings)
         );
     }
 

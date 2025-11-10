@@ -400,7 +400,7 @@ class BMA_Matcher {
     /**
      * Fetch Resos bookings for a date
      */
-    private function fetch_resos_bookings($date) {
+    public function fetch_resos_bookings($date) {
         $api_key = get_option('hotel_booking_resos_api_key');
 
         if (empty($api_key)) {
@@ -444,6 +444,39 @@ class BMA_Matcher {
         }
 
         return $filtered;
+    }
+
+    /**
+     * Fetch all restaurant bookings for a date, formatted for Gantt chart display
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @return array Array of bookings with time, people, name, room
+     */
+    public function fetch_all_bookings_for_gantt($date) {
+        $raw_bookings = $this->fetch_resos_bookings($date);
+        $formatted_bookings = array();
+
+        foreach ($raw_bookings as $booking) {
+            // Extract room from customFields
+            $room = 'Unknown';
+            if (isset($booking['customFields']) && is_array($booking['customFields'])) {
+                if (isset($booking['customFields']['room'])) {
+                    $room = $booking['customFields']['room'];
+                } elseif (isset($booking['customFields']['Room'])) {
+                    $room = $booking['customFields']['Room'];
+                }
+            }
+
+            $formatted_bookings[] = array(
+                'time' => $booking['time'] ?? '19:00',
+                'people' => $booking['people'] ?? 2,
+                'name' => $booking['guestName'] ?? 'Guest',
+                'room' => $room
+            );
+        }
+
+        error_log('BMA_Matcher: Fetched ' . count($formatted_bookings) . ' bookings for Gantt chart on ' . $date);
+        return $formatted_bookings;
     }
 
     /**
