@@ -519,13 +519,16 @@ class BMA_Matcher {
                 $people = $booking['numberOfGuests'];
             }
 
-            error_log('BMA_Matcher: Extracted - time: ' . $time . ', people: ' . $people . ', name: ' . $guest_name . ', room: ' . $room);
+            // Determine if guest is a hotel resident
+            $is_resident = !empty($room) && $room !== 'Unknown' && $room !== 'Non-Resident';
+
+            error_log('BMA_Matcher: Extracted - time: ' . $time . ', people: ' . $people . ', name: ' . $guest_name . ', is_resident: ' . ($is_resident ? 'yes' : 'no'));
 
             $formatted_bookings[] = array(
                 'time' => $time,
                 'people' => $people,
                 'name' => $guest_name,
-                'room' => $room
+                'is_resident' => $is_resident
             );
         }
 
