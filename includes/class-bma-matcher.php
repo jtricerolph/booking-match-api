@@ -57,6 +57,10 @@ class BMA_Matcher {
         $booking_status = $booking['booking_status'] ?? 'unknown';
         $booking_source = $this->determine_booking_source($booking);
 
+        // Extract guest contact details from guests array
+        $guest_phone = $this->get_primary_guest_phone($booking);
+        $guest_email = $this->get_primary_guest_email($booking);
+
         return array(
             'booking_id' => $booking['booking_id'] ?? null,
             'booking_reference' => $booking['booking_reference_id'] ?? '',
@@ -69,7 +73,9 @@ class BMA_Matcher {
             'occupants' => $occupants,
             'tariffs' => $tariffs,
             'booking_status' => $booking_status,
-            'booking_source' => $booking_source
+            'booking_source' => $booking_source,
+            'phone' => $guest_phone,
+            'email' => $guest_email
         );
     }
 

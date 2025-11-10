@@ -42,6 +42,13 @@ All notable changes to the Booking Match API plugin.
   - Adds click handlers to time slot buttons for selection and period ID capture
 
 ### Fixed (Latest)
+- **Email and phone auto-population from NewBook guest data**
+  - Fixed email and phone fields not populating in create booking form
+  - Added extraction of guest contact details from `guests[].contact_details` array
+  - Updated `match_booking_all_nights()` to include `phone` and `email` fields
+  - Now correctly accesses primary guest's phone and email from NewBook API structure
+  - Template form fields now auto-populate with guest contact information
+
 - **Service period validation and accordion UI improvements**
   - Fixed "select a service period" error appearing even after selecting time
   - Changed validation from old dropdown selector to hidden `opening-hour-id` field
