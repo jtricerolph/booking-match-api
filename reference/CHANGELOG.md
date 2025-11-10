@@ -6,11 +6,13 @@ All notable changes to the Booking Match API plugin.
 
 ### Added (Latest)
 - **Clickable restaurant header navigation in Summary tab**
-  - Restaurant section header now navigates to Restaurant tab
+  - Restaurant section header in booking cards now navigates to Restaurant tab
   - Click handler extracts booking ID and calls `navigateToRestaurantDate()`
   - Visual feedback with restaurant icon and arrow icon
   - Hover states with background color change and arrow animation
-  - Commits: dfa6f43 (template/CSS), 7a49003 (JavaScript)
+  - "No booking" rows now include data-date attribute for auto-expand functionality
+  - Clicking "No booking" rows automatically opens create form for that date
+  - Commits: d633c7c (template fix), 3a3a981 (JavaScript selector fix)
 
 - **Gantt chart visualization for booking creation**
   - Added `buildGanttChart()` function in sidepanel.js
@@ -49,6 +51,21 @@ All notable changes to the Booking Match API plugin.
   - Adds click handlers to time slot buttons for selection and period ID capture
 
 ### Fixed (Latest)
+- **Restaurant header navigation and auto-expand functionality**
+  - Fixed restaurant header initially applied to wrong tab (Restaurant instead of Summary)
+  - Reverted clickable header from Restaurant tab template
+  - Applied clickable header to correct location: Summary tab booking cards
+  - Fixed "No booking" rows missing data-date attribute preventing auto-expand
+  - Added create-booking-link class to enable auto-open of create form
+  - Changed JavaScript selector from .bma-restaurant-header-link to .restaurant-header-link
+  - Clicking "No booking" rows now properly auto-expands create form for that date
+  - Commits: d633c7c (template fix), 3a3a981 (JavaScript fix)
+
+- **Summary tab booking badges vertical alignment**
+  - Fixed badges being vertically centered, causing clash with time-since-placed element
+  - Added align-self: flex-start to position badges at top of header section
+  - Commit: a0c3404
+
 - **Email and phone auto-population from NewBook guest data**
   - Fixed email and phone fields not populating in create booking form
   - Added extraction of guest contact details from `guests[].contact_details` array
