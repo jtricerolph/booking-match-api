@@ -830,6 +830,19 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 $total_warning_count += $processed['warning_count'];
             }
 
+            // Sort by room number (site_name) using natural sort
+            usort($processed_bookings, function($a, $b) {
+                $room_a = $a['site_name'] ?? 'N/A';
+                $room_b = $b['site_name'] ?? 'N/A';
+
+                // Put N/A entries at the end
+                if ($room_a === 'N/A' && $room_b !== 'N/A') return 1;
+                if ($room_a !== 'N/A' && $room_b === 'N/A') return -1;
+
+                // Natural sort for room numbers (handles "101", "102", "Suite A", etc.)
+                return strnatcasecmp($room_a, $room_b);
+            });
+
             // Format response
             $formatter = new BMA_Response_Formatter();
             return array(
