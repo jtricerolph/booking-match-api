@@ -5,6 +5,71 @@ All notable changes to the Booking Match API plugin.
 ## [Unreleased] - Implementation in Progress
 
 ### Added (Latest)
+- **Content indicators for collapsible sections** (2025-01-10)
+  - Green "draw" icon appears on section headers when they contain user data
+  - Real-time monitoring of form fields in Details, Allergies, and Note sections
+  - JavaScript function `setupSectionIndicators(date, form)` monitors input/change events
+  - Details section: shows indicator for phone, email, checkboxes (hotel guest, DBB, notifications)
+  - Allergies section: shows indicator for checked dietary options or "other" text
+  - Note section: shows indicator when note textarea contains text
+  - CSS classes `.section-indicator` and `.has-content` control visibility
+  - Provides immediate visual feedback of form completion status
+  - Commits: (sidepanel.js), (sidepanel.css), (chrome-sidepanel-response.php template)
+
+### Changed (Latest)
+- **Streamlined section toggle styling** (2025-01-10)
+  - Reduced section toggle padding from 12px 16px to 8px 12px
+  - Reduced font size from 14px to 12px for compact appearance
+  - Changed font-weight from 500 to 600 for improved readability
+  - Reduced icon size from 20px to 16px
+  - Reduced spacing between sections from 16px to 8px
+  - Now matches service period header styling for visual consistency
+  - Commit: (sidepanel.css)
+
+- **Optimized alert banner spacing** (2025-01-10)
+  - Reduced special events banner margin from 12px to 8px
+  - Reduced gap between alerts from 6px to 4px
+  - Reduced alert padding from 8px 10px to 6px 8px
+  - Reduced line-height from 1.4 to 1.2 in event descriptions
+  - Shortened "Online bookings closed from planner screen" text to fit on one line
+  - Improved space efficiency for narrow sidepanel layout
+  - Commit: (sidepanel.css, chrome-sidepanel-response.php)
+
+- **Reduced auto-scroll offset** (2025-01-10)
+  - Changed scroll offset from 30px to 5px below tab bar
+  - Prevents content from appearing flush against tabs
+  - Provides minimal but visible spacing for better UX
+  - Applies to both manual scroll and auto-expand navigation
+  - Commit: (sidepanel.js lines 176-180, 1742-1746)
+
+- **Status message visibility consistency** (2025-01-10)
+  - Fixed "No restaurant booking" status message remaining visible on auto-expand
+  - Now hides status message when auto-expanding create form (matches manual behavior)
+  - Ensures consistent UI state regardless of how form is opened
+  - Commit: (sidepanel.js lines 132-143)
+
+- **Gantt chart minimum height** (2025-01-10)
+  - Implemented minimum height of 150px for days with few bookings
+  - Ensures interval lines are visible across full viewport
+  - Balances visibility with space efficiency (reduced from initial 300px)
+  - Commit: (sidepanel.js lines 603-609)
+
+- **Gantt tooltip enhancements** (2025-01-10)
+  - Added "pax" suffix to people count in booking bar tooltips
+  - Format: "{people} pax {name} [hotel icon if resident]"
+  - Provides clearer indication of party size at a glance
+  - Commit: (sidepanel.js lines 898-905)
+
+- **Extension icon improvements** (2025-01-10)
+  - Reduced icon font sizes to prevent right-side cutoff
+  - icon-16: 12px → 10px
+  - icon-48: 36px → 32px
+  - icon-128: 96px → 86px
+  - Adds breathing room within fixed icon dimensions
+  - User regenerated and committed new icon files
+  - Commit: (generate-icons.html)
+
+### Added
 - **Gantt chart redesign for Chrome extension**
   - Complete rewrite of `buildGanttChart()` function to display actual restaurant bookings
   - Implemented row compaction algorithm (ported from PHP class-bma-gantt-chart.php)
