@@ -5,6 +5,13 @@ All notable changes to the Booking Match API plugin.
 ## [Unreleased] - Implementation in Progress
 
 ### Added (Latest)
+- **Clickable restaurant header navigation in Summary tab**
+  - Restaurant section header now navigates to Restaurant tab
+  - Click handler extracts booking ID and calls `navigateToRestaurantDate()`
+  - Visual feedback with restaurant icon and arrow icon
+  - Hover states with background color change and arrow animation
+  - Commits: dfa6f43 (template/CSS), 7a49003 (JavaScript)
+
 - **Gantt chart visualization for booking creation**
   - Added `buildGanttChart()` function in sidepanel.js
   - Displays opening hours as colored bands on visual timeline
