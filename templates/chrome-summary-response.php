@@ -301,6 +301,7 @@ if (empty($bookings)) {
 .booking-badges {
     display: flex;
     gap: 6px;
+    align-self: flex-start;
 }
 
 .issue-badge {
