@@ -208,6 +208,13 @@ if (empty($bookings)) {
                     </div>
                 </div>
 
+                <!-- Issues/Checks Section -->
+                <div class="detail-separator"></div>
+                <div class="detail-section checks-section">
+                    <h4><span class="material-symbols-outlined">check_circle</span> Issues/Checks</h4>
+                    <p class="placeholder-text">Coming soon...</p>
+                </div>
+
                 <!-- Action Button -->
                 <div class="detail-separator"></div>
                 <div class="detail-actions">
