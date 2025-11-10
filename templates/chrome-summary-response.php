@@ -499,30 +499,44 @@ if (empty($bookings)) {
 .clickable-issue {
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s;
+    text-decoration: none;
 }
 
 .clickable-issue:hover {
     background-color: rgba(59, 130, 246, 0.1);
     transform: translateX(2px);
+    text-decoration: none;
 }
 
 .clickable-issue:active {
     transform: translateX(0);
 }
 
+/* Prevent underline on child elements */
+.clickable-issue:hover * {
+    text-decoration: none;
+}
+
 /* ResOS Deep Link Rows */
 .resos-deep-link {
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s;
+    text-decoration: none;
 }
 
 .resos-deep-link:hover {
     background-color: rgba(16, 185, 129, 0.1);
     transform: translateX(2px);
+    text-decoration: none;
 }
 
 .resos-deep-link:active {
     transform: translateX(0);
+}
+
+/* Prevent underline on child elements */
+.resos-deep-link:hover * {
+    text-decoration: none;
 }
 
 /* Checks Section */
