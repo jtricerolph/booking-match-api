@@ -367,8 +367,6 @@ if (!defined('ABSPATH')) {
                                  echo esc_attr($occ['adults'] + $occ['children'] + $occ['infants']);
                              ?>">
 
-                            <h5>Create Restaurant Booking</h5>
-
                             <!-- Gantt Chart (Compact Mode) -->
                             <div class="bma-gantt-container" id="gantt-container-<?php echo esc_attr($night['date']); ?>">
                                 <div class="gantt-viewport" id="gantt-<?php echo esc_attr($night['date']); ?>" style="overflow-x: auto; overflow-y: hidden; height: 120px; position: relative;">
@@ -377,11 +375,8 @@ if (!defined('ABSPATH')) {
                             </div>
 
                             <!-- Service Period Accordion Sections -->
-                            <div class="bma-form-row">
-                                <label>Select Service Period & Time *</label>
-                                <div id="service-period-sections-<?php echo esc_attr($night['date']); ?>" class="service-period-sections">
-                                    <p style="padding: 10px; text-align: center; color: #666;">Loading service periods...</p>
-                                </div>
+                            <div id="service-period-sections-<?php echo esc_attr($night['date']); ?>" class="service-period-sections">
+                                <p style="padding: 10px; text-align: center; color: #666;">Loading service periods...</p>
                             </div>
 
                             <!-- Hidden fields for selected time and period -->

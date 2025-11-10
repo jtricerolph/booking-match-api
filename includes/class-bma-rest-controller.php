@@ -1440,7 +1440,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $html .= sprintf(
                         '<button type="button" class="%s" data-time="%s"%s>%s</button>',
                         esc_attr($btn_class),
-                        esc_attr(str_replace(':', '', $time_str)),
+                        esc_attr($time_str),
                         $tooltip,
                         esc_html($time_str)
                     );
