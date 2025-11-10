@@ -2,6 +2,39 @@
 
 All notable changes to this plugin will be documented in this file.
 
+## [1.3.1] - 2025-11-10
+
+### Added
+- **All Bookings for Date Endpoint**: New REST endpoint `/bma/v1/all-bookings-for-date`
+  - Returns ALL restaurant bookings for a specific date (not filtered by hotel guest matching)
+  - Provides comprehensive view of restaurant occupancy for Gantt chart display
+  - Uses existing `BMA_Matcher::fetch_resos_bookings()` method
+  - Filters out canceled/no-show bookings automatically
+  - Formats data specifically for Gantt chart display (time, people, name, room)
+
+- **New Method**: `BMA_Matcher::fetch_all_bookings_for_gantt()`
+  - Public method to fetch and format all restaurant bookings for a date
+  - Extracts room numbers from Resos customFields
+  - Returns simplified array structure optimized for Gantt chart rendering
+
+### Changed
+- **BMA_Matcher Class**: Made `fetch_resos_bookings()` method public
+  - Previously private, now accessible for reuse across the plugin
+  - Enables fetching all Resos bookings without duplicate code
+
+- **Gantt Chart in Chrome Extension**: Now shows ALL restaurant bookings
+  - Previously only displayed bookings matched to current hotel guest
+  - Provides complete restaurant capacity view when creating new bookings
+  - Helps staff understand availability and conflicts across all guests
+
+### Technical Details
+- Reuses existing Resos API integration instead of creating duplicate functionality
+- No caching (real-time data for accurate availability)
+- Response includes booking count for debugging and UI display
+- Integrates with existing Gantt chart rendering in chrome-newbook-assistant extension
+
+---
+
 ## [1.3.0] - 2025-11-08
 
 ### Added

@@ -179,7 +179,52 @@ GET /bma/v1/special-events?date={date}&context={context}
 
 ---
 
-#### 5. Create Booking
+#### 5. All Bookings for Date
+```
+GET /bma/v1/all-bookings-for-date?date={date}
+```
+
+**Purpose:** Fetch ALL restaurant bookings for a specific date (not filtered by hotel guest matching). Used to display complete restaurant occupancy in Gantt chart view.
+
+**Parameters:**
+- `date` (required): YYYY-MM-DD format
+
+**Response (JSON):**
+```json
+{
+  "success": true,
+  "date": "2026-01-30",
+  "bookings": [
+    {
+      "time": "19:00",
+      "people": 2,
+      "name": "Smith",
+      "room": "101"
+    },
+    {
+      "time": "20:00",
+      "people": 4,
+      "name": "Johnson",
+      "room": "205"
+    }
+  ],
+  "count": 2
+}
+```
+
+**Implementation:**
+- Uses `BMA_Matcher::fetch_all_bookings_for_gantt()` method
+- Calls Resos API `/bookings` endpoint with date range filter
+- Filters out canceled/no-show bookings automatically
+- Formats data specifically for Gantt chart display (time, people, name, room)
+
+**Caching:** None (real-time data)
+
+**Used By:** Chrome extension create booking form Gantt chart to show complete restaurant availability
+
+---
+
+#### 6. Create Booking
 ```
 POST /bma/v1/bookings/create
 ```
@@ -306,6 +351,9 @@ The create booking form in the Chrome extension uses a **vertical accordion inte
 
 1. **Gantt Chart** (Compact Mode)
    - Visual timeline showing opening hours as colored bands
+   - Displays ALL restaurant bookings for the date (not just matched to current guest)
+   - Provides comprehensive view of restaurant occupancy and availability
+   - Fetched via `/bma/v1/all-bookings-for-date` REST endpoint
    - No navigation controls (arrows/title removed for space efficiency)
    - Auto-generated from opening hours data
 
@@ -330,10 +378,16 @@ The create booking form in the Chrome extension uses a **vertical accordion inte
 **Template Location:** `templates/chrome-sidepanel-response.php`
 
 **JavaScript Functions:**
-- `initializeCreateFormForDate(date, form)` - Auto-initializes form when visible
+- `initializeCreateFormForDate(date, form)` - Auto-initializes form when visible, fetches all bookings for Gantt chart
 - `togglePeriodSection(date, periodIndex)` - Handles accordion expand/collapse
 - `loadAvailableTimesForPeriod(date, people, periodId, periodIndex)` - Lazy loads time slots
-- `buildGanttChart(openingHours)` - Generates Gantt chart HTML
+- `buildGanttChart(openingHours)` - Generates Gantt chart HTML with booking bars
+- `fetchAllBookingsForDate(date)` - Fetches ALL restaurant bookings (not filtered by guest)
+
+**Scroll Behavior:**
+- Auto-scroll to `.bma-night` sections includes 10px offset from top
+- Positions scrolled content just below tab navigation instead of flush
+- Provides better visual context when navigating to bookings
 
 **Form Validation:**
 

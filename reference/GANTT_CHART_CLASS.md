@@ -209,6 +209,11 @@ echo $html;
 
 ### Bookings Data
 
+**Data Source for Chrome Extension:**
+- For comprehensive restaurant occupancy view, use `/bma/v1/all-bookings-for-date` endpoint
+- Returns ALL restaurant bookings for the date (not filtered by hotel guest matching)
+- Provides complete availability picture when creating new bookings
+
 **Structure:**
 ```php
 array(
