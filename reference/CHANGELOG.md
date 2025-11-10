@@ -51,6 +51,12 @@ All notable changes to the Booking Match API plugin.
   - Adds click handlers to time slot buttons for selection and period ID capture
 
 ### Fixed (Latest)
+- **Restaurant tab scroll alignment for last night**
+  - Added 60vh bottom padding to restaurant tab content
+  - Allows last night in the list to properly scroll to top of sidepanel
+  - Improves UX when navigating to or creating bookings for the last date
+  - Commit: cf11516
+
 - **Auto-expand form initialization and scroll timing - RESOLVED**
   - Fixed form opening without loading gantt chart, periods, or dietary choices
   - Fixed scroll happening before form content loaded (incorrect positioning)
