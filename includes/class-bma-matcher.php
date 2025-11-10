@@ -450,7 +450,7 @@ class BMA_Matcher {
      * Fetch all restaurant bookings for a date, formatted for Gantt chart display
      *
      * @param string $date Date in YYYY-MM-DD format
-     * @return array Array of bookings with time, people, name, room
+     * @return array Array of bookings with time, people, name, is_resident
      */
     public function fetch_all_bookings_for_gantt($date) {
         $raw_bookings = $this->fetch_resos_bookings($date);
@@ -462,15 +462,19 @@ class BMA_Matcher {
         }
 
         foreach ($raw_bookings as $booking) {
-            // Extract room from customFields
-            $room = 'Unknown';
+            // Extract Hotel Guest status from customFields
+            $is_resident = false;
             if (isset($booking['customFields']) && is_array($booking['customFields'])) {
-                if (isset($booking['customFields']['room'])) {
-                    $room = $booking['customFields']['room'];
-                } elseif (isset($booking['customFields']['Room'])) {
-                    $room = $booking['customFields']['Room'];
+                foreach ($booking['customFields'] as $field) {
+                    $field_name = $field['name'] ?? '';
+                    $field_value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
+
+                    if ($field_name === 'Hotel Guest') {
+                        $is_resident = ($field_value === 'Yes' || $field_value === 'yes' || $field_value === '1');
+                        break;
+                    }
                 }
-                error_log('BMA_Matcher: customFields found: ' . print_r($booking['customFields'], true));
+                error_log('BMA_Matcher: customFields found, is_resident: ' . ($is_resident ? 'yes' : 'no'));
             } else {
                 error_log('BMA_Matcher: No customFields found in booking');
             }
@@ -518,9 +522,6 @@ class BMA_Matcher {
             } elseif (isset($booking['numberOfGuests'])) {
                 $people = $booking['numberOfGuests'];
             }
-
-            // Determine if guest is a hotel resident
-            $is_resident = !empty($room) && $room !== 'Unknown' && $room !== 'Non-Resident';
 
             error_log('BMA_Matcher: Extracted - time: ' . $time . ', people: ' . $people . ', name: ' . $guest_name . ', is_resident: ' . ($is_resident ? 'yes' : 'no'));
 
