@@ -296,6 +296,69 @@ delete_transient('bma_dietary_choices');
 
 ---
 
+## Chrome Extension UI
+
+### Form Structure
+
+The create booking form in the Chrome extension uses a **vertical accordion interface** for service period selection.
+
+**Key Components:**
+
+1. **Gantt Chart** (Compact Mode)
+   - Visual timeline showing opening hours as colored bands
+   - No navigation controls (arrows/title removed for space efficiency)
+   - Auto-generated from opening hours data
+
+2. **Accordion Service Period Selector**
+   - Vertical list of collapsible section headers
+   - Each header represents one service period (e.g., "Lunch Service", "Evening Service")
+   - **Exclusive behavior**: Only one section can be open at a time
+   - Latest period (dinner) expanded by default
+   - Lazy loading: time slots fetched only when section expanded
+
+3. **Hidden Form Fields**
+   - `form-date`: Hidden input (date defined by which day's create button clicked)
+   - `form-time-selected`: Stores selected time slot value
+   - `form-opening-hour-id`: Stores period ID (captured when time slot clicked)
+
+4. **Dynamic Booking Summary Header**
+   - Positioned above Create/Cancel buttons
+   - Format: `{guest name} - {selected time} ({people}pax)`
+   - Time updates in real-time when user selects time slot
+   - Selected time displayed in blue highlight
+
+**Template Location:** `templates/chrome-sidepanel-response.php`
+
+**JavaScript Functions:**
+- `initializeCreateFormForDate(date, form)` - Auto-initializes form when visible
+- `togglePeriodSection(date, periodIndex)` - Handles accordion expand/collapse
+- `loadAvailableTimesForPeriod(date, people, periodId, periodIndex)` - Lazy loads time slots
+- `buildGanttChart(openingHours)` - Generates Gantt chart HTML
+
+**Form Validation:**
+
+The form validates that both time and period are selected:
+
+```javascript
+// Time validation
+const timeField = document.getElementById('time-selected-' + date);
+if (!timeField.value) {
+  showFeedback(feedback, 'Please select a time slot', 'error');
+  return;
+}
+
+// Period validation
+const openingHourIdField = document.getElementById('opening-hour-id-' + date);
+if (!openingHourIdField.value) {
+  showFeedback(feedback, 'Please select a time slot from a service period', 'error');
+  return;
+}
+```
+
+Both fields are automatically populated when user clicks a time slot button.
+
+---
+
 ## Custom Fields Mapping
 
 ### Field Name Map

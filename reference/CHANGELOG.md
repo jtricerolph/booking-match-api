@@ -10,25 +10,52 @@ All notable changes to the Booking Match API plugin.
   - Displays opening hours as colored bands on visual timeline
   - Shows closed periods as grey overlay blocks
   - Automatically generated when opening hours are loaded
-  - Compact mode suitable for Chrome extension sidebar
+  - Compact mode suitable for Chrome extension sidebar (no navigation controls)
 
-- **Tab-based service period selector UI**
-  - Replaced dropdown selector with tab button interface
-  - Each service period shown as clickable tab button
-  - Separate time slot sections for each period
+- **Accordion-based service period selector UI**
+  - Replaced dropdown selector with vertical accordion interface
+  - Each service period shown as collapsible section header
+  - Exclusive accordion behavior (only one section open at a time)
   - Latest period (dinner) pre-selected and expanded by default
-  - Lazy loading of available times when tab is clicked
-  - `switchTimeTab()` function for smooth tab switching
+  - Lazy loading of available times when section is expanded
+  - `togglePeriodSection()` function for expand/collapse behavior
+  - Automatic period ID capture when time slot selected
 
-- Automatic form initialization script in Chrome extension template (lines 549-683)
+- **Dynamic booking summary header**
+  - Moved booking header above form action buttons
+  - Format: `{guest name} - {selected time} ({people}pax)`
+  - Time updates dynamically when user selects time slot
+  - Selected time displayed in blue highlight color
+
+- **Streamlined form fields**
+  - Date field converted to hidden input (defined by which day's create button clicked)
+  - Hidden `opening-hour-id` field for automatic period ID capture
+  - Email and phone pre-populated from NewBook booking data
+  - Improved validation messages for better UX
+
+- Automatic form initialization script in Chrome extension template
   - MutationObserver watches for form visibility
-  - Auto-fetches opening hours and generates service period tabs
+  - Auto-fetches opening hours and generates accordion sections
   - Auto-fetches dietary choices and populates checkboxes
   - Loads available times for default period on initialization
-  - Lazy loads times for other periods when tabs are clicked
-  - Adds click handlers to time slot buttons for selection
+  - Lazy loads times for other periods when sections expanded
+  - Adds click handlers to time slot buttons for selection and period ID capture
 
 ### Fixed (Latest)
+- **Service period validation and accordion UI improvements**
+  - Fixed "select a service period" error appearing even after selecting time
+  - Changed validation from old dropdown selector to hidden `opening-hour-id` field
+  - Period ID now automatically captured when time slot button clicked
+  - Accordion sections now exclusive (only one open at a time)
+  - Removed period labels showing redundant time ranges
+  - Fixed onclick handlers by replacing inline attributes with proper event listeners
+
+- **Available times data filtering for accordion sections**
+  - Fixed issue where all periods' time buttons showed inside each expanded section
+  - Backend now filters `opening_hours` array by `opening_hour_id` parameter
+  - Modified `format_time_slots_html()` to skip period wrappers when filtering to single period
+  - Each accordion section now shows only its own time slot buttons
+
 - **CRITICAL**: Available times 404 error - incorrect API endpoint
   - Fixed 404 Not Found errors when fetching available times for booking form
   - Changed from `/openingHours/{date}?expand=availableTimes` to `/bookingFlow/times?date={date}`
