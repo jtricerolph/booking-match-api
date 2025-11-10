@@ -369,25 +369,8 @@ if (!defined('ABSPATH')) {
 
                             <h5>Create Restaurant Booking</h5>
 
-                            <!-- Compact Booking Header -->
-                            <div class="bma-booking-header">
-                                <span class="bma-booking-summary">
-                                    <strong><?php echo esc_html($booking['guest_name']); ?></strong> -
-                                    #<?php echo esc_html($booking['booking_id']); ?>
-                                    (<?php
-                                        $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
-                                        echo esc_html($occ['adults'] + $occ['children'] + $occ['infants']);
-                                    ?> pax)
-                                </span>
-                            </div>
-
                             <!-- Gantt Chart (Compact Mode) -->
                             <div class="bma-gantt-container" id="gantt-container-<?php echo esc_attr($night['date']); ?>">
-                                <div class="gantt-controls">
-                                    <button type="button" class="gantt-scroll-btn" data-direction="left" data-chart-id="gantt-<?php echo esc_attr($night['date']); ?>">◄</button>
-                                    <span class="gantt-title">Restaurant Timeline</span>
-                                    <button type="button" class="gantt-scroll-btn" data-direction="right" data-chart-id="gantt-<?php echo esc_attr($night['date']); ?>">►</button>
-                                </div>
                                 <div class="gantt-viewport" id="gantt-<?php echo esc_attr($night['date']); ?>" style="overflow-x: auto; overflow-y: hidden; height: 120px; position: relative;">
                                     <p style="padding: 20px; text-align: center; color: #666;">Loading timeline...</p>
                                 </div>
@@ -502,6 +485,16 @@ if (!defined('ABSPATH')) {
                                     <textarea class="form-booking-note" rows="3"
                                               placeholder="Internal restaurant notes..."></textarea>
                                 </div>
+                            </div>
+
+                            <!-- Booking Summary Header -->
+                            <div class="bma-booking-summary-header" id="booking-summary-<?php echo esc_attr($night['date']); ?>">
+                                <strong><?php echo esc_html($booking['guest_name']); ?></strong> -
+                                <span class="booking-time-display" id="booking-time-display-<?php echo esc_attr($night['date']); ?>">No time selected</span>
+                                (<?php
+                                    $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
+                                    echo esc_html($occ['adults'] + $occ['children'] + $occ['infants']);
+                                ?>pax)
                             </div>
 
                             <div class="bma-form-actions">
