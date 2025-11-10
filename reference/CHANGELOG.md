@@ -5,6 +5,53 @@ All notable changes to the Booking Match API plugin.
 ## [Unreleased] - Implementation in Progress
 
 ### Added (Latest)
+- **Gantt chart redesign for Chrome extension**
+  - Complete rewrite of `buildGanttChart()` function to display actual restaurant bookings
+  - Implemented row compaction algorithm (ported from PHP class-bma-gantt-chart.php)
+    - Sorts bookings by start time
+    - Calculates bar height based on party size: `Math.max(2, Math.floor(partySize / 2) + 1)`
+    - Uses grid-based placement with 5-minute buffer to prevent overlaps
+    - Reuses rows for non-overlapping bookings (vertical compaction)
+  - Booking bar visualization:
+    - Purple gradient bars with party size badges (always visible)
+    - Bar height varies based on party size (2-20 people)
+    - Guest name and room number shown in full mode, hidden in compact mode
+    - Hover effects with scale transform and shadow
+    - Tooltips via data attributes
+  - Display modes:
+    - **Compact mode** (default): 14px bars, party size badge only, 7px grid rows
+    - **Full mode**: 40px bars with names and room numbers, 14px grid rows
+  - Grey overlay rendering:
+    - Outside opening hours (lighter grey)
+    - Special event closures (medium grey)
+    - Fully booked time slots (lightest grey)
+    - Proper z-index layering
+  - Red sight line feature:
+    - 2px red vertical line appears on time slot button hover
+    - Positioned as percentage of chart width
+    - Smooth transition animations
+    - Auto-hides when not hovering
+  - Auto-scroll to hovered time:
+    - Gantt chart auto-centers on hovered time slot
+    - Smooth scroll behavior
+    - Calculates viewport position based on chart time range
+  - JavaScript functions added:
+    - `positionBookingsOnGrid()` - Row compaction algorithm
+    - `buildGanttChart()` - Completely rewritten with new signature
+    - `showGanttSightLine(chartId, time)` - Show sight line at specific time
+    - `hideGanttSightLine(chartId)` - Hide sight line
+    - `scrollGanttToTime(chartId, time, smooth)` - Auto-scroll to time
+  - CSS styles added:
+    - `.gantt-booking-bar` - Booking bar styling with hover effects
+    - `.gantt-party-size` - Party size badge styling
+    - `.gantt-bar-text` - Guest name/room text styling
+    - `.gantt-closed-block` - Grey overlay variants
+    - `.gantt-sight-line` - Red sight line with transitions
+  - Time slot button hover integration:
+    - `mouseenter` triggers sight line display and auto-scroll
+    - `mouseleave` hides sight line
+    - Works across all service period accordion sections
+
 - **Clickable restaurant header navigation in Summary tab**
   - Restaurant section header in booking cards now navigates to Restaurant tab
   - Click handler extracts booking ID and calls `navigateToRestaurantDate()`

@@ -512,6 +512,41 @@ if (!defined('ABSPATH')) {
                                 const form = document.getElementById(formId);
                                 let initialized = false;
 
+                                <?php
+                                // Extract restaurant bookings for this date
+                                $bookings_for_date = array();
+
+                                // Loop through all results to find bookings for this specific date
+                                foreach ($results as $result) {
+                                    foreach ($result['nights'] as $result_night) {
+                                        if ($result_night['date'] === $night['date']) {
+                                            // Extract restaurant bookings from resos_matches
+                                            if (!empty($result_night['resos_matches'])) {
+                                                foreach ($result_night['resos_matches'] as $match) {
+                                                    // Extract room number if available
+                                                    $room = 'Unknown';
+                                                    if (isset($match['room']) && !empty($match['room'])) {
+                                                        $room = $match['room'];
+                                                    } elseif (isset($result['room']) && !empty($result['room'])) {
+                                                        $room = $result['room'];
+                                                    }
+
+                                                    $bookings_for_date[] = array(
+                                                        'time' => $match['time'] ?? '19:00',
+                                                        'people' => $match['people'] ?? 2,
+                                                        'name' => $match['guest_name'] ?? 'Guest',
+                                                        'room' => $room
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                ?>
+
+                                // Restaurant bookings data for Gantt chart
+                                const bookingsForDate = <?php echo wp_json_encode($bookings_for_date); ?>;
+
                                 // Watch for form visibility and initialize on first show
                                 const observer = new MutationObserver(function(mutations) {
                                     mutations.forEach(function(mutation) {
@@ -565,13 +600,43 @@ if (!defined('ABSPATH')) {
                                             });
                                             sectionsContainer.innerHTML = sectionsHtml;
 
-                                            // Generate Gantt chart
+                                            // Generate Gantt chart with bookings
                                             if (typeof buildGanttChart === 'function') {
                                                 const ganttViewport = document.getElementById('gantt-' + date);
                                                 if (ganttViewport) {
-                                                    const ganttHtml = buildGanttChart(periods);
-                                                    ganttViewport.innerHTML = ganttHtml;
-                                                    console.log('Gantt chart generated for date:', date);
+                                                    // Fetch special events and available times for grey overlays
+                                                    const specialEventsPromise = fetchSpecialEvents(date);
+                                                    const people = parseInt(form.querySelector('.form-people').value) || 2;
+                                                    const availableTimesPromise = fetchAvailableTimes(date, people, null);
+
+                                                    Promise.all([specialEventsPromise, availableTimesPromise]).then(([specialEventsData, availableTimesData]) => {
+                                                        const specialEvents = specialEventsData.success ? specialEventsData.data : [];
+                                                        const availableTimes = availableTimesData.success ? availableTimesData.times : [];
+
+                                                        const ganttHtml = buildGanttChart(
+                                                            periods,            // opening hours
+                                                            specialEvents,      // special events/closures
+                                                            availableTimes,     // available time slots
+                                                            bookingsForDate,    // existing restaurant bookings
+                                                            'compact',          // display mode
+                                                            'gantt-' + date     // chart ID
+                                                        );
+                                                        ganttViewport.innerHTML = ganttHtml;
+                                                        console.log('Gantt chart generated for date:', date, 'with', bookingsForDate.length, 'bookings');
+                                                    }).catch(error => {
+                                                        console.error('Error fetching Gantt chart data:', error);
+                                                        // Fallback: render chart without special events/available times
+                                                        const ganttHtml = buildGanttChart(
+                                                            periods,
+                                                            [],
+                                                            [],
+                                                            bookingsForDate,
+                                                            'compact',
+                                                            'gantt-' + date
+                                                        );
+                                                        ganttViewport.innerHTML = ganttHtml;
+                                                        console.log('Gantt chart generated (fallback) for date:', date);
+                                                    });
                                                 }
                                             }
 
