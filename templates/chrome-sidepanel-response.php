@@ -546,6 +546,7 @@ if (!defined('ABSPATH')) {
 
                                 // Restaurant bookings data for Gantt chart
                                 const bookingsForDate = <?php echo wp_json_encode($bookings_for_date); ?>;
+                                console.log('DEBUG: Bookings for date ' + date + ':', bookingsForDate);
 
                                 // Watch for form visibility and initialize on first show
                                 const observer = new MutationObserver(function(mutations) {
@@ -622,7 +623,7 @@ if (!defined('ABSPATH')) {
                                                             'gantt-' + date     // chart ID
                                                         );
                                                         ganttViewport.innerHTML = ganttHtml;
-                                                        console.log('Gantt chart generated for date:', date, 'with', bookingsForDate.length, 'bookings');
+                                                        console.log('Gantt chart generated for date:', date, 'bookingsForDate:', bookingsForDate);
                                                     }).catch(error => {
                                                         console.error('Error fetching Gantt chart data:', error);
                                                         // Fallback: render chart without special events/available times
@@ -635,7 +636,7 @@ if (!defined('ABSPATH')) {
                                                             'gantt-' + date
                                                         );
                                                         ganttViewport.innerHTML = ganttHtml;
-                                                        console.log('Gantt chart generated (fallback) for date:', date);
+                                                        console.log('Gantt chart generated (fallback) for date:', date, 'bookingsForDate:', bookingsForDate);
                                                     });
                                                 }
                                             }
