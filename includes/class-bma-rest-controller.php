@@ -876,7 +876,20 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $nights = $this->calculate_nights($arrival_date, $departure_date);
         $status = $booking['booking_status'] ?? 'unknown';
         $room_number = $booking['site_name'] ?? 'N/A';
-        $group_id = $booking['booking_group_id'] ?? null;
+
+        // Try multiple possible field names for group ID
+        $group_id = $booking['booking_group_id']
+                 ?? $booking['group_id']
+                 ?? $booking['bookings_group_id']
+                 ?? null;
+
+        // Debug log to see if group ID is found
+        if ($group_id) {
+            error_log("BMA Staying: Found group_id = {$group_id} for booking {$booking_id}");
+        } else {
+            // Log available fields to help debug
+            error_log("BMA Staying: No group_id found for booking {$booking_id}. Available fields: " . implode(', ', array_keys($booking)));
+        }
 
         // Calculate which night this is
         $arrival = new DateTime($arrival_date);
