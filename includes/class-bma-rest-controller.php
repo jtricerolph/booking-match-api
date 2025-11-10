@@ -1477,7 +1477,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $name = isset($choice['name']) ? $choice['name'] : '';
 
             $html .= sprintf(
-                '<label><input type="checkbox" class="diet-checkbox" data-choice-id="%s" data-choice-name="%s"> %s</label>',
+                '<div class="dietary-checkbox-item"><label><input type="checkbox" class="diet-checkbox" data-choice-id="%s" data-choice-name="%s"> %s</label></div>',
                 esc_attr($id),
                 esc_attr($name),
                 esc_html($name)

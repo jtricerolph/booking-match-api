@@ -484,7 +484,7 @@ if (!defined('ABSPATH')) {
                             <!-- Booking Summary Header -->
                             <div class="bma-booking-summary-header" id="booking-summary-<?php echo esc_attr($night['date']); ?>">
                                 <strong><?php echo esc_html($booking['guest_name']); ?></strong> -
-                                <span class="booking-time-display" id="booking-time-display-<?php echo esc_attr($night['date']); ?>">No time selected</span>
+                                <span class="booking-time-display" id="booking-time-display-<?php echo esc_attr($night['date']); ?>">SELECT TIME</span>
                                 (<?php
                                     $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
                                     echo esc_html($occ['adults'] + $occ['children'] + $occ['infants']);
