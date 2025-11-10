@@ -456,6 +456,11 @@ class BMA_Matcher {
         $raw_bookings = $this->fetch_resos_bookings($date);
         $formatted_bookings = array();
 
+        // Log first booking structure for debugging
+        if (!empty($raw_bookings)) {
+            error_log('BMA_Matcher: Sample raw Resos booking structure: ' . print_r($raw_bookings[0], true));
+        }
+
         foreach ($raw_bookings as $booking) {
             // Extract room from customFields
             $room = 'Unknown';
@@ -465,12 +470,61 @@ class BMA_Matcher {
                 } elseif (isset($booking['customFields']['Room'])) {
                     $room = $booking['customFields']['Room'];
                 }
+                error_log('BMA_Matcher: customFields found: ' . print_r($booking['customFields'], true));
+            } else {
+                error_log('BMA_Matcher: No customFields found in booking');
             }
 
+            // Try to extract guest name from various possible fields
+            $guest_name = 'Guest';
+            if (isset($booking['guestName'])) {
+                $guest_name = $booking['guestName'];
+            } elseif (isset($booking['guest_name'])) {
+                $guest_name = $booking['guest_name'];
+            } elseif (isset($booking['name'])) {
+                $guest_name = $booking['name'];
+            } elseif (isset($booking['firstName']) && isset($booking['lastName'])) {
+                $guest_name = trim($booking['firstName'] . ' ' . $booking['lastName']);
+            } elseif (isset($booking['firstName'])) {
+                $guest_name = $booking['firstName'];
+            } elseif (isset($booking['guest']['name'])) {
+                $guest_name = $booking['guest']['name'];
+            }
+
+            // Try to extract time from various possible fields
+            $time = '19:00';
+            if (isset($booking['time'])) {
+                $time = $booking['time'];
+            } elseif (isset($booking['startTime'])) {
+                $time = $booking['startTime'];
+            } elseif (isset($booking['bookingTime'])) {
+                $time = $booking['bookingTime'];
+            } elseif (isset($booking['dateTime'])) {
+                // Extract time portion from datetime string
+                $datetime = $booking['dateTime'];
+                if (preg_match('/T(\d{2}:\d{2})/', $datetime, $matches)) {
+                    $time = $matches[1];
+                }
+            }
+
+            // Try to extract people count
+            $people = 2;
+            if (isset($booking['people'])) {
+                $people = $booking['people'];
+            } elseif (isset($booking['partySize'])) {
+                $people = $booking['partySize'];
+            } elseif (isset($booking['guests'])) {
+                $people = $booking['guests'];
+            } elseif (isset($booking['numberOfGuests'])) {
+                $people = $booking['numberOfGuests'];
+            }
+
+            error_log('BMA_Matcher: Extracted - time: ' . $time . ', people: ' . $people . ', name: ' . $guest_name . ', room: ' . $room);
+
             $formatted_bookings[] = array(
-                'time' => $booking['time'] ?? '19:00',
-                'people' => $booking['people'] ?? 2,
-                'name' => $booking['guestName'] ?? 'Guest',
+                'time' => $time,
+                'people' => $people,
+                'name' => $guest_name,
                 'room' => $room
             );
         }
