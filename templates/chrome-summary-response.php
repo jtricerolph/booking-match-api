@@ -417,6 +417,32 @@ if (empty($bookings)) {
     transition: all 0.2s;
 }
 
+/* Clickable Checks Header */
+.checks-header-link {
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 4px 8px;
+    margin: 0 -8px 6px -8px;
+    border-radius: 6px;
+}
+
+.checks-header-link:hover {
+    background: #f3f4f6;
+    color: #3b82f6;
+}
+
+.checks-header-link .arrow-icon {
+    margin-left: auto;
+    font-size: 16px;
+    opacity: 0.6;
+}
+
+.checks-header-link:hover .arrow-icon {
+    opacity: 1;
+    transform: translateX(4px);
+    transition: all 0.2s;
+}
+
 /* Restaurant Nights */
 .restaurant-nights {
     font-size: 12px;

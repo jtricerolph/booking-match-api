@@ -737,7 +737,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Fetch booking details from NewBook
             $searcher = new BMA_NewBook_Search();
-            $nb_booking = $searcher->fetch_booking($booking_id);
+            $nb_booking = $searcher->get_booking_by_id($booking_id);
 
             if (!$nb_booking) {
                 return new WP_Error(

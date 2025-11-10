@@ -249,4 +249,19 @@ if (empty($bookings)) {
     font-weight: 500;
     color: #374151;
 }
+
+/* Clickable Headers - ensure arrow is right-aligned */
+.restaurant-header-link .arrow-icon,
+.checks-header-link .arrow-icon {
+    margin-left: auto;
+    font-size: 16px;
+    opacity: 0.6;
+}
+
+.restaurant-header-link:hover .arrow-icon,
+.checks-header-link:hover .arrow-icon {
+    opacity: 1;
+    transform: translateX(4px);
+    transition: all 0.2s;
+}
 </style>
