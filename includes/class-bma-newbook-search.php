@@ -412,4 +412,32 @@ class BMA_NewBook_Search {
 
         return '';
     }
+
+    /**
+     * Fetch bookings staying on a specific date
+     * Uses NewBook's 'staying' list type which filters for bookings where:
+     * arrival_date <= $date AND departure_date > $date
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @return array Array of booking objects
+     */
+    public function fetch_staying_bookings($date) {
+        // Set time range for the specific date (00:00:00 to 23:59:59)
+        $period_from = $date . ' 00:00:00';
+        $period_to = $date . ' 23:59:59';
+
+        $data = array(
+            'period_from' => $period_from,
+            'period_to' => $period_to,
+            'list_type' => 'staying'  // NewBook API filters for guests staying on this date
+        );
+
+        $response = $this->call_api('bookings_list', $data);
+
+        if (!$response || !isset($response['data'])) {
+            return array();
+        }
+
+        return $response['data'];
+    }
 }

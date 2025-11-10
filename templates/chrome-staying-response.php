@@ -1,0 +1,227 @@
+<?php
+/**
+ * Chrome Extension Sidepanel - Staying Tab Template
+ * Displays bookings staying on a specific date
+ *
+ * Variables available:
+ * - $bookings: Array of staying bookings
+ * - $date: Target date (YYYY-MM-DD)
+ */
+
+if (empty($bookings)) {
+    echo '<div class="staying-empty">';
+    echo '<div class="empty-icon">🛏️</div>';
+    echo '<p>No bookings staying on this date</p>';
+    echo '</div>';
+    return;
+}
+?>
+
+<div class="staying-list">
+    <?php foreach ($bookings as $booking):
+        $status = strtolower($booking['status'] ?? 'confirmed');
+        $group_id = $booking['group_id'] ?? null;
+        $room_number = $booking['site_name'] ?? 'N/A';
+        $current_night = $booking['current_night'] ?? 1;
+        $total_nights = $booking['nights'] ?? 1;
+        $matches = $booking['resos_matches'] ?? [];
+        $has_package = $booking['has_package'] ?? false;
+    ?>
+        <div class="staying-card"
+             data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+             data-status="<?php echo esc_attr($status); ?>"
+             <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
+
+            <!-- Card Header (Collapsed View) -->
+            <div class="staying-header">
+                <div class="staying-main-info">
+                    <!-- Line 1: Room + Guest Name + Night Progress -->
+                    <div class="staying-guest-line">
+                        <span class="room-number"><?php echo esc_html($room_number); ?></span>
+                        <span class="guest-name"><?php echo esc_html($booking['guest_name']); ?></span>
+                        <span class="night-progress">Night <?php echo $current_night; ?>/<?php echo $total_nights; ?></span>
+                    </div>
+
+                    <!-- Line 2: Restaurant Status -->
+                    <div class="staying-restaurant-line">
+                        <span class="material-symbols-outlined">restaurant</span>
+                        <?php if (empty($matches)): ?>
+                            <span class="restaurant-status no-booking">
+                                No booking
+                                <span class="material-symbols-outlined"><?php echo $has_package ? 'flag' : 'add'; ?></span>
+                            </span>
+                        <?php elseif (count($matches) === 1 && ($matches[0]['match_info']['is_primary'] ?? false)): ?>
+                            <?php
+                            $match = $matches[0];
+                            $time = date('H:i', strtotime($match['time']));
+                            $pax = $match['people'] ?? 0;
+                            ?>
+                            <span class="restaurant-status has-booking">
+                                <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
+                                <span class="material-symbols-outlined">check</span>
+                            </span>
+                        <?php else: ?>
+                            <?php
+                            $match = $matches[0];
+                            $time = date('H:i', strtotime($match['time']));
+                            $pax = $match['people'] ?? 0;
+                            ?>
+                            <span class="restaurant-status has-issue">
+                                <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
+                                <span class="material-symbols-outlined">search</span>
+                            </span>
+                        <?php endif; ?>
+
+                        <?php if ($group_id): ?>
+                            <span class="group-id-badge">G#<?php echo esc_html($group_id); ?></span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Issue Badges -->
+                <div class="staying-badges">
+                    <?php if ($booking['critical_count'] > 0): ?>
+                        <span class="issue-badge critical-badge">
+                            <span class="material-symbols-outlined">warning</span>
+                            <?php echo esc_html($booking['critical_count']); ?>
+                        </span>
+                    <?php endif; ?>
+
+                    <?php if ($booking['warning_count'] > 0): ?>
+                        <span class="issue-badge warning-badge">
+                            <span class="material-symbols-outlined">flag</span>
+                            <?php echo esc_html($booking['warning_count']); ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+
+                <span class="staying-expand-icon">▼</span>
+            </div>
+
+            <!-- Card Details (Expanded View - Same as Summary Tab) -->
+            <div class="staying-details">
+                <!-- Compressed Booking Info -->
+                <div class="compact-details">
+                    <div class="compact-row">
+                        <span>Booking ID: #<?php echo esc_html($booking['booking_id']); ?></span>
+                        <span class="compact-occupants">
+                            <?php
+                            $occ = $booking['occupants'] ?? ['adults' => 0, 'children' => 0, 'infants' => 0];
+                            $parts = array();
+                            if ($occ['adults'] > 0) $parts[] = $occ['adults'] . ' Adult' . ($occ['adults'] > 1 ? 's' : '');
+                            if ($occ['children'] > 0) $parts[] = $occ['children'] . ' Child' . ($occ['children'] > 1 ? 'ren' : '');
+                            if ($occ['infants'] > 0) $parts[] = $occ['infants'] . ' Infant' . ($occ['infants'] > 1 ? 's' : '');
+                            echo esc_html(implode(', ', $parts));
+                            ?>
+                        </span>
+                    </div>
+                    <div class="compact-row">
+                        <span>Dates: <?php echo esc_html(date('D d/m', strtotime($booking['arrival_date']))); ?> - <?php echo esc_html(date('D d/m', strtotime($booking['departure_date']))); ?></span>
+                        <span class="nights-badge"><?php echo esc_html($booking['nights']); ?> night<?php echo $booking['nights'] > 1 ? 's' : ''; ?></span>
+                    </div>
+                    <div class="compact-row">
+                        <span>Tariff: <?php echo esc_html(empty($booking['tariffs']) ? 'Standard' : implode(', ', $booking['tariffs'])); ?></span>
+                    </div>
+                    <div class="compact-row">
+                        <span>Status: <?php echo esc_html(ucfirst($booking['status'])); ?></span>
+                        <span><?php echo esc_html($booking['booking_source'] ?? 'Unknown'); ?></span>
+                    </div>
+                </div>
+
+                <!-- Restaurant Section (same as Summary tab) -->
+                <div class="detail-separator"></div>
+                <div class="detail-section restaurant-section">
+                    <h4 class="restaurant-header-link" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
+                        <span class="material-symbols-outlined">restaurant</span>
+                        Restaurant
+                        <span class="material-symbols-outlined arrow-icon">arrow_forward</span>
+                    </h4>
+                    <div class="restaurant-nights">
+                        <!-- Show only the current night's restaurant status -->
+                        <?php
+                        $match_count = count($matches);
+                        $night_date = $date;
+                        ?>
+                        <?php if ($match_count === 0): ?>
+                            <div class="night-row create-booking-link clickable-issue"
+                                 data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                 data-date="<?php echo esc_attr($night_date); ?>"
+                                 title="Click to create booking in Restaurant tab">
+                                <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
+                                <span class="night-status">No booking</span>
+                                <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
+                                    <span class="material-symbols-outlined">add</span>
+                                </span>
+                            </div>
+                            <?php if ($has_package): ?>
+                                <div class="night-alert critical-alert">
+                                    <span class="material-symbols-outlined">flag</span>
+                                    Package booking - missing reservation
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <?php foreach ($matches as $match):
+                                $is_primary = $match['match_info']['is_primary'] ?? false;
+                                $time = date('H:i', strtotime($match['time']));
+                                $pax = $match['people'] ?? 0;
+                                $resos_id = $match['resos_booking_id'] ?? '';
+                                $restaurant_id = $match['restaurant_id'] ?? '';
+                            ?>
+                                <div class="night-row <?php echo $is_primary ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                     data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                     <?php if ($is_primary): ?>
+                                         data-resos-id="<?php echo esc_attr($resos_id); ?>"
+                                         data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
+                                         data-date="<?php echo esc_attr($night_date); ?>"
+                                         title="Click to view in ResOS"
+                                     <?php else: ?>
+                                         title="Click to view in Restaurant tab"
+                                     <?php endif; ?>>
+                                    <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
+                                    <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
+                                    <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
+                                        <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                    </span>
+                                </div>
+                            <?php endforeach; ?>
+                            <?php if ($match_count > 1 || !($matches[0]['match_info']['is_primary'] ?? false)): ?>
+                                <div class="night-alert warning-alert">
+                                    <span class="material-symbols-outlined">warning</span>
+                                    <?php echo $match_count > 1 ? 'Multiple matches - needs review' : 'Suggested match - low confidence'; ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="detail-separator"></div>
+                <div class="detail-actions">
+                    <button class="open-booking-btn" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                        Open Booking in NewBook
+                    </button>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+<style>
+.staying-empty {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.staying-empty .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.staying-empty p {
+    font-size: 16px;
+    font-weight: 500;
+    color: #374151;
+}
+</style>

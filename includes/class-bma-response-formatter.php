@@ -308,4 +308,28 @@ class BMA_Response_Formatter {
 
         return ob_get_clean();
     }
+
+    /**
+     * Format staying bookings response for Chrome extension
+     *
+     * @param array $bookings Staying bookings with matches
+     * @param string $date Target date (YYYY-MM-DD)
+     * @return string HTML content
+     */
+    public function format_staying_response($bookings, $date) {
+        ob_start();
+        $template_file = BMA_PLUGIN_DIR . 'templates/chrome-staying-response.php';
+
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            // Fallback simple HTML
+            echo '<div class="staying-empty">';
+            echo '<div class="empty-icon">🛏️</div>';
+            echo '<p>Template not found</p>';
+            echo '</div>';
+        }
+
+        return ob_get_clean();
+    }
 }

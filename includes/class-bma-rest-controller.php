@@ -191,6 +191,21 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 ),
             ),
         ));
+
+        register_rest_route($this->namespace, '/staying', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_staying_bookings'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => array(
+                    'date' => array(
+                        'required' => false,
+                        'type' => 'string',
+                        'description' => 'Date in YYYY-MM-DD format (defaults to today)',
+                    ),
+                ),
+            ),
+        ));
     }
 
     /**
@@ -758,6 +773,159 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 array('status' => 500)
             );
         }
+    }
+
+    /**
+     * Get all bookings staying on a specific date
+     *
+     * @param WP_REST_Request $request Full request data
+     * @return WP_REST_Response|WP_Error Response object
+     */
+    public function get_staying_bookings($request) {
+        try {
+            $date = $request->get_param('date');
+
+            // Default to today if no date provided
+            if (empty($date)) {
+                $date = date('Y-m-d');
+            }
+
+            // Validate date format
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                return new WP_Error(
+                    'invalid_date',
+                    __('Invalid date format. Use YYYY-MM-DD', 'booking-match-api'),
+                    array('status' => 400)
+                );
+            }
+
+            error_log("BMA Staying: Fetching bookings for date = {$date}");
+
+            // Fetch staying bookings from NewBook
+            $searcher = new BMA_NewBook_Search();
+            $staying_bookings = $searcher->fetch_staying_bookings($date);
+
+            if (empty($staying_bookings)) {
+                // Return empty success response
+                $formatter = new BMA_Response_Formatter();
+                return array(
+                    'success' => true,
+                    'html' => $formatter->format_staying_response(array(), $date),
+                    'date' => $date,
+                    'booking_count' => 0,
+                    'critical_count' => 0,
+                    'warning_count' => 0
+                );
+            }
+
+            // Process each booking
+            $processed_bookings = array();
+            $total_critical_count = 0;
+            $total_warning_count = 0;
+
+            foreach ($staying_bookings as $nb_booking) {
+                $processed = $this->process_booking_for_staying($nb_booking, $date);
+                $processed_bookings[] = $processed;
+                $total_critical_count += $processed['critical_count'];
+                $total_warning_count += $processed['warning_count'];
+            }
+
+            // Format response
+            $formatter = new BMA_Response_Formatter();
+            return array(
+                'success' => true,
+                'html' => $formatter->format_staying_response($processed_bookings, $date),
+                'date' => $date,
+                'booking_count' => count($processed_bookings),
+                'critical_count' => $total_critical_count,
+                'warning_count' => $total_warning_count
+            );
+
+        } catch (Exception $e) {
+            error_log('BMA Staying Error: ' . $e->getMessage());
+            return new WP_Error(
+                'staying_error',
+                __('Error retrieving staying bookings: ' . $e->getMessage(), 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Process a booking for staying display
+     */
+    private function process_booking_for_staying($booking, $target_date) {
+        // Extract basic info
+        $booking_id = $booking['booking_id'];
+        $guest_name = $this->extract_guest_name($booking);
+        $arrival_date = substr($booking['booking_arrival'] ?? '', 0, 10);
+        $departure_date = substr($booking['booking_departure'] ?? '', 0, 10);
+        $nights = $this->calculate_nights($arrival_date, $departure_date);
+        $status = $booking['booking_status'] ?? 'unknown';
+        $room_number = $booking['site_name'] ?? 'N/A';
+        $group_id = $booking['group_id'] ?? null;
+
+        // Calculate which night this is
+        $arrival = new DateTime($arrival_date);
+        $target = new DateTime($target_date);
+        $current_night = $arrival->diff($target)->days + 1;
+
+        // Extract occupants
+        $occupants = $this->extract_occupants($booking);
+
+        // Extract tariff types
+        $tariffs = $this->extract_tariffs($booking);
+
+        // Check if has package
+        $has_package = in_array('DBB', $tariffs);
+
+        // Match with restaurant for this specific date using existing match_single_night method
+        $matcher = new BMA_Matcher();
+
+        // Use reflection to access private match_single_night method
+        $reflection = new ReflectionClass($matcher);
+        $method = $reflection->getMethod('match_single_night');
+        $method->setAccessible(true);
+        $night_result = $method->invoke($matcher, $booking, $target_date);
+
+        $matches = $night_result['resos_matches'] ?? array();
+
+        // Determine booking source
+        $source_detector = new BMA_Booking_Source();
+        $booking_source = $source_detector->determine_source($booking);
+
+        // Calculate issue counts
+        $critical_count = 0;
+        $warning_count = 0;
+
+        if ($has_package && empty($matches)) {
+            $critical_count++;
+        } elseif (!empty($matches)) {
+            foreach ($matches as $match) {
+                if (!($match['match_info']['is_primary'] ?? false)) {
+                    $warning_count++;
+                }
+            }
+        }
+
+        return array(
+            'booking_id' => $booking_id,
+            'guest_name' => $guest_name,
+            'site_name' => $room_number,
+            'arrival_date' => $arrival_date,
+            'departure_date' => $departure_date,
+            'nights' => $nights,
+            'current_night' => $current_night,
+            'status' => $status,
+            'group_id' => $group_id,
+            'booking_source' => $booking_source,
+            'occupants' => $occupants,
+            'tariffs' => $tariffs,
+            'has_package' => $has_package,
+            'resos_matches' => $matches,
+            'critical_count' => $critical_count,
+            'warning_count' => $warning_count
+        );
     }
 
     /**
