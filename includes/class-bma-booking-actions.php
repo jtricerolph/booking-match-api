@@ -1202,4 +1202,60 @@ class BMA_Booking_Actions {
 
         return $choices;
     }
+
+    /**
+     * Check if online booking is available for a specific date
+     *
+     * @param string $from_date From date in YYYY-MM-DD format
+     * @param string $to_date To date in YYYY-MM-DD format (exclusive)
+     * @return bool True if online booking is available, false otherwise
+     */
+    public function check_online_booking_available( $from_date, $to_date ) {
+        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+
+        if ( empty( $resos_api_key ) ) {
+            return false;
+        }
+
+        // Build URL for bookingFlow/dates endpoint
+        $url = 'https://api.resos.com/v1/bookingFlow/dates';
+        $url .= '?fromDate=' . urlencode( $from_date );
+        $url .= '&toDate=' . urlencode( $to_date );
+
+        $args = array(
+            'timeout' => 15,
+            'headers' => array(
+                'Authorization' => 'Basic ' . base64_encode( $resos_api_key . ':' ),
+                'Content-Type' => 'application/json',
+            ),
+        );
+
+        error_log( 'BMA: Checking online booking availability for ' . $from_date );
+        $response = wp_remote_get( $url, $args );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( 'BMA: Online booking check failed: ' . $response->get_error_message() );
+            return false;
+        }
+
+        $response_code = wp_remote_retrieve_response_code( $response );
+        if ( $response_code !== 200 ) {
+            error_log( 'BMA: Online booking check failed with status: ' . $response_code );
+            return false;
+        }
+
+        $body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $body, true );
+
+        if ( ! is_array( $data ) ) {
+            error_log( 'BMA: Invalid online booking availability response format' );
+            return false;
+        }
+
+        // Check if the from_date is in the available dates array
+        $is_available = in_array( $from_date, $data, true );
+        error_log( 'BMA: Online booking available for ' . $from_date . ': ' . ( $is_available ? 'yes' : 'no' ) );
+
+        return $is_available;
+    }
 }

@@ -1339,11 +1339,21 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $matcher = new BMA_Matcher();
         $bookings = $matcher->fetch_all_bookings_for_gantt($date);
 
+        // Get special events for this date
+        $actions = new BMA_Booking_Actions();
+        $special_events = $actions->fetch_special_events($date);
+
+        // Check if online booking is available for this date
+        $next_day = date('Y-m-d', strtotime($date . ' +1 day'));
+        $online_booking_available = $actions->check_online_booking_available($date, $next_day);
+
         return array(
             'success' => true,
             'date' => $date,
             'bookings' => $bookings,
-            'count' => count($bookings)
+            'count' => count($bookings),
+            'specialEvents' => $special_events,
+            'onlineBookingAvailable' => $online_booking_available
         );
     }
 
