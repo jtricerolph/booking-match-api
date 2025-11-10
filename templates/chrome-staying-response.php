@@ -19,6 +19,20 @@ if (empty($bookings)) {
 
 <div class="staying-list">
     <?php foreach ($bookings as $booking):
+        // Check if this is a vacant room entry
+        if (isset($booking['is_vacant']) && $booking['is_vacant'] === true):
+            $room_number = $booking['site_name'] ?? 'N/A';
+    ?>
+            <!-- Vacant Room Line -->
+            <div class="vacant-room-line">
+                <span class="room-number"><?php echo esc_html($room_number); ?></span>
+                <span class="vacant-label">- Vacant</span>
+            </div>
+    <?php
+            continue; // Skip to next iteration
+        endif;
+
+        // Regular booking entry
         $status = strtolower($booking['status'] ?? 'confirmed');
         $group_id = $booking['group_id'] ?? null;
         $room_number = $booking['site_name'] ?? 'N/A';

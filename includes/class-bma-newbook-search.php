@@ -440,4 +440,34 @@ class BMA_NewBook_Search {
 
         return $response['data'];
     }
+
+    /**
+     * Fetch list of all sites/rooms from NewBook
+     * Reusable function for getting room inventory
+     *
+     * @return array Array of site objects with site_id, site_name, etc.
+     */
+    public function fetch_sites() {
+        // Check cache first (cache for 1 hour since rooms don't change often)
+        $cache_key = 'bma_newbook_sites';
+        $cached = get_transient($cache_key);
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        $data = array();
+        $response = $this->call_api('sites_list', $data);
+
+        if (!$response || !isset($response['data'])) {
+            error_log('BMA_NewBook_Search: Failed to fetch sites list');
+            return array();
+        }
+
+        $sites = $response['data'];
+
+        // Cache for 1 hour
+        set_transient($cache_key, $sites, HOUR_IN_SECONDS);
+
+        return $sites;
+    }
 }

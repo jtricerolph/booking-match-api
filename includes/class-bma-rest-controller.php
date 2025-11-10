@@ -830,6 +830,31 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 $total_warning_count += $processed['warning_count'];
             }
 
+            // Get list of all sites/rooms
+            $all_sites = $searcher->fetch_sites();
+
+            // Create a map of occupied room names
+            $occupied_rooms = array();
+            foreach ($processed_bookings as $booking) {
+                $room_name = $booking['site_name'] ?? '';
+                if (!empty($room_name) && $room_name !== 'N/A') {
+                    $occupied_rooms[] = $room_name;
+                }
+            }
+
+            // Add vacant rooms to the list
+            foreach ($all_sites as $site) {
+                $site_name = $site['site_name'] ?? '';
+                if (!empty($site_name) && !in_array($site_name, $occupied_rooms)) {
+                    // Add vacant room entry
+                    $processed_bookings[] = array(
+                        'is_vacant' => true,
+                        'site_name' => $site_name,
+                        'site_id' => $site['site_id'] ?? null
+                    );
+                }
+            }
+
             // Sort by room number (site_name) using natural sort
             usort($processed_bookings, function($a, $b) {
                 $room_a = $a['site_name'] ?? 'N/A';
