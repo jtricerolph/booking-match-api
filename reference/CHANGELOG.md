@@ -51,18 +51,16 @@ All notable changes to the Booking Match API plugin.
   - Adds click handlers to time slot buttons for selection and period ID capture
 
 ### Fixed (Latest)
-- **Auto-expand form initialization and scroll timing**
+- **Auto-expand form initialization and scroll timing - RESOLVED**
   - Fixed form opening without loading gantt chart, periods, or dietary choices
   - Fixed scroll happening before form content loaded (incorrect positioning)
-  - Fixed MutationObserver not triggering when form already visible
-  - Force form display toggle (none → block) to ensure MutationObserver fires
-  - Added data-initialized flag to track form initialization completion
-  - Added waitForFormInitialization helper with MutationObserver
-  - Made processNavigationContext async to await initialization before scrolling
-  - Added 5 second timeout fallback to prevent indefinite waiting
-  - Scroll now accounts for increased form size after content loads
+  - **Root cause identified:** Inline `<script>` tags in template don't execute when HTML is inserted via innerHTML (browser security)
+  - **Solution:** Exposed initializeCreateFormForDate to window object for programmatic access
+  - Updated processNavigationContext to call initialization function directly instead of waiting for MutationObserver
+  - Removed waitForFormInitialization helper (no longer needed)
+  - Form now properly initializes with gantt chart, opening periods, and dietary choices when navigating from Summary tab
   - Added period ID and booking time display updates in time slot click handlers
-  - Commits: 43e8224 (template), 16420ce (initial async wait), 42961d9 (display toggle fix)
+  - Commits: 43e8224 (template), 16420ce (initial async wait), 42961d9 (display toggle fix), d943d84 (final fix)
 
 - **Restaurant header navigation and auto-expand functionality**
   - Fixed restaurant header initially applied to wrong tab (Restaurant instead of Summary)
