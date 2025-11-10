@@ -438,8 +438,7 @@ if (empty($bookings)) {
 
 .night-status {
     flex: 1;
-    color: #718096;
-    font-style: italic;
+    color: #4a5568;
 }
 
 .status-icon {
