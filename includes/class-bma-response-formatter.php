@@ -192,6 +192,37 @@ class BMA_Response_Formatter {
 
         $html = ob_get_clean();
 
+        // Extract restaurant bookings by date for Gantt chart
+        $bookings_by_date = array();
+        foreach ($results as $result) {
+            foreach ($result['nights'] as $night) {
+                $date = $night['date'];
+                if (!isset($bookings_by_date[$date])) {
+                    $bookings_by_date[$date] = array();
+                }
+
+                // Add all restaurant bookings for this date
+                if (!empty($night['resos_matches'])) {
+                    foreach ($night['resos_matches'] as $match) {
+                        // Extract room number if available
+                        $room = 'Unknown';
+                        if (isset($match['room']) && !empty($match['room'])) {
+                            $room = $match['room'];
+                        } elseif (isset($result['room']) && !empty($result['room'])) {
+                            $room = $result['room'];
+                        }
+
+                        $bookings_by_date[$date][] = array(
+                            'time' => $match['time'] ?? '19:00',
+                            'people' => $match['people'] ?? 2,
+                            'name' => $match['guest_name'] ?? 'Guest',
+                            'room' => $room
+                        );
+                    }
+                }
+            }
+        }
+
         // Return as data object (REST API will handle encoding)
         return array(
             'success' => true,
@@ -201,7 +232,8 @@ class BMA_Response_Formatter {
             'search_method' => $search_method,
             'badge_count' => $badge_count,
             'critical_count' => $critical_count,
-            'warning_count' => $warning_count
+            'warning_count' => $warning_count,
+            'bookings_by_date' => $bookings_by_date
         );
     }
 
