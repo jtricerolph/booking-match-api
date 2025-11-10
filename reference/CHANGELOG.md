@@ -63,6 +63,19 @@ All notable changes to the Booking Match API plugin.
   - Modified `format_time_slots_html()` to skip period wrappers when filtering to single period
   - Each accordion section now shows only its own time slot buttons
 
+- **Time slot generation and availability logic**
+  - Fixed incorrect approach to generating and greying out time slot buttons
+  - Now matches management plugin pattern: generate ALL slots from opening hours, grey out based on TWO criteria
+  - Time slots calculated from opening hours (start time + interval) instead of relying only on available times
+  - Slots greyed out if EITHER:
+    1. Not in available times from `/bookingFlow/times` API (fully booked), OR
+    2. Restricted by special events (closures/limitations)
+  - Special events with `isOpen: true` now correctly skipped (these are special opening hours, not restrictions)
+  - New `check_time_restriction()` helper method handles restriction logic
+  - Changed CSS class from `.unavailable` to `.time-slot-unavailable`
+  - Tooltips now use `data-restriction` attribute showing specific event name or "No availability"
+  - Commits: 1e310d9 (backend), 4e46400 (frontend CSS)
+
 - **CRITICAL**: Available times 404 error - incorrect API endpoint
   - Fixed 404 Not Found errors when fetching available times for booking form
   - Changed from `/openingHours/{date}?expand=availableTimes` to `/bookingFlow/times?date={date}`

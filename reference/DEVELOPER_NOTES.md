@@ -357,6 +357,38 @@ if (!openingHourIdField.value) {
 
 Both fields are automatically populated when user clicks a time slot button.
 
+**Time Slot Generation Logic:**
+
+The time slot buttons are generated using the **management plugin pattern**:
+
+1. **Generate ALL time slots** from opening hours:
+   - Calculate from start time (open) + interval minutes
+   - Continue until last seating time is reached
+   - Example: 18:00 open, 15min interval, 21:00 last seating = 18:00, 18:15, 18:30...21:00
+
+2. **Grey out slots** based on TWO criteria (either condition triggers greying):
+   - **Not available**: Slot time not in `availableTimes` array from `/bookingFlow/times` endpoint (fully booked)
+   - **Restricted**: Slot falls within special event restriction (closures/limitations)
+
+3. **Special Events handling**:
+   - Events with `isOpen: true` are **skipped** (these are special opening hours, NOT restrictions)
+   - Events with `isOpen: false` or no `isOpen` property are treated as restrictions
+   - Full-day closures: Events with no `open`/`close` times grey out entire period
+   - Time-range restrictions: Events with `open`/`close` grey out specific time range
+
+4. **Tooltip display** (`data-restriction` attribute):
+   - **Restricted slots**: Show event name (e.g., "Private Event", "Christmas Closure")
+   - **Fully booked slots**: Show "No availability"
+   - Falls back to period name + "closed" if event has no name
+
+**Backend Implementation:**
+- `format_time_slots_html()` - Generates all slots and applies greying logic
+- `check_time_restriction()` - Helper method checking special event restrictions
+
+**Frontend CSS:**
+- `.time-slot-btn.time-slot-unavailable` - Styles greyed out slots
+- `::before` pseudo-element displays `data-restriction` attribute on hover
+
 ---
 
 ## Custom Fields Mapping
