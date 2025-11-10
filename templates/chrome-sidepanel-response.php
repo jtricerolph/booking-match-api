@@ -613,6 +613,10 @@ if (!defined('ABSPATH')) {
                                         const container = document.getElementById('dietary-checkboxes-' + date);
                                         container.innerHTML = '<p style="color: #ef4444;">Error loading dietary options</p>';
                                     }
+
+                                    // Mark form as initialized
+                                    form.dataset.initialized = 'true';
+                                    console.log('Form initialization complete for date:', date);
                                 }
 
                                 async function loadAvailableTimesForPeriod(date, people, periodId, periodIndex) {
@@ -638,9 +642,22 @@ if (!defined('ABSPATH')) {
                                                     allButtons.forEach(b => b.classList.remove('selected'));
                                                     // Add selected class to clicked button
                                                     this.classList.add('selected');
-                                                    // Update hidden field
+                                                    // Update hidden time field
                                                     const timeValue = this.dataset.time || this.textContent.trim();
                                                     document.getElementById('time-selected-' + date).value = timeValue;
+
+                                                    // Update hidden opening hour ID field
+                                                    const openingHourIdField = document.getElementById('opening-hour-id-' + date);
+                                                    if (openingHourIdField) {
+                                                        openingHourIdField.value = periodId;
+                                                    }
+
+                                                    // Update booking time display in summary header
+                                                    const bookingTimeDisplay = document.getElementById('booking-time-display-' + date);
+                                                    if (bookingTimeDisplay) {
+                                                        const displayTime = this.textContent.trim();
+                                                        bookingTimeDisplay.textContent = displayTime;
+                                                    }
                                                 });
                                             });
 
