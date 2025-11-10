@@ -1384,7 +1384,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
      * @return string HTML for time slot grid
      */
     private function format_time_slots_html($available_times, $opening_hours, $special_events, $skip_period_headers = false) {
-        // This is a simplified version - full implementation would match the JavaScript buildTimeSlots function
+        // Generate time slots from opening hours, grey out based on available times AND special events
         $html = '';
 
         // Convert available times to set for fast lookup
@@ -1432,10 +1432,28 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     }
 
                     $time_str = $current_hour . ':' . ($current_min < 10 ? '0' . $current_min : $current_min);
+
+                    // Check if time is in available times from API
                     $is_available = isset($available_set[$time_str]);
 
-                    $btn_class = 'time-slot-btn' . ($is_available ? '' : ' unavailable');
-                    $tooltip = $is_available ? '' : ' data-tooltip="Fully booked - Override allowed"';
+                    // Check if time is restricted by special events (closures/limitations)
+                    $restriction_reason = $this->check_time_restriction($time_str, $current_time, $special_events, $period_name);
+                    $is_restricted = $restriction_reason !== null;
+
+                    // Mark as unavailable if not in available set OR if restricted by special event
+                    $btn_class = 'time-slot-btn';
+                    $tooltip = '';
+
+                    if (!$is_available || $is_restricted) {
+                        $btn_class .= ' time-slot-unavailable';
+
+                        // Tooltip shows restriction reason (special event) OR "Fully booked"
+                        if ($is_restricted) {
+                            $tooltip = ' data-restriction="' . esc_attr($restriction_reason) . '"';
+                        } else {
+                            $tooltip = ' data-restriction="No availability"';
+                        }
+                    }
 
                     $html .= sprintf(
                         '<button type="button" class="%s" data-time="%s"%s>%s</button>',
@@ -1461,6 +1479,42 @@ class BMA_REST_Controller extends WP_REST_Controller {
         }
 
         return $html;
+    }
+
+    /**
+     * Check if a time is restricted by special events
+     *
+     * @param string $time_str Time in H:MM or HH:MM format
+     * @param int $time_value Time in HHMM format (e.g., 1830)
+     * @param array $special_events Array of special event objects
+     * @param string $period_name Fallback name if event has no name
+     * @return string|null Restriction reason or null if not restricted
+     */
+    private function check_time_restriction($time_str, $time_value, $special_events, $period_name = '') {
+        if (empty($special_events) || !is_array($special_events)) {
+            return null; // No restrictions
+        }
+
+        foreach ($special_events as $event) {
+            // Skip events that are OPEN (isOpen = true) - these are special open hours, not restrictions
+            if (isset($event['isOpen']) && $event['isOpen'] === true) {
+                continue; // Not a restriction
+            }
+
+            // Check if this is a full-day closure (no open/close times)
+            if (empty($event['open']) && empty($event['close'])) {
+                return isset($event['name']) && !empty($event['name']) ? $event['name'] : 'Service unavailable';
+            }
+
+            // Check if time falls within restricted period
+            if (isset($event['open']) && isset($event['close'])) {
+                if ($time_value >= $event['open'] && $time_value < $event['close']) {
+                    return isset($event['name']) && !empty($event['name']) ? $event['name'] : ($period_name ? $period_name . ' closed' : 'Service unavailable');
+                }
+            }
+        }
+
+        return null; // Not restricted
     }
 
     /**
