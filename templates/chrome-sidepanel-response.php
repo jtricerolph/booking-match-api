@@ -384,8 +384,9 @@ if (!defined('ABSPATH')) {
                                 </div>
                             </div>
 
-                            <!-- Hidden field for selected time -->
+                            <!-- Hidden fields for selected time and period -->
                             <input type="hidden" class="form-time-selected" id="time-selected-<?php echo esc_attr($night['date']); ?>">
+                            <input type="hidden" class="form-opening-hour-id" id="opening-hour-id-<?php echo esc_attr($night['date']); ?>">
 
                             <!-- Collapsible Section 1: Booking Details -->
                             <div class="bma-expandable-section">
@@ -396,10 +397,8 @@ if (!defined('ABSPATH')) {
                                 <div id="booking-details-<?php echo esc_attr($night['date']); ?>"
                                      class="bma-section-content" style="display:none;">
 
-                                    <div class="bma-form-row">
-                                        <label>Date</label>
-                                        <input type="text" class="form-date" value="<?php echo esc_attr($night['date']); ?>" readonly>
-                                    </div>
+                                    <!-- Hidden date field (already defined by which day's create button was clicked) -->
+                                    <input type="hidden" class="form-date" value="<?php echo esc_attr($night['date']); ?>">
 
                                     <div class="bma-form-row">
                                         <label>Guest Name *</label>
