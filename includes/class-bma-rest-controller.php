@@ -876,7 +876,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $nights = $this->calculate_nights($arrival_date, $departure_date);
         $status = $booking['booking_status'] ?? 'unknown';
         $room_number = $booking['site_name'] ?? 'N/A';
-        $group_id = $booking['group_id'] ?? null;
+        $group_id = $booking['booking_group_id'] ?? null;
 
         // Calculate which night this is
         $arrival = new DateTime($arrival_date);
