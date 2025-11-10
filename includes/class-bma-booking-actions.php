@@ -1085,49 +1085,46 @@ class BMA_Booking_Actions {
             return $cached;
         }
 
-        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
-        if ( empty( $resos_api_key ) ) {
-            error_log( 'BMA: Resos API key not configured' );
+        // Get ALL opening hours (includes special events)
+        $all_hours = $this->get_all_opening_hours();
+
+        if ( empty( $all_hours ) ) {
+            error_log( 'BMA: No opening hours data available for filtering special events' );
             return array();
         }
 
-        $url = 'https://api.resos.com/v1/specialEvents?date=' . urlencode( $date );
+        // Filter for special events matching this date
+        $special_events = array();
+        $target_date = date( 'Y-m-d', strtotime( $date ) );
 
-        $args = array(
-            'timeout' => 15,
-            'headers' => array(
-                'Authorization' => 'Basic ' . base64_encode( $resos_api_key . ':' ),
-                'Content-Type' => 'application/json',
-            ),
-        );
+        foreach ( $all_hours as $hours ) {
+            // Only process special events
+            if ( ! isset( $hours['special'] ) || $hours['special'] !== true ) {
+                continue;
+            }
 
-        error_log( 'BMA: Fetching special events from Resos API: ' . $url );
-        $response = wp_remote_get( $url, $args );
+            // Check if this special event matches the requested date
+            if ( isset( $hours['date'] ) ) {
+                $event_date = date( 'Y-m-d', strtotime( $hours['date'] ) );
 
-        if ( is_wp_error( $response ) ) {
-            error_log( 'BMA: Special events fetch error: ' . $response->get_error_message() );
-            return array();
+                if ( $event_date === $target_date ) {
+                    $special_events[] = array(
+                        'name'   => isset( $hours['name'] ) ? $hours['name'] : '',
+                        'isOpen' => isset( $hours['isOpen'] ) ? $hours['isOpen'] : false,
+                        'open'   => isset( $hours['open'] ) ? $hours['open'] : null,
+                        'close'  => isset( $hours['close'] ) ? $hours['close'] : null,
+                    );
+                }
+            }
         }
 
-        $response_code = wp_remote_retrieve_response_code( $response );
-        if ( $response_code !== 200 ) {
-            error_log( 'BMA: Special events fetch failed with status: ' . $response_code );
-            return array();
-        }
-
-        $body = wp_remote_retrieve_body( $response );
-        $data = json_decode( $body, true );
-
-        if ( ! is_array( $data ) ) {
-            error_log( 'BMA: Invalid special events response format' );
-            return array();
-        }
+        error_log( 'BMA: Found ' . count( $special_events ) . ' special event(s) for date: ' . $date );
 
         // Cache for 30 minutes
-        set_transient( $cache_key, $data, 30 * MINUTE_IN_SECONDS );
-        error_log( 'BMA: Cached special events for: ' . $date );
+        set_transient( $cache_key, $special_events, 30 * MINUTE_IN_SECONDS );
+        error_log( 'BMA: Cached ' . count( $special_events ) . ' special event(s) for: ' . $date );
 
-        return $data;
+        return $special_events;
     }
 
     /**
