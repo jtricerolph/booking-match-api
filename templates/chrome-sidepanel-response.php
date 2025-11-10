@@ -372,7 +372,7 @@ if (!defined('ABSPATH')) {
 
                             <!-- Gantt Chart (Compact Mode) -->
                             <div class="bma-gantt-container" id="gantt-container-<?php echo esc_attr($night['date']); ?>">
-                                <div class="gantt-viewport" id="gantt-<?php echo esc_attr($night['date']); ?>" style="overflow-x: auto; overflow-y: hidden; height: 120px; position: relative;">
+                                <div class="gantt-viewport" id="gantt-<?php echo esc_attr($night['date']); ?>" style="overflow-x: auto; overflow-y: hidden; min-height: 120px; position: relative;">
                                     <p style="padding: 20px; text-align: center; color: #666;">Loading timeline...</p>
                                 </div>
                             </div>
