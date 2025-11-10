@@ -187,7 +187,11 @@ if (empty($bookings)) {
                 <!-- Issues/Checks Section -->
                 <div class="detail-separator"></div>
                 <div class="detail-section checks-section">
-                    <h4><span class="material-symbols-outlined">check_circle</span> Issues/Checks</h4>
+                    <h4 class="checks-header-link" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Issues/Checks
+                        <span class="material-symbols-outlined arrow-icon">arrow_forward</span>
+                    </h4>
                     <p class="placeholder-text">Coming soon...</p>
                 </div>
 

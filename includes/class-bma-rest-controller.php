@@ -735,9 +735,20 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $booking_id = $request->get_param('booking_id');
             $context = $request->get_param('context') ?: 'json';
 
+            // Fetch booking details from NewBook
+            $searcher = new BMA_NewBook_Search();
+            $nb_booking = $searcher->fetch_booking($booking_id);
+
+            if (!$nb_booking) {
+                return new WP_Error(
+                    'booking_not_found',
+                    __('Booking not found', 'booking-match-api'),
+                    array('status' => 404)
+                );
+            }
+
             // TODO: Implement actual checks logic
             // For now, return placeholder/stub data
-
             $checks = array(
                 'twin_bed_request' => false,
                 'sofa_bed_request' => false,
@@ -752,7 +763,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
-                    'html' => $formatter->format_checks_html($booking_id, $checks),
+                    'html' => $formatter->format_checks_html($nb_booking, $checks),
                     'badge_count' => $badge_count,
                 );
             }
@@ -761,6 +772,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return array(
                 'success' => true,
                 'booking_id' => $booking_id,
+                'booking' => $nb_booking,
                 'checks' => $checks,
                 'badge_count' => $badge_count,
             );

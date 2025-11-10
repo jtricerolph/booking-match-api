@@ -291,7 +291,7 @@ class BMA_Response_Formatter {
     /**
      * Format checks HTML for Chrome sidepanel
      */
-    public function format_checks_html($booking_id, $checks) {
+    public function format_checks_html($booking, $checks) {
         ob_start();
         $template_file = BMA_PLUGIN_DIR . 'templates/chrome-checks-response.php';
 
@@ -300,7 +300,7 @@ class BMA_Response_Formatter {
         } else {
             // Fallback simple HTML
             echo '<div class="bma-checks">';
-            echo '<h2>Checks for Booking #' . esc_html($booking_id) . '</h2>';
+            echo '<h2>Checks for Booking #' . esc_html($booking['booking_id']) . '</h2>';
             echo '<p>No issues found</p>';
             echo '<p><em>Twin bed checks, sofa bed checks, and special request matching coming soon...</em></p>';
             echo '</div>';
