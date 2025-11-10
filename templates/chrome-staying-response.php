@@ -46,7 +46,7 @@ if (empty($bookings)) {
                     <div class="staying-restaurant-line">
                         <span class="material-symbols-outlined">restaurant</span>
                         <?php if (empty($matches)): ?>
-                            <span class="restaurant-status no-booking">
+                            <span class="restaurant-status <?php echo $has_package ? 'has-package' : 'no-booking'; ?>">
                                 No booking
                                 <span class="material-symbols-outlined"><?php echo $has_package ? 'flag' : 'add'; ?></span>
                             </span>
