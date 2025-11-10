@@ -427,6 +427,7 @@ if (empty($bookings)) {
 
 .night-date {
     font-weight: 500;
+    font-size: 12px;
     color: #2d3748;
     min-width: 70px;
 }
@@ -434,11 +435,15 @@ if (empty($bookings)) {
 .night-time {
     flex: 1;
     color: #4a5568;
+    font-size: 12px;
+    font-weight: 400;
 }
 
 .night-status {
     flex: 1;
     color: #4a5568;
+    font-size: 12px;
+    font-weight: 400;
 }
 
 .status-icon {
