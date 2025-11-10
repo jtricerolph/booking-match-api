@@ -467,14 +467,18 @@ class BMA_Matcher {
             if (isset($booking['customFields']) && is_array($booking['customFields'])) {
                 foreach ($booking['customFields'] as $field) {
                     $field_name = $field['name'] ?? '';
-                    $field_value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
 
                     if ($field_name === 'Hotel Guest') {
+                        // For multiple choice fields, use multipleChoiceValueName (not value which contains ID)
+                        $field_value = $field['multipleChoiceValueName'] ?? $field['value'] ?? '';
                         $is_resident = ($field_value === 'Yes' || $field_value === 'yes' || $field_value === '1');
+                        error_log('BMA_Matcher: Found Hotel Guest field, value: ' . $field_value . ', is_resident: ' . ($is_resident ? 'yes' : 'no'));
                         break;
                     }
                 }
-                error_log('BMA_Matcher: customFields found, is_resident: ' . ($is_resident ? 'yes' : 'no'));
+                if (!$is_resident) {
+                    error_log('BMA_Matcher: No Hotel Guest field found or value not Yes');
+                }
             } else {
                 error_log('BMA_Matcher: No customFields found in booking');
             }
