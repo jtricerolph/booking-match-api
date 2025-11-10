@@ -388,9 +388,10 @@ if (!defined('ABSPATH')) {
 
                             <!-- Collapsible Section 1: Booking Details -->
                             <div class="bma-expandable-section">
-                                <button type="button" class="bma-section-toggle" data-target="booking-details-<?php echo esc_attr($night['date']); ?>">
+                                <button type="button" class="bma-section-toggle" data-target="booking-details-<?php echo esc_attr($night['date']); ?>" data-section-type="details">
                                     <span class="material-symbols-outlined">expand_more</span>
-                                    Booking Details
+                                    <span class="section-title">Booking Details</span>
+                                    <span class="material-symbols-outlined section-indicator" data-indicator="details-<?php echo esc_attr($night['date']); ?>">draw</span>
                                 </button>
                                 <div id="booking-details-<?php echo esc_attr($night['date']); ?>"
                                      class="bma-section-content" style="display:none;">
@@ -453,9 +454,10 @@ if (!defined('ABSPATH')) {
 
                             <!-- Collapsible Section 2: Allergies & Dietary -->
                             <div class="bma-expandable-section">
-                                <button type="button" class="bma-section-toggle" data-target="allergies-<?php echo esc_attr($night['date']); ?>">
+                                <button type="button" class="bma-section-toggle" data-target="allergies-<?php echo esc_attr($night['date']); ?>" data-section-type="allergies">
                                     <span class="material-symbols-outlined">expand_more</span>
-                                    Allergies & Dietary
+                                    <span class="section-title">Allergies & Dietary</span>
+                                    <span class="material-symbols-outlined section-indicator" data-indicator="allergies-<?php echo esc_attr($night['date']); ?>">draw</span>
                                 </button>
                                 <div id="allergies-<?php echo esc_attr($night['date']); ?>"
                                      class="bma-section-content" style="display:none;">
@@ -473,9 +475,10 @@ if (!defined('ABSPATH')) {
 
                             <!-- Collapsible Section 3: Add Note -->
                             <div class="bma-expandable-section">
-                                <button type="button" class="bma-section-toggle" data-target="note-<?php echo esc_attr($night['date']); ?>">
+                                <button type="button" class="bma-section-toggle" data-target="note-<?php echo esc_attr($night['date']); ?>" data-section-type="note">
                                     <span class="material-symbols-outlined">expand_more</span>
-                                    Add Note
+                                    <span class="section-title">Add Note</span>
+                                    <span class="material-symbols-outlined section-indicator" data-indicator="note-<?php echo esc_attr($night['date']); ?>">draw</span>
                                 </button>
                                 <div id="note-<?php echo esc_attr($night['date']); ?>"
                                      class="bma-section-content" style="display:none;">
