@@ -115,10 +115,9 @@ if (!defined('ABSPATH')) {
         </div>
 
         <div class="bma-nights">
-            <h4 class="bma-restaurant-header-link" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
+            <h4>
                 <span class="material-symbols-outlined">restaurant</span>
                 Restaurant Bookings by Night
-                <span class="material-symbols-outlined arrow-icon">arrow_forward</span>
             </h4>
 
             <?php foreach ($booking['nights'] as $night): ?>
@@ -832,38 +831,6 @@ if (!defined('ABSPATH')) {
     color: #374151;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-}
-
-.bma-restaurant-header-link {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    padding: 8px 12px;
-    margin: 0 -12px 16px -12px;
-    border-radius: 6px;
-}
-
-.bma-restaurant-header-link:hover {
-    background: #f3f4f6;
-    color: #3b82f6;
-}
-
-.bma-restaurant-header-link .material-symbols-outlined {
-    font-size: 20px;
-}
-
-.bma-restaurant-header-link .arrow-icon {
-    margin-left: auto;
-    font-size: 18px;
-    opacity: 0.6;
-}
-
-.bma-restaurant-header-link:hover .arrow-icon {
-    opacity: 1;
-    transform: translateX(4px);
-    transition: all 0.2s;
 }
 
 .bma-night {

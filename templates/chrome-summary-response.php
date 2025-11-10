@@ -88,7 +88,11 @@ if (empty($bookings)) {
                 <!-- Restaurant Section -->
                 <div class="detail-separator"></div>
                 <div class="detail-section restaurant-section">
-                    <h4><span class="material-symbols-outlined">restaurant</span> Restaurant</h4>
+                    <h4 class="restaurant-header-link" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
+                        <span class="material-symbols-outlined">restaurant</span>
+                        Restaurant
+                        <span class="material-symbols-outlined arrow-icon">arrow_forward</span>
+                    </h4>
                     <div class="restaurant-nights">
                         <?php
                         $match_details = $booking['match_details'];
@@ -100,7 +104,7 @@ if (empty($bookings)) {
                         ?>
                             <?php if ($match_count === 0): ?>
                                 <!-- No booking -->
-                                <div class="night-row clickable-issue" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" title="Click to view in Restaurant tab">
+                                <div class="night-row clickable-issue create-booking-link" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($night_date); ?>" title="Click to create booking in Restaurant tab">
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-status">No booking</span>
                                     <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
@@ -381,6 +385,32 @@ if (empty($bookings)) {
 
 .detail-section h4 .material-symbols-outlined {
     font-size: 16px;
+}
+
+/* Clickable Restaurant Header */
+.restaurant-header-link {
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 4px 8px;
+    margin: 0 -8px 6px -8px;
+    border-radius: 6px;
+}
+
+.restaurant-header-link:hover {
+    background: #f3f4f6;
+    color: #3b82f6;
+}
+
+.restaurant-header-link .arrow-icon {
+    margin-left: auto;
+    font-size: 16px;
+    opacity: 0.6;
+}
+
+.restaurant-header-link:hover .arrow-icon {
+    opacity: 1;
+    transform: translateX(4px);
+    transition: all 0.2s;
 }
 
 /* Restaurant Nights */
