@@ -747,6 +747,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 );
             }
 
+            // Process booking through matcher to get normalized fields (same as Restaurant tab)
+            $matcher = new BMA_Matcher();
+            $processed_booking = $matcher->match_booking_all_nights($nb_booking);
+
             // TODO: Implement actual checks logic
             // For now, return placeholder/stub data
             $checks = array(
@@ -763,7 +767,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
-                    'html' => $formatter->format_checks_html($nb_booking, $checks),
+                    'html' => $formatter->format_checks_html($processed_booking, $checks),
                     'badge_count' => $badge_count,
                 );
             }
@@ -772,7 +776,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return array(
                 'success' => true,
                 'booking_id' => $booking_id,
-                'booking' => $nb_booking,
+                'booking' => $processed_booking,
                 'checks' => $checks,
                 'badge_count' => $badge_count,
             );

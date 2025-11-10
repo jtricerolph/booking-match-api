@@ -14,61 +14,49 @@ if (!defined('ABSPATH')) {
 }
 
 // Variables available: $booking (array), $checks (array of check results)
-$booking_id = $booking['booking_id'];
-$guest_name = $booking['guest_name'] ?? 'Unknown Guest';
-$room_number = $booking['site_name'] ?? 'N/A';
-$arrival_date = $booking['arrival_date'] ?? '';
-$departure_date = $booking['departure_date'] ?? '';
-$nights = $booking['nights'] ?? 0;
-$occupants = $booking['occupants'] ?? ['adults' => 0, 'children' => 0, 'infants' => 0];
-$tariffs = $booking['tariffs'] ?? [];
-$status = $booking['status'] ?? 'Confirmed';
-$booking_source = $booking['booking_source'] ?? 'Unknown';
 ?>
 <div class="bma-checks-tab">
-    <!-- Booking Summary Section -->
-    <div class="booking-summary-section">
-        <div class="booking-summary-header">
-            <div class="booking-summary-title">
-                <h3><?php echo esc_html($guest_name); ?></h3>
-                <span class="booking-id">#<?php echo esc_html($booking_id); ?></span>
-            </div>
-            <span class="room-badge"><?php echo esc_html($room_number); ?></span>
+    <!-- Booking Summary Section (matching Restaurant tab) -->
+    <div class="bma-booking-summary">
+        <!-- Guest Name (Bold, Prominent) -->
+        <div class="bma-guest-name">
+            <strong><?php echo esc_html($booking['guest_name']); ?></strong>
         </div>
 
-        <div class="booking-summary-details">
-            <div class="detail-row">
-                <span class="detail-label">Dates:</span>
-                <span class="detail-value">
-                    <?php echo esc_html(date('D d/m', strtotime($arrival_date))); ?> -
-                    <?php echo esc_html(date('D d/m', strtotime($departure_date))); ?>
-                    <span class="nights-badge"><?php echo esc_html($nights); ?> night<?php echo $nights > 1 ? 's' : ''; ?></span>
-                </span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Guests:</span>
-                <span class="detail-value">
+        <!-- Compact Details Section -->
+        <div class="bma-compact-details">
+            <div class="bma-compact-row">
+                <span>Booking ID: #<?php echo esc_html($booking['booking_id']); ?></span>
+                <span class="bma-compact-occupants">
                     <?php
+                    $occ = $booking['occupants'] ?? array('adults' => 0, 'children' => 0, 'infants' => 0);
                     $parts = array();
-                    if ($occupants['adults'] > 0) $parts[] = $occupants['adults'] . ' Adult' . ($occupants['adults'] > 1 ? 's' : '');
-                    if ($occupants['children'] > 0) $parts[] = $occupants['children'] . ' Child' . ($occupants['children'] > 1 ? 'ren' : '');
-                    if ($occupants['infants'] > 0) $parts[] = $occupants['infants'] . ' Infant' . ($occupants['infants'] > 1 ? 's' : '');
+                    if ($occ['adults'] > 0) $parts[] = $occ['adults'] . ' Adult' . ($occ['adults'] > 1 ? 's' : '');
+                    if ($occ['children'] > 0) $parts[] = $occ['children'] . ' Child' . ($occ['children'] > 1 ? 'ren' : '');
+                    if ($occ['infants'] > 0) $parts[] = $occ['infants'] . ' Infant' . ($occ['infants'] > 1 ? 's' : '');
                     echo esc_html(implode(', ', $parts));
                     ?>
                 </span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Tariff:</span>
-                <span class="detail-value"><?php echo esc_html(empty($tariffs) ? 'Standard' : implode(', ', $tariffs)); ?></span>
+            <div class="bma-compact-row">
+                <span>Dates: <?php echo esc_html(date('D d/m', strtotime($booking['arrival']))); ?> - <?php echo esc_html(date('D d/m', strtotime($booking['departure']))); ?></span>
+                <span class="bma-nights-badge"><?php echo esc_html($booking['total_nights']); ?> night<?php echo $booking['total_nights'] > 1 ? 's' : ''; ?></span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value"><?php echo esc_html(ucfirst($status)); ?> • <?php echo esc_html($booking_source); ?></span>
+            <div class="bma-compact-row">
+                <span>Tariff: <?php
+                    $tariffs = $booking['tariffs'] ?? array();
+                    echo esc_html(empty($tariffs) ? 'Standard' : implode(', ', $tariffs));
+                ?></span>
+            </div>
+            <div class="bma-compact-row">
+                <span>Status: <?php echo esc_html(ucfirst($booking['booking_status'] ?? 'unknown')); ?></span>
+                <span><?php echo esc_html($booking['booking_source'] ?? 'Direct'); ?></span>
             </div>
         </div>
 
-        <div class="booking-summary-actions">
-            <button class="open-booking-btn" data-booking-id="<?php echo esc_attr($booking_id); ?>">
+        <!-- Action Button -->
+        <div class="bma-top-actions">
+            <button class="open-booking-btn" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>">
                 <span class="material-symbols-outlined">arrow_back</span>
                 Open Booking in NewBook
             </button>
@@ -76,12 +64,11 @@ $booking_source = $booking['booking_source'] ?? 'Unknown';
     </div>
 
     <!-- Checks & Issues Section -->
-    <div class="checks-section-header">
+    <div class="bma-nights">
         <h4>
             <span class="material-symbols-outlined">check_circle</span>
             Checks & Issues
         </h4>
-    </div>
 
     <?php
     // Calculate total issues count
@@ -155,148 +142,122 @@ $booking_source = $booking['booking_source'] ?? 'Unknown';
             </div>
         </div>
     </div>
-</div>
+    </div> <!-- Close bma-nights -->
+</div> <!-- Close bma-checks-tab -->
 
 <style>
-/* Checks Tab Styles */
+/* Checks Tab Styles (matching Restaurant tab) */
 .bma-checks-tab {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 14px;
     line-height: 1.5;
     color: #333;
-    padding: 0;
+    padding: 16px;
     background: #fff;
 }
 
-/* Booking Summary Section */
-.booking-summary-section {
-    padding: 16px;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+/* Booking Summary Section (from Restaurant tab) */
+.bma-booking-summary {
+    margin-bottom: 20px;
 }
 
-.booking-summary-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+/* Guest Name - Bold and Prominent */
+.bma-guest-name {
+    font-size: 14px;
+    color: #2d3748;
     margin-bottom: 12px;
 }
 
-.booking-summary-title {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.booking-summary-title h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #111827;
-}
-
-.booking-id {
-    font-size: 13px;
-    color: #6b7280;
-    font-weight: 400;
-}
-
-.room-badge {
-    padding: 4px 10px;
-    background: #3b82f6;
-    color: white;
-    border-radius: 6px;
-    font-size: 13px;
+.bma-guest-name strong {
     font-weight: 600;
 }
 
-.booking-summary-details {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
-}
-
-.detail-row {
-    display: flex;
-    gap: 8px;
-    font-size: 13px;
-}
-
-.detail-label {
-    color: #6b7280;
-    min-width: 55px;
+/* Nights Badge on Dates Row */
+.bma-nights-badge {
+    background: #edf2f7;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
     font-weight: 500;
 }
 
-.detail-value {
-    color: #111827;
-    flex: 1;
+/* Compact Details Section */
+.bma-compact-details {
+    margin-bottom: 16px;
 }
 
-.nights-badge {
-    padding: 2px 6px;
-    background: #e5e7eb;
-    border-radius: 4px;
+.bma-compact-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
     font-size: 12px;
-    color: #374151;
-    margin-left: 6px;
+    color: #4a5568;
 }
 
-.booking-summary-actions {
-    margin-top: 12px;
+.bma-compact-occupants {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+/* Top Action Button */
+.bma-top-actions {
+    margin-top: 16px;
 }
 
 .open-booking-btn {
+    width: 100%;
+    padding: 10px;
+    background: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
     display: flex;
     align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 10px 14px;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    color: #374151;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    justify-content: center;
+    gap: 6px;
 }
 
 .open-booking-btn:hover {
-    background: #f9fafb;
-    border-color: #9ca3af;
+    background: #2c5aa0;
 }
 
 .open-booking-btn .material-symbols-outlined {
     font-size: 18px;
 }
 
-/* Checks Section Header */
-.checks-section-header {
-    padding: 16px 16px 12px 16px;
-    border-bottom: 1px solid #e5e7eb;
+/* Checks & Issues Section (styled like Restaurant Nights) */
+.bma-nights {
+    margin-top: 24px;
 }
 
-.checks-section-header h4 {
+.bma-nights h4 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #111827;
 }
 
-.checks-section-header .material-symbols-outlined {
+.bma-nights h4 .material-symbols-outlined {
     font-size: 20px;
-    color: #6b7280;
 }
 
 .bma-no-issues {
     text-align: center;
     padding: 40px 20px;
-    margin: 16px;
+}
+
+.bma-muted {
+    color: #6b7280;
+    font-size: 13px;
 }
 
 .bma-icon-large {
@@ -321,8 +282,7 @@ $booking_source = $booking['booking_source'] ?? 'Unknown';
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin: 16px;
-    margin-bottom: 8px;
+    margin-bottom: 24px;
 }
 
 .bma-check-item {
@@ -365,7 +325,6 @@ $booking_source = $booking['booking_source'] ?? 'Unknown';
 }
 
 .bma-checks-placeholder {
-    margin: 16px;
     margin-top: 24px;
     padding: 24px;
     background: #f9fafb;
