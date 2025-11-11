@@ -2401,7 +2401,7 @@ function showFeedback(feedbackElement, message, type) {
 }
 
 // Load and display comparison view
-async function loadComparisonView(date, bookingId, resosBookingId) {
+async function loadComparisonView(date, bookingId, resosBookingId, buttonElement) {
     const containerId = 'comparison-' + date + '-' + resosBookingId;
     const container = document.getElementById(containerId);
 
@@ -2413,12 +2413,11 @@ async function loadComparisonView(date, bookingId, resosBookingId) {
         return;
     }
 
-    // Get button that triggered this to access data attributes
-    const triggerButton = event.target.closest('button[data-action="view-comparison"]');
-    const isConfirmed = triggerButton && triggerButton.dataset.isConfirmed === '1';
-    const isMatchedElsewhere = triggerButton && triggerButton.dataset.isMatchedElsewhere === '1';
-    const hotelBookingId = triggerButton ? triggerButton.dataset.hotelBookingId : '';
-    const guestName = triggerButton ? triggerButton.dataset.guestName : '';
+    // Get button data attributes
+    const isConfirmed = buttonElement && buttonElement.dataset.isConfirmed === '1';
+    const isMatchedElsewhere = buttonElement && buttonElement.dataset.isMatchedElsewhere === '1';
+    const hotelBookingId = buttonElement ? buttonElement.dataset.hotelBookingId : '';
+    const guestName = buttonElement ? buttonElement.dataset.guestName : '';
 
     // Show loading state
     container.innerHTML = '<div class="bma-comparison-loading">Loading comparison data...</div>';
@@ -2814,7 +2813,8 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
                 loadComparisonView(
                     button.dataset.date,
                     button.dataset.bookingId,
-                    button.dataset.resosBookingId
+                    button.dataset.resosBookingId,
+                    button
                 );
                 break;
 
