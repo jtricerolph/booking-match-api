@@ -249,15 +249,26 @@ class BMA_Comparison {
         $hotel_has_package = false;
         $package_inventory_name = get_option('bma_package_inventory_name', '');
 
+        error_log("BMA DEBUG: Package detection - input_date: '{$input_date}', package_inventory_name option: '{$package_inventory_name}'");
+        error_log("BMA DEBUG: Has inventory_items: " . (isset($hotel_booking['inventory_items']) ? 'YES' : 'NO') . ", Count: " . (isset($hotel_booking['inventory_items']) ? count($hotel_booking['inventory_items']) : 0));
+
         if (!empty($package_inventory_name) && isset($hotel_booking['inventory_items']) && is_array($hotel_booking['inventory_items'])) {
             foreach ($hotel_booking['inventory_items'] as $item) {
+                error_log("BMA DEBUG: Inventory item - stay_date: '" . ($item['stay_date'] ?? 'NOT SET') . "', description: '" . ($item['description'] ?? 'NOT SET') . "'");
                 if (isset($item['stay_date']) && $item['stay_date'] == $input_date) {
                     if (isset($item['description']) && stripos($item['description'], $package_inventory_name) !== false) {
+                        error_log("BMA DEBUG: PACKAGE FOUND! Matched '{$package_inventory_name}' in '{$item['description']}'");
                         $hotel_has_package = true;
                         break;
+                    } else {
+                        error_log("BMA DEBUG: Date matches but description doesn't contain '{$package_inventory_name}'");
                     }
+                } else {
+                    error_log("BMA DEBUG: Date doesn't match - item date: '" . ($item['stay_date'] ?? 'NOT SET') . "' vs input: '{$input_date}'");
                 }
             }
+        } else {
+            error_log("BMA DEBUG: Package check skipped - package_inventory_name empty: " . (empty($package_inventory_name) ? 'YES' : 'NO'));
         }
 
         // Check package/DBB match
