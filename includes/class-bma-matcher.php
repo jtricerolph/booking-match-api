@@ -401,9 +401,18 @@ class BMA_Matcher {
      * Fetch Resos bookings for a date
      */
     public function fetch_resos_bookings($date) {
+        // Check cache first (60 second cache to prevent API hammering)
+        $cache_key = 'bma_resos_bookings_' . $date;
+        $cached = get_transient($cache_key);
+
+        if ($cached !== false) {
+            return $cached;
+        }
+
         $api_key = get_option('hotel_booking_resos_api_key');
 
         if (empty($api_key)) {
+            error_log("BMA ERROR: Resos API key not configured");
             return array();
         }
 
@@ -422,6 +431,29 @@ class BMA_Matcher {
         $response = wp_remote_get($url, $args);
 
         if (is_wp_error($response)) {
+            error_log("BMA ERROR: Resos API call failed for date {$date}: " . $response->get_error_message());
+
+            // Try to return stale cache if available (with _stale suffix)
+            $stale_cache = get_transient($cache_key . '_stale');
+            if ($stale_cache !== false) {
+                error_log("BMA WARNING: Returning stale cache for date {$date} due to API failure");
+                return $stale_cache;
+            }
+
+            return array();
+        }
+
+        $http_code = wp_remote_retrieve_response_code($response);
+        if ($http_code !== 200) {
+            error_log("BMA ERROR: Resos API returned HTTP {$http_code} for date {$date}");
+
+            // Try to return stale cache
+            $stale_cache = get_transient($cache_key . '_stale');
+            if ($stale_cache !== false) {
+                error_log("BMA WARNING: Returning stale cache for date {$date} due to HTTP {$http_code}");
+                return $stale_cache;
+            }
+
             return array();
         }
 
@@ -429,6 +461,15 @@ class BMA_Matcher {
         $data = json_decode($body, true);
 
         if (!is_array($data)) {
+            error_log("BMA ERROR: Resos API returned invalid JSON for date {$date}");
+
+            // Try to return stale cache
+            $stale_cache = get_transient($cache_key . '_stale');
+            if ($stale_cache !== false) {
+                error_log("BMA WARNING: Returning stale cache for date {$date} due to invalid JSON");
+                return $stale_cache;
+            }
+
             return array();
         }
 
@@ -442,6 +483,12 @@ class BMA_Matcher {
                 $filtered[] = $booking;
             }
         }
+
+        // Cache for 60 seconds
+        set_transient($cache_key, $filtered, 60);
+
+        // Also set a stale cache (5 minutes) as fallback
+        set_transient($cache_key . '_stale', $filtered, 300);
 
         return $filtered;
     }
