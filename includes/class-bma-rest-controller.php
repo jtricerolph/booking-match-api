@@ -203,6 +203,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
                         'type' => 'string',
                         'description' => 'Date in YYYY-MM-DD format (defaults to today)',
                     ),
+                    'force_refresh' => array(
+                        'required' => false,
+                        'type' => 'boolean',
+                        'description' => 'Force refresh of Resos cache',
+                        'default' => false,
+                    ),
                 ),
             ),
         ));
@@ -331,6 +337,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'enum' => array('json', 'chrome-extension', 'chrome-sidepanel'),
                 'sanitize_callback' => 'sanitize_text_field',
             ),
+            'force_refresh' => array(
+                'description' => __('Force refresh of Resos cache', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => false,
+            ),
         );
     }
 
@@ -347,6 +359,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $group_id = $request->get_param('group_id');
             $agent_ref = $request->get_param('travelagent_reference');
             $context = $request->get_param('context') ?: 'json';
+            $force_refresh = $request->get_param('force_refresh') ?: false;
 
             // Validate search criteria
             $validation = $this->validate_search_criteria($booking_id, $guest_name, $email, $phone, $agent_ref);
@@ -401,7 +414,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $results = array();
 
             foreach ($bookings as $booking) {
-                $match_result = $matcher->match_booking_all_nights($booking);
+                $match_result = $matcher->match_booking_all_nights($booking, $force_refresh);
                 $results[] = $match_result;
             }
 
@@ -471,6 +484,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'enum' => array('json', 'chrome-summary'),
                 'sanitize_callback' => 'sanitize_text_field',
             ),
+            'force_refresh' => array(
+                'description' => __('Force refresh of Resos cache', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => false,
+            ),
         );
     }
 
@@ -495,6 +514,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'enum' => array('json', 'chrome-checks'),
                 'sanitize_callback' => 'sanitize_text_field',
             ),
+            'force_refresh' => array(
+                'description' => __('Force refresh of Resos cache', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => false,
+            ),
         );
     }
 
@@ -505,6 +530,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         try {
             $context = $request->get_param('context') ?: 'json';
             $limit = $request->get_param('limit') ?: 5;
+            $force_refresh = $request->get_param('force_refresh') ?: false;
 
             error_log("BMA Summary: Requested limit = {$limit}, context = {$context}");
 
@@ -540,7 +566,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_warning_count = 0;
 
             foreach ($recent_bookings as $nb_booking) {
-                $processed = $this->process_booking_for_summary($nb_booking);
+                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh);
                 $summary_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
@@ -580,7 +606,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for summary display
      */
-    private function process_booking_for_summary($booking) {
+    private function process_booking_for_summary($booking, $force_refresh = false) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -597,7 +623,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
         // Match with restaurants
         $matcher = new BMA_Matcher();
-        $match_result = $matcher->match_booking_all_nights($booking);
+        $match_result = $matcher->match_booking_all_nights($booking, $force_refresh);
 
         // Determine booking source (placeholder)
         $source_detector = new BMA_Booking_Source();
@@ -734,6 +760,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         try {
             $booking_id = $request->get_param('booking_id');
             $context = $request->get_param('context') ?: 'json';
+            $force_refresh = $request->get_param('force_refresh') ?: false;
 
             // Fetch booking details from NewBook
             $searcher = new BMA_NewBook_Search();
@@ -749,7 +776,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Process booking through matcher to get normalized fields (same as Restaurant tab)
             $matcher = new BMA_Matcher();
-            $processed_booking = $matcher->match_booking_all_nights($nb_booking);
+            $processed_booking = $matcher->match_booking_all_nights($nb_booking, $force_refresh);
 
             // TODO: Implement actual checks logic
             // For now, return placeholder/stub data
@@ -800,6 +827,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     public function get_staying_bookings($request) {
         try {
             $date = $request->get_param('date');
+            $force_refresh = $request->get_param('force_refresh') ?: false;
 
             // Default to today if no date provided
             if (empty($date)) {
@@ -840,7 +868,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_warning_count = 0;
 
             foreach ($staying_bookings as $nb_booking) {
-                $processed = $this->process_booking_for_staying($nb_booking, $date);
+                $processed = $this->process_booking_for_staying($nb_booking, $date, $force_refresh);
                 $processed_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
@@ -908,7 +936,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for staying display
      */
-    private function process_booking_for_staying($booking, $target_date) {
+    private function process_booking_for_staying($booking, $target_date, $force_refresh = false) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -953,7 +981,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $reflection = new ReflectionClass($matcher);
         $method = $reflection->getMethod('match_single_night');
         $method->setAccessible(true);
-        $night_result = $method->invoke($matcher, $booking, $target_date);
+        $night_result = $method->invoke($matcher, $booking, $target_date, $force_refresh);
 
         $matches = $night_result['resos_matches'] ?? array();
 
@@ -1006,6 +1034,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $booking_id = $request->get_param('booking_id');
             $date = $request->get_param('date');
             $resos_booking_id = $request->get_param('resos_booking_id');
+            $force_refresh = $request->get_param('force_refresh') ?: false;
 
             // Fetch hotel booking
             $searcher = new BMA_NewBook_Search();
@@ -1057,7 +1086,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             } else {
                 // No specific Resos booking ID - find best match for this date
                 // Use matcher to get matches for this night
-                $night_match = $this->get_night_match_from_all($hotel_booking, $date);
+                $night_match = $this->get_night_match_from_all($hotel_booking, $date, $force_refresh);
 
                 if (empty($night_match['resos_matches'])) {
                     return new WP_Error(
@@ -1117,9 +1146,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Helper method to get night match data
      */
-    private function get_night_match_from_all($hotel_booking, $date) {
+    private function get_night_match_from_all($hotel_booking, $date, $force_refresh = false) {
         $matcher = new BMA_Matcher();
-        $all_matches = $matcher->match_booking_all_nights($hotel_booking);
+        $all_matches = $matcher->match_booking_all_nights($hotel_booking, $force_refresh);
 
         // Find the match for the requested date
         foreach ($all_matches['nights'] as $night) {
@@ -1158,6 +1187,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'type' => 'string',
                 'required' => false,
                 'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'force_refresh' => array(
+                'description' => __('Force refresh of Resos cache', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => false,
             ),
         );
     }

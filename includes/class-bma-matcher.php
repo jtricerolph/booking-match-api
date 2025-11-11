@@ -29,9 +29,10 @@ class BMA_Matcher {
      * Match a booking across all its nights
      *
      * @param array $booking NewBook booking data
+     * @param bool $force_refresh Force refresh of Resos cache
      * @return array Match results for all nights
      */
-    public function match_booking_all_nights($booking) {
+    public function match_booking_all_nights($booking, $force_refresh = false) {
         // Extract arrival and departure dates
         $arrival = $booking['booking_arrival'] ?? '';
         $departure = $booking['booking_departure'] ?? '';
@@ -52,7 +53,7 @@ class BMA_Matcher {
         // Match for each night
         $night_matches = array();
         foreach ($nights as $night) {
-            $match = $this->match_single_night($booking, $night);
+            $match = $this->match_single_night($booking, $night, $force_refresh);
             $night_matches[] = $match;
         }
 
@@ -87,9 +88,9 @@ class BMA_Matcher {
     /**
      * Match booking for a single night
      */
-    private function match_single_night($booking, $date) {
+    private function match_single_night($booking, $date, $force_refresh = false) {
         // Fetch Resos bookings for this date
-        $resos_bookings = $this->fetch_resos_bookings($date);
+        $resos_bookings = $this->fetch_resos_bookings($date, $force_refresh);
 
         // Fetch ALL hotel bookings for this date (for "matched elsewhere" checking)
         $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date);
@@ -409,9 +410,16 @@ class BMA_Matcher {
     /**
      * Fetch Resos bookings for a date
      */
-    public function fetch_resos_bookings($date) {
+    public function fetch_resos_bookings($date, $force_refresh = false) {
         // Check cache first (60 second cache to prevent API hammering)
         $cache_key = 'bma_resos_bookings_' . $date;
+
+        // If force refresh requested, clear both fresh and stale caches
+        if ($force_refresh) {
+            delete_transient($cache_key);
+            delete_transient($cache_key . '_stale');
+        }
+
         $cached = get_transient($cache_key);
 
         if ($cached !== false) {
