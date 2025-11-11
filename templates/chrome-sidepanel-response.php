@@ -1,6 +1,7 @@
 <?php
 /**
  * Chrome Sidepanel Response Template
+ * TEMPLATE VERSION: 1.4.0-2025-01-11
  *
  * HTML template for chrome-sidepanel context (wider layout for sidebar)
  *
@@ -2483,7 +2484,8 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     const matches = data.matches || {};
     const suggestions = data.suggested_updates || {};
 
-    let html = '<div class="comparison-row-content">';
+    let html = '<!-- TEMPLATE VERSION 1.4.0-2025-01-11 -->';
+    html += '<div class="comparison-row-content">';
     html += '<div class="comparison-table-wrapper">';
     html += '<div class="comparison-header">Match Comparison</div>';
     html += '<table class="comparison-table">';
