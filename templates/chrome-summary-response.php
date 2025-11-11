@@ -129,12 +129,13 @@ if (empty($bookings)) {
                                 ?>
                                 <div class="night-row <?php echo $is_primary ? 'resos-deep-link' : 'clickable-issue'; ?>"
                                      data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                     data-date="<?php echo esc_attr($night_date); ?>"
                                      <?php if ($is_primary): ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                         data-date="<?php echo esc_attr($night_date); ?>"
                                          title="Click to view in ResOS"
                                      <?php else: ?>
+                                         data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          title="Click to view in Restaurant tab"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
