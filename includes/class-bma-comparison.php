@@ -306,14 +306,17 @@ class BMA_Comparison {
             $suggested_updates['booking_ref'] = $hotel_booking_id;
         }
 
-        // Tariff/Package: Suggest "Yes" if hotel has package, suggest clearing if hotel doesn't
+        // Tariff/Package: ONLY suggest if it doesn't match
         // DBB is a "Yes only" radio button (no "No" option, just Yes or empty)
         // To clear: omit the field from customFields array (handled in update action)
-        if ($hotel_has_package && $resos_dbb !== 'Yes') {
-            $suggested_updates['dbb'] = 'Yes';
-        } elseif (!$hotel_has_package && $resos_dbb === 'Yes') {
-            // Suggest clearing DBB (empty string = omit from customFields array when updating)
-            $suggested_updates['dbb'] = '';
+        // Don't suggest if already matched
+        if (!isset($matches['dbb']) || !$matches['dbb']) {
+            if ($hotel_has_package && $resos_dbb !== 'Yes') {
+                $suggested_updates['dbb'] = 'Yes';
+            } elseif (!$hotel_has_package && $resos_dbb === 'Yes') {
+                // Suggest clearing DBB (empty string = omit from customFields array when updating)
+                $suggested_updates['dbb'] = '';
+            }
         }
 
         // People/Covers: Suggest hotel occupancy if different from Resos covers
