@@ -354,7 +354,7 @@ class BMA_Admin {
         echo '<select name="bma_newbook_region" id="bma_newbook_region">';
         echo '<option value="au"' . selected($value, 'au', false) . '>Australia (au)</option>';
         echo '<option value="nz"' . selected($value, 'nz', false) . '>New Zealand (nz)</option>';
-        echo '<option value="uk"' . selected($value, 'uk', false) . '>United Kingdom (uk)</option>';
+        echo '<option value="eu"' . selected($value, 'eu', false) . '>Europe (eu)</option>';
         echo '<option value="us"' . selected($value, 'us', false) . '>United States (us)</option>';
         echo '</select>';
         echo '<p class="description">';
