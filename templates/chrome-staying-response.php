@@ -278,6 +278,8 @@ if (empty($bookings)) {
     flex: none;
     display: inline-flex;
     text-decoration: none;
+    font-size: 12px;
+    align-items: center;
 }
 
 .restaurant-status.create-booking-link:hover {
