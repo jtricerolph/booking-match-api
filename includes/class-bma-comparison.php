@@ -16,6 +16,32 @@ if (!defined('ABSPATH')) {
 class BMA_Comparison {
 
     /**
+     * Title-case a name properly
+     * Converts "john smith" to "John Smith", handles hyphenated names, etc.
+     *
+     * @param string $name The name to title-case
+     * @return string Title-cased name
+     */
+    private function title_case_name($name) {
+        if (empty($name)) {
+            return '';
+        }
+
+        // Convert to lowercase first, then use mb_convert_case for proper title casing
+        $name = mb_strtolower(trim($name), 'UTF-8');
+
+        // Use MB_CASE_TITLE for multibyte-safe title casing
+        $name = mb_convert_case($name, MB_CASE_TITLE, 'UTF-8');
+
+        // Handle special cases like "O'brien" -> "O'Brien", "Mcdonald" -> "McDonald"
+        $name = preg_replace_callback("/\b(mc|mac|o')(\w)/i", function($matches) {
+            return $matches[1] . strtoupper($matches[2]);
+        }, $name);
+
+        return $name;
+    }
+
+    /**
      * Prepare comparison data between hotel booking and Resos booking
      *
      * @param array $hotel_booking NewBook booking data
@@ -34,8 +60,8 @@ class BMA_Comparison {
         if (isset($hotel_booking['guests']) && is_array($hotel_booking['guests'])) {
             foreach ($hotel_booking['guests'] as $guest) {
                 if (isset($guest['primary_client']) && $guest['primary_client'] == '1') {
-                    // Get name
-                    $hotel_guest_name = trim($guest['firstname'] . ' ' . $guest['lastname']);
+                    // Get name and apply title casing (NewBook returns lowercase)
+                    $hotel_guest_name = $this->title_case_name($guest['firstname'] . ' ' . $guest['lastname']);
 
                     // Extract phone and email from contact_details array, separating mobile and landline
                     if (isset($guest['contact_details']) && is_array($guest['contact_details'])) {
@@ -70,7 +96,7 @@ class BMA_Comparison {
             // If no primary client found, use first guest
             if (empty($hotel_guest_name) && count($hotel_booking['guests']) > 0) {
                 $guest = $hotel_booking['guests'][0];
-                $hotel_guest_name = trim($guest['firstname'] . ' ' . $guest['lastname']);
+                $hotel_guest_name = $this->title_case_name($guest['firstname'] . ' ' . $guest['lastname']);
 
                 // Extract phone and email from contact_details array
                 if (isset($guest['contact_details']) && is_array($guest['contact_details'])) {
@@ -245,15 +271,11 @@ class BMA_Comparison {
         // Calculate suggested updates for Resos
         $suggested_updates = array();
 
-        // Guest Name: Suggest if Resos doesn't have full name (just has surname)
+        // Guest Name: Suggest if names don't match exactly (case-sensitive)
         if (!empty($hotel_guest_name) && !empty($resos_guest_name)) {
-            // If names don't match exactly and Resos name is shorter or just surname
-            if (strtolower(trim($hotel_guest_name)) !== strtolower(trim($resos_guest_name))) {
-                $resos_surname = $this->extract_surname($resos_guest_name);
-                // If Resos name is just the surname, suggest full name
-                if (strtolower(trim($resos_guest_name)) === strtolower(trim($resos_surname))) {
-                    $suggested_updates['name'] = $hotel_guest_name;
-                }
+            // Compare case-sensitively to catch lowercase names from NewBook
+            if (trim($hotel_guest_name) !== trim($resos_guest_name)) {
+                $suggested_updates['name'] = $hotel_guest_name;
             }
         } elseif (!empty($hotel_guest_name) && empty($resos_guest_name)) {
             // If Resos has no name, suggest hotel name
