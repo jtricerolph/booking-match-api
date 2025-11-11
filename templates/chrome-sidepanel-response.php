@@ -1746,6 +1746,17 @@ if (!defined('ABSPATH')) {
     font-style: italic;
 }
 
+/* Resos value strikethrough when suggestion is checked */
+.comparison-table .resos-value.overwriting {
+    text-decoration: line-through;
+    color: #9ca3af;
+}
+
+/* Suggestion text greyed out when unchecked */
+.comparison-table .suggestion-text.inactive {
+    color: #9ca3af;
+}
+
 /* Comparison action buttons */
 .comparison-actions-buttons {
     display: flex;
@@ -2444,6 +2455,9 @@ async function loadComparisonView(date, bookingId, resosBookingId, buttonElement
         if (result.success && result.comparison) {
             const comparisonHTML = buildComparisonHTML(result.comparison, date, resosBookingId, isConfirmed, isMatchedElsewhere, hotelBookingId, guestName);
             container.innerHTML = comparisonHTML;
+
+            // Attach event listeners to suggestion checkboxes for visual feedback
+            attachSuggestionCheckboxListeners(container);
         } else {
             container.innerHTML = `
                 <div class="bma-comparison-error">
@@ -2576,7 +2590,7 @@ function buildComparisonRow(label, field, hotelValue, resosValue, isMatch, sugge
     let html = `<tr${matchClass}>`;
     html += `<td><strong>${escapeHTML(label)}</strong></td>`;
     html += hotelTitle ? `<td title="${escapeHTML(hotelTitle)}">${hotelDisplay}</td>` : `<td>${hotelDisplay}</td>`;
-    html += resosTitle ? `<td title="${escapeHTML(resosTitle)}">${resosDisplay}</td>` : `<td>${resosDisplay}</td>`;
+    html += resosTitle ? `<td class="resos-value" data-field="${field}" title="${escapeHTML(resosTitle)}">${resosDisplay}</td>` : `<td class="resos-value" data-field="${field}">${resosDisplay}</td>`;
     html += '</tr>';
 
     // If there's a suggestion, add a suggestion row below
@@ -2595,8 +2609,8 @@ function buildComparisonRow(label, field, hotelValue, resosValue, isMatch, sugge
         html += `<td colspan="3">`;
         html += `<div class="suggestion-content">`;
         html += `<label>`;
-        html += `<input type="checkbox" class="suggestion-checkbox" name="suggestion_${field}" value="${escapeHTML(String(suggestionValue))}"${checkedAttr}> `;
-        html += `Update to: ${suggestionDisplay}`;
+        html += `<input type="checkbox" class="suggestion-checkbox" name="suggestion_${field}" data-field="${field}" value="${escapeHTML(String(suggestionValue))}"${checkedAttr}> `;
+        html += `<span class="suggestion-text" data-field="${field}">Update to: ${suggestionDisplay}</span>`;
         html += `</label>`;
         html += `</div>`;
         html += `</td>`;
@@ -2604,6 +2618,51 @@ function buildComparisonRow(label, field, hotelValue, resosValue, isMatch, sugge
     }
 
     return html;
+}
+
+// Attach event listeners to suggestion checkboxes for visual feedback
+function attachSuggestionCheckboxListeners(container) {
+    const checkboxes = container.querySelectorAll('.suggestion-checkbox');
+
+    checkboxes.forEach(checkbox => {
+        const field = checkbox.dataset.field;
+
+        // Apply initial state
+        updateSuggestionVisualState(container, field, checkbox.checked);
+
+        // Add change listener
+        checkbox.addEventListener('change', function() {
+            updateSuggestionVisualState(container, field, this.checked);
+        });
+    });
+}
+
+// Update visual state based on checkbox state
+function updateSuggestionVisualState(container, field, isChecked) {
+    // Find the Resos value cell for this field
+    const resosCell = container.querySelector(`.resos-value[data-field="${field}"]`);
+    // Find the suggestion text for this field
+    const suggestionText = container.querySelector(`.suggestion-text[data-field="${field}"]`);
+
+    if (resosCell) {
+        if (isChecked) {
+            // Add strikethrough to Resos value
+            resosCell.classList.add('overwriting');
+        } else {
+            // Remove strikethrough from Resos value
+            resosCell.classList.remove('overwriting');
+        }
+    }
+
+    if (suggestionText) {
+        if (isChecked) {
+            // Normal color for suggestion text
+            suggestionText.classList.remove('inactive');
+        } else {
+            // Grey out suggestion text
+            suggestionText.classList.add('inactive');
+        }
+    }
 }
 
 // Get status icon for Material Symbols
