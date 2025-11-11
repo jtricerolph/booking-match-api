@@ -51,7 +51,8 @@ class BMA_Booking_Actions {
         $custom_field_map = array(
             'dbb' => 'DBB',
             'booking_ref' => 'Booking #',
-            'hotel_guest' => 'Hotel Guest'
+            'hotel_guest' => 'Hotel Guest',
+            'group_exclude' => 'GROUP/EXCLUDE'
         );
 
         // Check if any special fields need to be converted to customFields
@@ -150,7 +151,7 @@ class BMA_Booking_Actions {
 
     /**
      * Exclude a Resos booking from matching a hotel booking
-     * Adds a "NOT-#{hotel_booking_id}" note to the Resos booking
+     * Updates the GROUP/EXCLUDE custom field with NOT-#{hotel_booking_id}
      *
      * @param string $resos_booking_id Resos booking ID
      * @param string $hotel_booking_id Hotel booking ID to exclude
@@ -181,45 +182,68 @@ class BMA_Booking_Actions {
             );
         }
 
-        // Use the dedicated restaurant note endpoint
-        $note_url = 'https://api.resos.com/v1/bookings/' . urlencode($resos_booking_id) . '/restaurantNote';
-
-        // Prepare the note request body
-        $note_text = 'NOT-#' . $hotel_booking_id;
-        $request_body = json_encode(array('text' => $note_text));
-
-        $args = array(
-            'method' => 'POST',
+        // Fetch current booking to get existing GROUP/EXCLUDE value
+        $booking_url = 'https://api.resos.com/v1/bookings/' . urlencode($resos_booking_id) . '?expand=customFields';
+        $fetch_args = array(
+            'method' => 'GET',
             'timeout' => 30,
             'headers' => array(
                 'Authorization' => 'Basic ' . base64_encode($resos_api_key . ':'),
-                'Content-Type' => 'application/json'
-            ),
-            'body' => $request_body
+                'Accept' => 'application/json'
+            )
         );
 
-        error_log('BMA: Exclude Match - Adding note "' . $note_text . '" to Resos booking ' . $resos_booking_id);
+        error_log('BMA: Exclude Match - Fetching current booking ' . $resos_booking_id);
 
-        $response = wp_remote_post($note_url, $args);
+        $response = wp_remote_get($booking_url, $fetch_args);
 
         if (is_wp_error($response)) {
             return array(
                 'success' => false,
-                'message' => 'Failed to add note to Resos booking: ' . $response->get_error_message()
+                'message' => 'Failed to fetch booking: ' . $response->get_error_message()
             );
         }
 
         $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
-
-        // Note endpoint typically returns 201 Created for successful POST
-        if ($response_code !== 200 && $response_code !== 201) {
+        if ($response_code !== 200) {
             return array(
                 'success' => false,
-                'message' => 'Failed to add note to Resos booking. Status: ' . $response_code,
-                'response_code' => $response_code,
-                'response_body' => $response_body
+                'message' => 'Failed to fetch booking. Status: ' . $response_code
             );
+        }
+
+        $booking_data = json_decode(wp_remote_retrieve_body($response), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return array(
+                'success' => false,
+                'message' => 'Failed to parse booking data'
+            );
+        }
+
+        // Get current GROUP/EXCLUDE data
+        $current_data = $this->get_group_exclude_data($booking_data);
+
+        // Add the booking ID to excludes if not already there
+        if (!in_array(strval($hotel_booking_id), $current_data['excludes'], true)) {
+            $current_data['excludes'][] = strval($hotel_booking_id);
+        }
+
+        // Build new field value
+        $new_field_value = $this->build_group_exclude_value(
+            $current_data['groups'],
+            $current_data['individuals'],
+            $current_data['excludes']
+        );
+
+        error_log('BMA: Exclude Match - Updating GROUP/EXCLUDE to: ' . $new_field_value);
+
+        // Update the booking with new GROUP/EXCLUDE value
+        $update_result = $this->update_resos_booking($resos_booking_id, array(
+            'group_exclude' => $new_field_value
+        ));
+
+        if (!$update_result['success']) {
+            return $update_result;
         }
 
         error_log('BMA: Exclude Match SUCCESS - Added NOT-#' . $hotel_booking_id . ' to Resos booking ' . $resos_booking_id);
@@ -229,7 +253,7 @@ class BMA_Booking_Actions {
             'message' => 'Match excluded successfully',
             'resos_booking_id' => $resos_booking_id,
             'hotel_booking_id' => $hotel_booking_id,
-            'exclusion_note' => 'NOT-#' . $hotel_booking_id
+            'exclusion_field' => $new_field_value
         );
     }
 
@@ -450,6 +474,124 @@ class BMA_Booking_Actions {
             'success' => true,
             'updates' => $updates
         );
+    }
+
+    /**
+     * Parse GROUP/EXCLUDE field value into structured arrays
+     *
+     * Format: G#{group_id},#{booking_id},NOT-#{booking_id}
+     * Example: "G#5678,#12345,NOT-#12346"
+     *
+     * @param string $value The GROUP/EXCLUDE field value
+     * @return array Parsed data: ['groups' => [], 'individuals' => [], 'excludes' => []]
+     */
+    private function parse_group_exclude_field($value) {
+        $result = array(
+            'groups' => array(),
+            'individuals' => array(),
+            'excludes' => array()
+        );
+
+        if (empty($value) || !is_string($value)) {
+            return $result;
+        }
+
+        // Split by comma and process each entry
+        $entries = array_map('trim', explode(',', $value));
+
+        foreach ($entries as $entry) {
+            if (empty($entry)) {
+                continue;
+            }
+
+            // Check for exclusion: NOT-#12345
+            if (stripos($entry, 'NOT-#') === 0) {
+                $booking_id = substr($entry, 5); // Remove "NOT-#"
+                if (!empty($booking_id)) {
+                    $result['excludes'][] = $booking_id;
+                }
+            }
+            // Check for group: G#5678
+            elseif (stripos($entry, 'G#') === 0) {
+                $group_id = substr($entry, 2); // Remove "G#"
+                if (!empty($group_id)) {
+                    $result['groups'][] = $group_id;
+                }
+            }
+            // Check for individual: #12345
+            elseif (strpos($entry, '#') === 0) {
+                $booking_id = substr($entry, 1); // Remove "#"
+                if (!empty($booking_id)) {
+                    $result['individuals'][] = $booking_id;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Build GROUP/EXCLUDE field value from structured arrays
+     *
+     * @param array $groups Array of group IDs
+     * @param array $individuals Array of individual booking IDs
+     * @param array $excludes Array of excluded booking IDs
+     * @return string Formatted field value
+     */
+    public function build_group_exclude_value($groups = array(), $individuals = array(), $excludes = array()) {
+        $entries = array();
+
+        // Add group entries: G#5678
+        if (is_array($groups)) {
+            foreach ($groups as $group_id) {
+                if (!empty($group_id)) {
+                    $entries[] = 'G#' . $group_id;
+                }
+            }
+        }
+
+        // Add individual booking entries: #12345
+        if (is_array($individuals)) {
+            foreach ($individuals as $booking_id) {
+                if (!empty($booking_id)) {
+                    $entries[] = '#' . $booking_id;
+                }
+            }
+        }
+
+        // Add exclusion entries: NOT-#12345
+        if (is_array($excludes)) {
+            foreach ($excludes as $booking_id) {
+                if (!empty($booking_id)) {
+                    $entries[] = 'NOT-#' . $booking_id;
+                }
+            }
+        }
+
+        return implode(',', $entries);
+    }
+
+    /**
+     * Get and parse GROUP/EXCLUDE field data from a Resos booking
+     *
+     * @param array $resos_booking Resos booking data
+     * @return array Parsed data: ['groups' => [], 'individuals' => [], 'excludes' => [], 'raw' => '']
+     */
+    public function get_group_exclude_data($resos_booking) {
+        $custom_fields = isset($resos_booking['customFields']) ? $resos_booking['customFields'] : array();
+
+        $field_value = '';
+        foreach ($custom_fields as $field) {
+            if (isset($field['name']) && $field['name'] === 'GROUP/EXCLUDE') {
+                $field_value = isset($field['value']) ? $field['value'] : '';
+                break;
+            }
+        }
+
+        $parsed = $this->parse_group_exclude_field($field_value);
+        $parsed['raw'] = $field_value;
+
+        return $parsed;
     }
 
     /**

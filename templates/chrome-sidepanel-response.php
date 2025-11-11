@@ -192,12 +192,28 @@ if (!defined('ABSPATH')) {
                                     </div>
                                 <?php endif; ?>
 
-                                <div class="bma-match-details">
-                                    <!-- Line 1: Guest Name - Time (People pax) -->
+                                <div class="bma-match-details<?php echo !empty($match['match_info']['is_group_member']) ? ' grouped' : ''; ?>">
+                                    <!-- Line 1: Guest Name - Time (People pax) OR Time - Group Icon - Lead ID (People pax) -->
                                     <div class="bma-match-primary">
-                                        <?php echo esc_html($match['guest_name']); ?> -
-                                        <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
-                                        (<?php echo esc_html($match['people']); ?> pax)
+                                        <?php if (!empty($match['match_info']['is_group_member'])): ?>
+                                            <?php echo esc_html($match['time'] ?? 'Not specified'); ?> -
+                                            <span class="material-symbols-outlined group-icon" title="Group Booking">groups</span>
+                                            <?php
+                                            // Get lead booking ID from custom fields
+                                            $lead_booking_id = '';
+                                            if (!empty($match['booking_number'])) {
+                                                $lead_booking_id = $match['booking_number'];
+                                            }
+                                            if (!empty($lead_booking_id)) {
+                                                echo '<span class="lead-booking-id">#' . esc_html($lead_booking_id) . '</span>';
+                                            }
+                                            ?>
+                                            (<?php echo esc_html($match['people']); ?> pax)
+                                        <?php else: ?>
+                                            <?php echo esc_html($match['guest_name']); ?> -
+                                            <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
+                                            (<?php echo esc_html($match['people']); ?> pax)
+                                        <?php endif; ?>
                                     </div>
 
                                     <!-- Line 2: Status icon + Matched on fields -->
@@ -2000,6 +2016,51 @@ if (!defined('ABSPATH')) {
     margin: 0;
     line-height: 1.5;
 }
+
+/* Group Booking Styles */
+.bma-match-details.grouped {
+    border-left: 3px solid #3b82f6;
+    padding-left: 8px;
+}
+
+.group-icon {
+    color: #3b82f6;
+    font-size: 1.25rem;
+    vertical-align: middle;
+    margin: 0 4px;
+}
+
+.lead-booking-id {
+    font-weight: 600;
+    color: #1f2937;
+    font-family: monospace;
+    background: #e5e7eb;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin: 0 4px;
+}
+
+.btn-manage-group {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.btn-manage-group:hover {
+    background: #2563eb;
+}
+
+.btn-manage-group .material-symbols-outlined {
+    font-size: 18px;
+}
 </style>
 
 <!-- Custom Modal Structure -->
@@ -2462,14 +2523,21 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     html += '<span class="material-symbols-outlined">close</span> Close';
     html += '</button>';
 
-    // 2. Exclude Match button (only for non-confirmed, non-matched-elsewhere matches)
+    // 2. Manage Group button (always shown for matched bookings)
+    if (resosBookingId) {
+        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}">`;
+        html += '<span class="material-symbols-outlined">groups</span> Manage Group';
+        html += '</button>';
+    }
+
+    // 3. Exclude Match button (only for non-confirmed, non-matched-elsewhere matches)
     if (!isConfirmed && !isMatchedElsewhere && resosBookingId && hotelBookingId) {
         html += `<button class="btn-exclude-match" data-action="exclude-match" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-guest-name="${escapeHTML(guestName || 'Guest')}">`;
         html += '<span class="material-symbols-outlined">close</span> Exclude Match';
         html += '</button>';
     }
 
-    // 3. Update button (only if there are suggested updates)
+    // 4. Update button (only if there are suggested updates)
     if (hasSuggestions) {
         const buttonLabel = isConfirmed ? 'Update Selected' : 'Update Selected & Match';
         const buttonClass = isConfirmed ? 'btn-confirm-match btn-update-confirmed' : 'btn-confirm-match';
@@ -2716,6 +2784,22 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
 
             case 'submit-update':
                 submitUpdateBooking(button.dataset.date, button.dataset.resosBookingId);
+                break;
+
+            case 'manage-group':
+                if (window.parent && window.parent.openGroupManagementModal) {
+                    window.parent.openGroupManagementModal(
+                        button.dataset.resosBookingId,
+                        button.dataset.hotelBookingId,
+                        button.dataset.date
+                    );
+                } else if (window.openGroupManagementModal) {
+                    window.openGroupManagementModal(
+                        button.dataset.resosBookingId,
+                        button.dataset.hotelBookingId,
+                        button.dataset.date
+                    );
+                }
                 break;
 
             case 'exclude-match':

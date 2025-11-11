@@ -82,6 +82,24 @@ class BMA_REST_Controller extends WP_REST_Controller {
             ),
         ));
 
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/group', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'update_group'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => $this->get_update_group_params(),
+            ),
+        ));
+
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/for-date', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'get_bookings_for_date'),
+                'permission_callback' => array($this, 'permissions_check'),
+                'args' => $this->get_bookings_for_date_params(),
+            ),
+        ));
+
         register_rest_route($this->namespace, '/' . $this->rest_base . '/create', array(
             array(
                 'methods' => WP_REST_Server::CREATABLE,
@@ -1275,6 +1293,172 @@ class BMA_REST_Controller extends WP_REST_Controller {
     }
 
     /**
+     * Update group relationships for a Resos booking
+     *
+     * @param WP_REST_Request $request Full request data
+     * @return WP_REST_Response|WP_Error Response object
+     */
+    public function update_group($request) {
+        try {
+            $resos_booking_id = $request->get_param('resos_booking_id');
+            $lead_booking_id = $request->get_param('lead_booking_id');
+            $group_id = $request->get_param('group_id');
+            $individual_ids = $request->get_param('individual_ids') ?: array();
+            $exclude_ids = $request->get_param('exclude_ids') ?: array();
+
+            $actions = new BMA_Booking_Actions();
+
+            // Prepare updates array
+            $updates = array();
+
+            // Update lead booking ID (Booking # field)
+            if (!empty($lead_booking_id)) {
+                $updates['booking_ref'] = $lead_booking_id;
+            }
+
+            // Build GROUP/EXCLUDE field value
+            $groups = !empty($group_id) ? array($group_id) : array();
+            $group_exclude_value = $actions->build_group_exclude_value($groups, $individual_ids, $exclude_ids);
+
+            if (!empty($group_exclude_value)) {
+                $updates['group_exclude'] = $group_exclude_value;
+            } else {
+                // Empty value means clear the field
+                $updates['group_exclude'] = '';
+            }
+
+            // Update the booking
+            $result = $actions->update_resos_booking($resos_booking_id, $updates);
+
+            if (!$result['success']) {
+                return new WP_Error(
+                    'update_group_failed',
+                    $result['message'],
+                    array('status' => 400)
+                );
+            }
+
+            // Clear all Resos bookings caches since group changes affect matching
+            $matcher = new BMA_Matcher();
+            $matcher->clear_all_resos_caches();
+
+            return rest_ensure_response(array(
+                'success' => true,
+                'message' => 'Group updated successfully',
+                'resos_booking_id' => $resos_booking_id,
+                'lead_booking_id' => $lead_booking_id,
+                'group_id' => $group_id,
+                'individual_ids' => $individual_ids,
+                'exclude_ids' => $exclude_ids,
+                'group_exclude_field' => $group_exclude_value
+            ));
+
+        } catch (Exception $e) {
+            error_log('BMA Update Group Error: ' . $e->getMessage());
+            return new WP_Error(
+                'update_group_error',
+                __('Error updating group', 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
+     * Get NewBook bookings for a specific date (for group management modal)
+     *
+     * @param WP_REST_Request $request Full request data
+     * @return WP_REST_Response|WP_Error Response object
+     */
+    public function get_bookings_for_date($request) {
+        try {
+            $date = $request->get_param('date');
+            $exclude_booking_id = $request->get_param('exclude_booking_id');
+
+            $search = new BMA_NewBook_Search();
+
+            // Fetch all hotel bookings for this date
+            $bookings = $search->fetch_hotel_bookings_for_date($date);
+
+            if (empty($bookings)) {
+                return rest_ensure_response(array(
+                    'success' => true,
+                    'date' => $date,
+                    'bookings' => array(),
+                    'groups' => array()
+                ));
+            }
+
+            // Filter out excluded booking if specified
+            if (!empty($exclude_booking_id)) {
+                $bookings = array_filter($bookings, function($booking) use ($exclude_booking_id) {
+                    return strval($booking['booking_id']) !== strval($exclude_booking_id);
+                });
+            }
+
+            // Format bookings for response
+            $formatted_bookings = array();
+            $groups = array();
+
+            foreach ($bookings as $booking) {
+                $booking_id = $booking['booking_id'] ?? '';
+                $bookings_group_id = $booking['bookings_group_id'] ?? '';
+                $guest_name = '';
+
+                // Extract guest name
+                if (!empty($booking['guests']) && is_array($booking['guests'])) {
+                    foreach ($booking['guests'] as $guest) {
+                        if (isset($guest['primary_client']) && $guest['primary_client'] === '1') {
+                            $guest_name = trim(($guest['firstname'] ?? '') . ' ' . ($guest['lastname'] ?? ''));
+                            break;
+                        }
+                    }
+                }
+
+                $formatted_booking = array(
+                    'booking_id' => $booking_id,
+                    'bookings_group_id' => $bookings_group_id,
+                    'guest_name' => $guest_name,
+                    'site_name' => $booking['site_name'] ?? '',
+                    'arrival' => substr($booking['booking_arrival'] ?? '', 0, 10),
+                    'departure' => substr($booking['booking_departure'] ?? '', 0, 10),
+                    'adults' => $booking['booking_adults'] ?? 0,
+                    'children' => $booking['booking_children'] ?? 0
+                );
+
+                $formatted_bookings[] = $formatted_booking;
+
+                // Group bookings by bookings_group_id
+                if (!empty($bookings_group_id)) {
+                    if (!isset($groups[$bookings_group_id])) {
+                        $groups[$bookings_group_id] = array();
+                    }
+                    $groups[$bookings_group_id][] = $booking_id;
+                }
+            }
+
+            // Sort by site_name (room number)
+            usort($formatted_bookings, function($a, $b) {
+                return strcmp($a['site_name'], $b['site_name']);
+            });
+
+            return rest_ensure_response(array(
+                'success' => true,
+                'date' => $date,
+                'bookings' => $formatted_bookings,
+                'groups' => $groups
+            ));
+
+        } catch (Exception $e) {
+            error_log('BMA Get Bookings for Date Error: ' . $e->getMessage());
+            return new WP_Error(
+                'get_bookings_error',
+                __('Error fetching bookings for date', 'booking-match-api'),
+                array('status' => 500)
+            );
+        }
+    }
+
+    /**
      * Get update booking endpoint parameters
      */
     protected function get_update_booking_params() {
@@ -1308,6 +1492,65 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'description' => __('Hotel booking ID to exclude from matching', 'booking-match-api'),
                 'type' => 'string',
                 'required' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+        );
+    }
+
+    /**
+     * Get update group endpoint parameters
+     */
+    protected function get_update_group_params() {
+        return array(
+            'resos_booking_id' => array(
+                'description' => __('Resos booking ID to update', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'lead_booking_id' => array(
+                'description' => __('Lead hotel booking ID (for Booking # field)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'group_id' => array(
+                'description' => __('NewBook group ID for G# format', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'individual_ids' => array(
+                'description' => __('Array of individual booking IDs for # format', 'booking-match-api'),
+                'type' => 'array',
+                'required' => false,
+            ),
+            'exclude_ids' => array(
+                'description' => __('Array of excluded booking IDs for NOT-# format', 'booking-match-api'),
+                'type' => 'array',
+                'required' => false,
+            ),
+        );
+    }
+
+    /**
+     * Get bookings for date endpoint parameters
+     */
+    protected function get_bookings_for_date_params() {
+        return array(
+            'date' => array(
+                'description' => __('Date in YYYY-MM-DD format', 'booking-match-api'),
+                'type' => 'string',
+                'required' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+                'validate_callback' => function($param, $request, $key) {
+                    return preg_match('/^\d{4}-\d{2}-\d{2}$/', $param);
+                },
+            ),
+            'exclude_booking_id' => array(
+                'description' => __('Booking ID to exclude from results', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
                 'sanitize_callback' => 'sanitize_text_field',
             ),
         );

@@ -201,19 +201,36 @@ class BMA_Matcher {
         $hotel_ref = $hotel_booking['booking_reference_id'] ?? '';
         $hotel_room = $hotel_booking['site_name'] ?? '';
 
-        // Check for exclusion notes FIRST (before any matching logic)
-        // If Resos booking has "NOT-#{hotel_booking_id}" note, exclude it from matching
+        // Get GROUP/EXCLUDE field data
+        $group_exclude_data = $this->get_group_exclude_field($resos_booking);
+
+        // Check for exclusion in GROUP/EXCLUDE field FIRST (before any matching logic)
+        if (!empty($hotel_booking_id) && $this->is_booking_excluded($hotel_booking_id, $group_exclude_data)) {
+            return array(
+                'matched' => false,
+                'excluded' => true,
+                'exclusion_reason' => 'Excluded via GROUP/EXCLUDE field'
+            );
+        }
+
+        // Fallback: Check for exclusion in old notes format (backward compatibility)
         $notes = $this->get_resos_notes($resos_booking);
         if (!empty($hotel_booking_id)) {
             $exclusion_pattern = 'NOT-#' . $hotel_booking_id;
             if (stripos($notes, $exclusion_pattern) !== false) {
-                // This match has been explicitly excluded
+                // This match has been explicitly excluded via note
                 return array(
                     'matched' => false,
                     'excluded' => true,
-                    'exclusion_reason' => 'Manual exclusion note found'
+                    'exclusion_reason' => 'Manual exclusion note found (legacy)'
                 );
             }
+        }
+
+        // Check for group/individual match in GROUP/EXCLUDE field (Priority 0.5 - before "Booking #" field)
+        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data);
+        if ($group_match !== false) {
+            return $group_match;
         }
 
         // Check if this Resos booking's "Booking #" field matches ANY OTHER hotel booking ID
@@ -919,5 +936,134 @@ class BMA_Matcher {
         }
 
         return 'Direct';
+    }
+
+    /**
+     * Get GROUP/EXCLUDE field data from Resos booking
+     *
+     * @param array $resos_booking Resos booking data
+     * @return array Parsed data with groups, individuals, excludes
+     */
+    private function get_group_exclude_field($resos_booking) {
+        $custom_fields = isset($resos_booking['customFields']) ? $resos_booking['customFields'] : array();
+
+        $field_value = '';
+        foreach ($custom_fields as $field) {
+            if (isset($field['name']) && $field['name'] === 'GROUP/EXCLUDE') {
+                $field_value = isset($field['value']) ? $field['value'] : '';
+                break;
+            }
+        }
+
+        return $this->parse_group_exclude_field($field_value);
+    }
+
+    /**
+     * Parse GROUP/EXCLUDE field value
+     *
+     * @param string $value Field value
+     * @return array Parsed arrays for groups, individuals, excludes
+     */
+    private function parse_group_exclude_field($value) {
+        $result = array(
+            'groups' => array(),
+            'individuals' => array(),
+            'excludes' => array()
+        );
+
+        if (empty($value) || !is_string($value)) {
+            return $result;
+        }
+
+        $entries = array_map('trim', explode(',', $value));
+
+        foreach ($entries as $entry) {
+            if (empty($entry)) {
+                continue;
+            }
+
+            // Check for exclusion: NOT-#12345
+            if (stripos($entry, 'NOT-#') === 0) {
+                $booking_id = substr($entry, 5);
+                if (!empty($booking_id)) {
+                    $result['excludes'][] = $booking_id;
+                }
+            }
+            // Check for group: G#5678
+            elseif (stripos($entry, 'G#') === 0) {
+                $group_id = substr($entry, 2);
+                if (!empty($group_id)) {
+                    $result['groups'][] = $group_id;
+                }
+            }
+            // Check for individual: #12345
+            elseif (strpos($entry, '#') === 0) {
+                $booking_id = substr($entry, 1);
+                if (!empty($booking_id)) {
+                    $result['individuals'][] = $booking_id;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Check if a booking ID is excluded in the GROUP/EXCLUDE field
+     *
+     * @param string $booking_id Hotel booking ID
+     * @param array $group_exclude_data Parsed GROUP/EXCLUDE data
+     * @return bool True if excluded
+     */
+    private function is_booking_excluded($booking_id, $group_exclude_data) {
+        if (empty($booking_id) || empty($group_exclude_data['excludes'])) {
+            return false;
+        }
+
+        return in_array(strval($booking_id), $group_exclude_data['excludes'], true);
+    }
+
+    /**
+     * Check if a booking matches via GROUP/EXCLUDE field (group ID or individual ID)
+     *
+     * @param array $hotel_booking Hotel booking data
+     * @param array $group_exclude_data Parsed GROUP/EXCLUDE data
+     * @return array|false Match result or false if no match
+     */
+    private function check_group_exclude_match($hotel_booking, $group_exclude_data) {
+        $booking_id = strval($hotel_booking['booking_id'] ?? '');
+        $bookings_group_id = strval($hotel_booking['bookings_group_id'] ?? '');
+
+        // Check if booking is in a group that's linked (G#5678)
+        if (!empty($bookings_group_id) && !empty($group_exclude_data['groups'])) {
+            if (in_array($bookings_group_id, $group_exclude_data['groups'], true)) {
+                return array(
+                    'matched' => true,
+                    'match_type' => 'group_id',
+                    'confidence' => 'high',
+                    'is_primary' => true,
+                    'is_group_member' => true,
+                    'matched_via_group_id' => $bookings_group_id,
+                    'match_label' => 'Group Member (G#' . $bookings_group_id . ')'
+                );
+            }
+        }
+
+        // Check if individual booking ID is linked (#12345)
+        if (!empty($booking_id) && !empty($group_exclude_data['individuals'])) {
+            if (in_array($booking_id, $group_exclude_data['individuals'], true)) {
+                return array(
+                    'matched' => true,
+                    'match_type' => 'individual_id',
+                    'confidence' => 'high',
+                    'is_primary' => true,
+                    'is_group_member' => true,
+                    'matched_via_individual_id' => $booking_id,
+                    'match_label' => 'Individual Link (#' . $booking_id . ')'
+                );
+            }
+        }
+
+        return false;
     }
 }
