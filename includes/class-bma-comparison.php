@@ -282,14 +282,18 @@ class BMA_Comparison {
             $suggested_updates['name'] = $hotel_guest_name;
         }
 
-        // Phone: Suggest if Resos doesn't have one
-        if (empty($resos_phone) && !empty($hotel_preferred_phone)) {
-            $suggested_updates['phone'] = $hotel_preferred_phone;
+        // Phone: Suggest if Resos doesn't have one or if they don't match
+        if (!empty($hotel_preferred_phone)) {
+            if (empty($resos_phone) || trim($hotel_preferred_phone) !== trim($resos_phone)) {
+                $suggested_updates['phone'] = $hotel_preferred_phone;
+            }
         }
 
-        // Email: Suggest if Resos doesn't have one
-        if (empty($resos_email) && !empty($hotel_email)) {
-            $suggested_updates['email'] = $hotel_email;
+        // Email: Suggest if Resos doesn't have one or if they don't match
+        if (!empty($hotel_email)) {
+            if (empty($resos_email) || strtolower(trim($hotel_email)) !== strtolower(trim($resos_email))) {
+                $suggested_updates['email'] = $hotel_email;
+            }
         }
 
         // Hotel Guest: Suggest "Yes" if not already set to "Yes"
