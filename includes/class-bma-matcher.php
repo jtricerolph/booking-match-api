@@ -283,26 +283,60 @@ class BMA_Matcher {
             }
         }
 
-        // Priority 3: Booking ID in notes
+        // Priority 3: Booking ID in notes (SUGGESTED - should be in custom field)
         $notes = $this->get_resos_notes($resos_booking);
         if (!empty($hotel_booking_id) && stripos($notes, (string)$hotel_booking_id) !== false) {
+            // Check current custom fields to suggest updates
+            $current_booking_number = '';
+            $current_hotel_guest = '';
+            foreach ($custom_fields as $field) {
+                if (($field['name'] ?? '') === 'Booking #') {
+                    $current_booking_number = $field['value'] ?? '';
+                }
+                if (($field['name'] ?? '') === 'Hotel Guest') {
+                    $current_hotel_guest = $field['multipleChoiceValueName'] ?? '';
+                }
+            }
+
             return array(
                 'matched' => true,
                 'match_type' => 'notes_booking_id',
-                'confidence' => 'high',
-                'is_primary' => true,
-                'match_label' => 'Booking ID in notes'
+                'confidence' => 'medium',  // Changed from high to medium
+                'is_primary' => false,     // Changed from true to false (suggested match)
+                'match_label' => 'Booking ID in notes (needs field update)',
+                'suggestions' => array(
+                    'booking_ref' => $hotel_booking_id,  // Suggest setting Booking # field
+                    'hotel_guest' => 'Yes'                // Suggest setting Hotel Guest to Yes
+                ),
+                'suggestion_note' => 'Booking ID found in notes. Update Booking # field and set Hotel Guest to Yes.'
             );
         }
 
-        // Priority 4: Agent ref in notes
+        // Priority 4: Agent ref in notes (SUGGESTED - should be in custom field)
         if (!empty($hotel_ref) && stripos($notes, $hotel_ref) !== false) {
+            // Check current custom fields
+            $current_booking_number = '';
+            $current_hotel_guest = '';
+            foreach ($custom_fields as $field) {
+                if (($field['name'] ?? '') === 'Booking #') {
+                    $current_booking_number = $field['value'] ?? '';
+                }
+                if (($field['name'] ?? '') === 'Hotel Guest') {
+                    $current_hotel_guest = $field['multipleChoiceValueName'] ?? '';
+                }
+            }
+
             return array(
                 'matched' => true,
                 'match_type' => 'notes_agent_ref',
-                'confidence' => 'high',
-                'is_primary' => true,
-                'match_label' => 'Agent ref in notes'
+                'confidence' => 'medium',  // Changed from high to medium
+                'is_primary' => false,     // Changed from true to false (suggested match)
+                'match_label' => 'Agent ref in notes (needs field update)',
+                'suggestions' => array(
+                    'booking_ref' => $hotel_booking_id,  // Suggest setting Booking # field
+                    'hotel_guest' => 'Yes'                // Suggest setting Hotel Guest to Yes
+                ),
+                'suggestion_note' => 'Agent reference found in notes. Update Booking # field and set Hotel Guest to Yes.'
             );
         }
 
