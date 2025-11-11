@@ -273,10 +273,11 @@ if (empty($bookings)) {
 .restaurant-status.create-booking-link {
     cursor: pointer;
     transition: all 0.2s;
+    padding: 2px 4px;
+    border-radius: 3px;
 }
 
 .restaurant-status.create-booking-link:hover {
-    opacity: 0.8;
-    text-decoration: underline;
+    background-color: rgba(59, 130, 246, 0.1);
 }
 </style>
