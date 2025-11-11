@@ -40,6 +40,7 @@ if (empty($bookings)) {
         $total_nights = $booking['nights'] ?? 1;
         $matches = $booking['resos_matches'] ?? [];
         $has_package = $booking['has_package'] ?? false;
+        $is_stale = $booking['is_stale'] ?? false;
     ?>
         <div class="staying-card"
              data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
@@ -65,7 +66,11 @@ if (empty($bookings)) {
                                   data-date="<?php echo esc_attr($date); ?>"
                                   title="Click to create booking in Restaurant tab">
                                 No booking
-                                <span class="material-symbols-outlined"><?php echo $has_package ? 'flag' : 'add'; ?></span>
+                                <?php if ($is_stale): ?>
+                                    <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                <?php else: ?>
+                                    <span class="material-symbols-outlined"><?php echo $has_package ? 'flag' : 'add'; ?></span>
+                                <?php endif; ?>
                             </span>
                         <?php elseif (count($matches) === 1 && ($matches[0]['match_info']['is_primary'] ?? false)): ?>
                             <?php
@@ -75,7 +80,11 @@ if (empty($bookings)) {
                             ?>
                             <span class="restaurant-status has-booking">
                                 <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
-                                <span class="material-symbols-outlined">check</span>
+                                <?php if ($is_stale): ?>
+                                    <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                <?php else: ?>
+                                    <span class="material-symbols-outlined">check</span>
+                                <?php endif; ?>
                             </span>
                         <?php else: ?>
                             <?php
@@ -85,7 +94,11 @@ if (empty($bookings)) {
                             ?>
                             <span class="restaurant-status has-issue">
                                 <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
-                                <span class="material-symbols-outlined">search</span>
+                                <?php if ($is_stale): ?>
+                                    <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                <?php else: ?>
+                                    <span class="material-symbols-outlined">search</span>
+                                <?php endif; ?>
                             </span>
                         <?php endif; ?>
 
@@ -167,7 +180,11 @@ if (empty($bookings)) {
                                 <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                 <span class="night-status">No booking</span>
                                 <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
-                                    <span class="material-symbols-outlined">add</span>
+                                    <?php if ($is_stale): ?>
+                                        <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                    <?php else: ?>
+                                        <span class="material-symbols-outlined">add</span>
+                                    <?php endif; ?>
                                 </span>
                             </div>
                             <?php if ($has_package): ?>
@@ -198,7 +215,11 @@ if (empty($bookings)) {
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                     <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
-                                        <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                        <?php if ($is_stale): ?>
+                                            <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                        <?php else: ?>
+                                            <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                        <?php endif; ?>
                                     </span>
                                 </div>
                             <?php endforeach; ?>
@@ -285,5 +306,11 @@ if (empty($bookings)) {
 .restaurant-status.create-booking-link:hover {
     background-color: rgba(59, 130, 246, 0.1);
     text-decoration: none;
+}
+
+/* Stale cache indicator styling */
+.stale-indicator {
+    color: #f59e0b !important;
+    opacity: 0.9;
 }
 </style>

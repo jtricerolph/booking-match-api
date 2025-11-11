@@ -1184,6 +1184,11 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 );
             }
 
+            // Clear all Resos bookings caches since we don't know the booking's date
+            // Updates can affect matching across dates
+            $matcher = new BMA_Matcher();
+            $matcher->clear_all_resos_caches();
+
             return rest_ensure_response($result);
 
         } catch (Exception $e) {
@@ -1217,6 +1222,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     array('status' => 400)
                 );
             }
+
+            // Clear all Resos bookings caches since exclusion affects matching
+            $matcher = new BMA_Matcher();
+            $matcher->clear_all_resos_caches();
 
             return rest_ensure_response($result);
 
@@ -1307,6 +1316,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $result['message'],
                     array('status' => 400)
                 );
+            }
+
+            // Clear cache for the created booking's date to ensure fresh data on next fetch
+            if (!empty($booking_data['date'])) {
+                $matcher = new BMA_Matcher();
+                $matcher->clear_resos_cache_for_date($booking_data['date']);
             }
 
             return rest_ensure_response($result);

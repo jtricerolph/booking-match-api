@@ -125,6 +125,7 @@ if (!defined('ABSPATH')) {
                 $has_matches = !empty($night['resos_matches']);
                 $match_count = $has_matches ? count($night['resos_matches']) : 0;
                 $has_package = isset($night['has_package']) && $night['has_package'];
+                $is_stale = isset($night['is_stale']) && $night['is_stale'];
                 $has_warnings = false;
                 $has_package_alert = false;
 
@@ -147,6 +148,11 @@ if (!defined('ABSPATH')) {
                         <div class="bma-night-date">
                             <?php echo esc_html(date('l, d/m/y', strtotime($night['date']))); ?>
                         </div>
+                        <?php if ($is_stale): ?>
+                            <span class="bma-stale-badge" title="Data from cache - may be outdated">
+                                <span class="material-symbols-outlined">sync_problem</span> Cached
+                            </span>
+                        <?php endif; ?>
                         <?php if ($has_package_alert): ?>
                             <span class="bma-package-alert-badge">🍽️ Package</span>
                         <?php elseif ($has_warnings): ?>
@@ -960,7 +966,7 @@ if (!defined('ABSPATH')) {
     font-size: 15px;
 }
 
-.bma-warning-badge, .bma-package-alert-badge {
+.bma-warning-badge, .bma-package-alert-badge, .bma-stale-badge {
     font-size: 13px;
     font-weight: 600;
     padding: 4px 10px;
@@ -975,6 +981,18 @@ if (!defined('ABSPATH')) {
 .bma-package-alert-badge {
     background: #fecaca;
     color: #991b1b;
+}
+
+.bma-stale-badge {
+    background: #fef3c7;
+    color: #f59e0b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.bma-stale-badge .material-symbols-outlined {
+    font-size: 16px;
 }
 
 .bma-package-alert-message {

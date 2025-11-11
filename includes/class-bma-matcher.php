@@ -21,6 +21,11 @@ class BMA_Matcher {
     private $hotel_bookings_cache = array();
 
     /**
+     * Track dates that are using stale cache (fallback due to API failures)
+     */
+    private $stale_cache_dates = array();
+
+    /**
      * Match a booking across all its nights
      *
      * @param array $booking NewBook booking data
@@ -102,11 +107,15 @@ class BMA_Matcher {
         // Check if this booking has a package for this date
         $has_package = $this->check_has_package($booking, $date);
 
+        // Check if this date is using stale cache
+        $is_stale = $this->is_date_using_stale_cache($date);
+
         $result = array(
             'date' => $date,
             'resos_matches' => array(),
             'match_count' => 0,
-            'has_package' => $has_package
+            'has_package' => $has_package,
+            'is_stale' => $is_stale
         );
 
         if (empty($resos_bookings)) {
@@ -437,6 +446,7 @@ class BMA_Matcher {
             $stale_cache = get_transient($cache_key . '_stale');
             if ($stale_cache !== false) {
                 error_log("BMA WARNING: Returning stale cache for date {$date} due to API failure");
+                $this->stale_cache_dates[] = $date;
                 return $stale_cache;
             }
 
@@ -451,6 +461,7 @@ class BMA_Matcher {
             $stale_cache = get_transient($cache_key . '_stale');
             if ($stale_cache !== false) {
                 error_log("BMA WARNING: Returning stale cache for date {$date} due to HTTP {$http_code}");
+                $this->stale_cache_dates[] = $date;
                 return $stale_cache;
             }
 
@@ -467,6 +478,7 @@ class BMA_Matcher {
             $stale_cache = get_transient($cache_key . '_stale');
             if ($stale_cache !== false) {
                 error_log("BMA WARNING: Returning stale cache for date {$date} due to invalid JSON");
+                $this->stale_cache_dates[] = $date;
                 return $stale_cache;
             }
 
@@ -491,6 +503,71 @@ class BMA_Matcher {
         set_transient($cache_key . '_stale', $filtered, 300);
 
         return $filtered;
+    }
+
+    /**
+     * Check if a specific date is using stale cache
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @return bool True if date is using stale cache
+     */
+    public function is_date_using_stale_cache($date) {
+        return in_array($date, $this->stale_cache_dates);
+    }
+
+    /**
+     * Clear Resos bookings cache for a specific date
+     * Called after create/update operations to ensure fresh data
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @return void
+     */
+    public function clear_resos_cache_for_date($date) {
+        $cache_key = 'bma_resos_bookings_' . $date;
+        delete_transient($cache_key);
+        delete_transient($cache_key . '_stale');
+
+        // Also remove from stale cache tracking if present
+        $key = array_search($date, $this->stale_cache_dates);
+        if ($key !== false) {
+            unset($this->stale_cache_dates[$key]);
+        }
+
+        error_log("BMA: Cleared Resos bookings cache for date: {$date}");
+    }
+
+    /**
+     * Clear ALL Resos bookings caches
+     * Used when date is unknown (update/exclude operations)
+     *
+     * @return void
+     */
+    public function clear_all_resos_caches() {
+        global $wpdb;
+
+        // Query WordPress options table for BMA Resos bookings caches
+        // WordPress stores transients as options with '_transient_' prefix
+        $pattern = 'bma_resos_bookings_%';
+
+        // Get all transient keys matching the pattern
+        $sql = $wpdb->prepare(
+            "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+            '_transient_' . $pattern
+        );
+
+        $transients = $wpdb->get_results($sql);
+
+        $cleared_count = 0;
+        foreach ($transients as $transient) {
+            $transient_key = str_replace('_transient_', '', $transient->option_name);
+            delete_transient($transient_key);
+            $cleared_count++;
+        }
+
+        // Clear stale cache tracking
+        $this->stale_cache_dates = array();
+
+        error_log("BMA: Cleared {$cleared_count} Resos bookings transients");
     }
 
     /**

@@ -101,6 +101,7 @@ if (empty($bookings)) {
                             $has_package = $night['has_package'] ?? false;
                             $matches = $night['resos_matches'] ?? array();
                             $match_count = count($matches);
+                            $is_stale = $night['is_stale'] ?? false;
                         ?>
                             <?php if ($match_count === 0): ?>
                                 <!-- No booking -->
@@ -108,7 +109,11 @@ if (empty($bookings)) {
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-status">No booking</span>
                                     <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
-                                        <span class="material-symbols-outlined">add</span>
+                                        <?php if ($is_stale): ?>
+                                            <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                        <?php else: ?>
+                                            <span class="material-symbols-outlined">add</span>
+                                        <?php endif; ?>
                                     </span>
                                 </div>
                                 <?php if ($has_package): ?>
@@ -141,7 +146,11 @@ if (empty($bookings)) {
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                     <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
-                                        <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                        <?php if ($is_stale): ?>
+                                            <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                        <?php else: ?>
+                                            <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                        <?php endif; ?>
                                     </span>
                                 </div>
                                 <?php if (!$is_primary): ?>
@@ -172,7 +181,11 @@ if (empty($bookings)) {
                                         <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                         <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                         <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
-                                            <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                            <?php if ($is_stale): ?>
+                                                <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                            <?php else: ?>
+                                                <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                            <?php endif; ?>
                                         </span>
                                     </div>
                                 <?php endforeach; ?>
@@ -621,6 +634,12 @@ if (empty($bookings)) {
 .booking-card.new-booking .time-since-placed {
     color: #10b981;
     font-weight: 600;
+}
+
+/* Stale cache indicator styling */
+.stale-indicator {
+    color: #f59e0b !important;
+    opacity: 0.9;
 }
 </style>
 
