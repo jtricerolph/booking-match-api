@@ -49,7 +49,7 @@ class BMA_Admin {
      * Register plugin settings
      */
     public function register_settings() {
-        // Register settings
+        // Register general settings
         register_setting(
             'bma_settings_group',
             'bma_booking_page_url',
@@ -70,15 +70,93 @@ class BMA_Admin {
             )
         );
 
-        // Add settings section
+        register_setting(
+            'bma_settings_group',
+            'bma_hotel_id',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+                'default' => '1'
+            )
+        );
+
+        // Register Resos API settings
+        register_setting(
+            'bma_settings_group',
+            'bma_resos_api_key',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+                'default' => ''
+            )
+        );
+
+        // Register NewBook API settings
+        register_setting(
+            'bma_settings_group',
+            'bma_newbook_username',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+                'default' => ''
+            )
+        );
+
+        register_setting(
+            'bma_settings_group',
+            'bma_newbook_password',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+                'default' => ''
+            )
+        );
+
+        register_setting(
+            'bma_settings_group',
+            'bma_newbook_api_key',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+                'default' => ''
+            )
+        );
+
+        register_setting(
+            'bma_settings_group',
+            'bma_newbook_region',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+                'default' => 'au'
+            )
+        );
+
+        // Add General Settings section
         add_settings_section(
             'bma_general_section',
             __('General Settings', 'booking-match-api'),
-            array($this, 'render_section_description'),
+            array($this, 'render_general_section_description'),
             'booking-match-api'
         );
 
-        // Add booking page URL field
+        // Add Resos API section
+        add_settings_section(
+            'bma_resos_section',
+            __('Resos API Settings', 'booking-match-api'),
+            array($this, 'render_resos_section_description'),
+            'booking-match-api'
+        );
+
+        // Add NewBook API section
+        add_settings_section(
+            'bma_newbook_section',
+            __('NewBook API Settings', 'booking-match-api'),
+            array($this, 'render_newbook_section_description'),
+            'booking-match-api'
+        );
+
+        // Add general settings fields
         add_settings_field(
             'bma_booking_page_url',
             __('Booking Management Page URL', 'booking-match-api'),
@@ -87,13 +165,62 @@ class BMA_Admin {
             'bma_general_section'
         );
 
-        // Add package inventory name field
         add_settings_field(
             'bma_package_inventory_name',
             __('Package Inventory Item Name', 'booking-match-api'),
             array($this, 'render_package_inventory_field'),
             'booking-match-api',
             'bma_general_section'
+        );
+
+        add_settings_field(
+            'bma_hotel_id',
+            __('Hotel ID', 'booking-match-api'),
+            array($this, 'render_hotel_id_field'),
+            'booking-match-api',
+            'bma_general_section'
+        );
+
+        // Add Resos API fields
+        add_settings_field(
+            'bma_resos_api_key',
+            __('Resos API Key', 'booking-match-api'),
+            array($this, 'render_resos_api_key_field'),
+            'booking-match-api',
+            'bma_resos_section'
+        );
+
+        // Add NewBook API fields
+        add_settings_field(
+            'bma_newbook_username',
+            __('Username', 'booking-match-api'),
+            array($this, 'render_newbook_username_field'),
+            'booking-match-api',
+            'bma_newbook_section'
+        );
+
+        add_settings_field(
+            'bma_newbook_password',
+            __('Password', 'booking-match-api'),
+            array($this, 'render_newbook_password_field'),
+            'booking-match-api',
+            'bma_newbook_section'
+        );
+
+        add_settings_field(
+            'bma_newbook_api_key',
+            __('API Key', 'booking-match-api'),
+            array($this, 'render_newbook_api_key_field'),
+            'booking-match-api',
+            'bma_newbook_section'
+        );
+
+        add_settings_field(
+            'bma_newbook_region',
+            __('Region', 'booking-match-api'),
+            array($this, 'render_newbook_region_field'),
+            'booking-match-api',
+            'bma_newbook_section'
         );
     }
 
@@ -112,10 +239,24 @@ class BMA_Admin {
     }
 
     /**
-     * Render section description
+     * Render general section description
      */
-    public function render_section_description() {
-        echo '<p>' . __('Configure settings for the Booking Match API plugin.', 'booking-match-api') . '</p>';
+    public function render_general_section_description() {
+        echo '<p>' . __('Configure general settings for the Booking Match API plugin.', 'booking-match-api') . '</p>';
+    }
+
+    /**
+     * Render Resos section description
+     */
+    public function render_resos_section_description() {
+        echo '<p>' . __('Configure your Resos API credentials for restaurant reservation management.', 'booking-match-api') . '</p>';
+    }
+
+    /**
+     * Render NewBook section description
+     */
+    public function render_newbook_section_description() {
+        echo '<p>' . __('Configure your NewBook API credentials for hotel booking management.', 'booking-match-api') . '</p>';
     }
 
     /**
@@ -147,6 +288,77 @@ class BMA_Admin {
         echo __('Examples: "Dinner", "DBB", "Half Board", "Package"', 'booking-match-api');
         echo '<br />';
         echo __('This is used to determine if a booking should have the DBB/Package field set to "Yes" in Resos.', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Render hotel ID field
+     */
+    public function render_hotel_id_field() {
+        $value = get_option('bma_hotel_id', '1');
+        echo '<input type="text" name="bma_hotel_id" id="bma_hotel_id" value="' . esc_attr($value) . '" class="regular-text" placeholder="1" />';
+        echo '<p class="description">';
+        echo __('Enter your NewBook hotel ID (usually "1").', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Render Resos API key field
+     */
+    public function render_resos_api_key_field() {
+        $value = get_option('bma_resos_api_key', '');
+        echo '<input type="password" name="bma_resos_api_key" id="bma_resos_api_key" value="' . esc_attr($value) . '" class="large-text" />';
+        echo '<p class="description">';
+        echo __('Enter your Resos API key for accessing restaurant reservation data.', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Render NewBook username field
+     */
+    public function render_newbook_username_field() {
+        $value = get_option('bma_newbook_username', '');
+        echo '<input type="text" name="bma_newbook_username" id="bma_newbook_username" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">';
+        echo __('Enter your NewBook API username.', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Render NewBook password field
+     */
+    public function render_newbook_password_field() {
+        $value = get_option('bma_newbook_password', '');
+        echo '<input type="password" name="bma_newbook_password" id="bma_newbook_password" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">';
+        echo __('Enter your NewBook API password.', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Render NewBook API key field
+     */
+    public function render_newbook_api_key_field() {
+        $value = get_option('bma_newbook_api_key', '');
+        echo '<input type="password" name="bma_newbook_api_key" id="bma_newbook_api_key" value="' . esc_attr($value) . '" class="large-text" />';
+        echo '<p class="description">';
+        echo __('Enter your NewBook API key.', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Render NewBook region field
+     */
+    public function render_newbook_region_field() {
+        $value = get_option('bma_newbook_region', 'au');
+        echo '<select name="bma_newbook_region" id="bma_newbook_region">';
+        echo '<option value="au"' . selected($value, 'au', false) . '>Australia (au)</option>';
+        echo '<option value="nz"' . selected($value, 'nz', false) . '>New Zealand (nz)</option>';
+        echo '<option value="uk"' . selected($value, 'uk', false) . '>United Kingdom (uk)</option>';
+        echo '<option value="us"' . selected($value, 'us', false) . '>United States (us)</option>';
+        echo '</select>';
+        echo '<p class="description">';
+        echo __('Select your NewBook API region.', 'booking-match-api');
         echo '</p>';
     }
 
@@ -221,14 +433,13 @@ class BMA_Admin {
             </form>
 
             <div class="bma-admin-footer" style="background: #f9f9f9; border: 1px solid #ccd0d4; padding: 15px; margin-top: 20px; border-radius: 4px;">
-                <h3 style="margin-top: 0;">Configuration Dependencies</h3>
-                <p>This plugin relies on settings from the <strong>Hotel Admin</strong> plugin for API credentials:</p>
+                <h3 style="margin-top: 0;">Important Notes</h3>
                 <ul>
-                    <li>NewBook API credentials (username, password, API key, region)</li>
-                    <li>Resos API key</li>
-                    <li>Hotel ID</li>
+                    <li>All API credentials are stored securely in your WordPress database</li>
+                    <li>Make sure to configure all API settings above before using the plugin</li>
+                    <li>If you previously used the Hotel Booking Table plugin, you may need to re-enter your credentials here</li>
+                    <li>The plugin will fall back to Hotel Booking Table settings if not configured here (for backward compatibility)</li>
                 </ul>
-                <p>Make sure those settings are configured at <a href="<?php echo admin_url('options-general.php?page=hotel-booking-table-settings'); ?>">Settings → Hotel Booking Table</a>.</p>
             </div>
 
             <div class="bma-admin-testing" style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin-top: 20px; border-radius: 4px;">

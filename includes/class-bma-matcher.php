@@ -477,7 +477,8 @@ class BMA_Matcher {
             return $cached;
         }
 
-        $api_key = get_option('hotel_booking_resos_api_key');
+        // Get Resos API key (check new option first, fallback to old)
+        $api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
 
         if (empty($api_key)) {
             error_log("BMA ERROR: Resos API key not configured");
@@ -736,12 +737,12 @@ class BMA_Matcher {
             return $this->hotel_bookings_cache[$date];
         }
 
-        // Get NewBook API credentials
-        $username = get_option('hotel_booking_newbook_username');
-        $password = get_option('hotel_booking_newbook_password');
-        $api_key = get_option('hotel_booking_newbook_api_key');
-        $region = get_option('hotel_booking_newbook_region', 'au');
-        $hotel_id = get_option('hotel_booking_default_hotel_id', '1');
+        // Get NewBook API credentials (check new options first, fallback to old)
+        $username = get_option('bma_newbook_username') ?: get_option('hotel_booking_newbook_username');
+        $password = get_option('bma_newbook_password') ?: get_option('hotel_booking_newbook_password');
+        $api_key = get_option('bma_newbook_api_key') ?: get_option('hotel_booking_newbook_api_key');
+        $region = get_option('bma_newbook_region') ?: get_option('hotel_booking_newbook_region', 'au');
+        $hotel_id = get_option('bma_hotel_id') ?: get_option('hotel_booking_default_hotel_id', '1');
 
         if (empty($username) || empty($password) || empty($api_key)) {
             return array();
@@ -899,7 +900,8 @@ class BMA_Matcher {
      * Uses the same logic as reservation-management-integration plugin
      */
     private function check_has_package($booking, $date) {
-        $package_inventory_name = get_option('hotel_booking_package_inventory_name', '');
+        // Get package inventory name (check new option first, fallback to old)
+        $package_inventory_name = get_option('bma_package_inventory_name') ?: get_option('hotel_booking_package_inventory_name', '');
 
         if (empty($package_inventory_name)) {
             return false;

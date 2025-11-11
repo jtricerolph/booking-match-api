@@ -39,7 +39,8 @@ class BMA_Booking_Actions {
         }
 
         // Get Resos API key
-        $resos_api_key = get_option('hotel_booking_resos_api_key');
+        // Get Resos API key (check new option first, fallback to old)
+        $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
         if (empty($resos_api_key)) {
             return array(
                 'success' => false,
@@ -174,7 +175,8 @@ class BMA_Booking_Actions {
         }
 
         // Get Resos API key
-        $resos_api_key = get_option('hotel_booking_resos_api_key');
+        // Get Resos API key (check new option first, fallback to old)
+        $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
         if (empty($resos_api_key)) {
             return array(
                 'success' => false,
@@ -648,7 +650,8 @@ class BMA_Booking_Actions {
         }
 
         // Get Resos API key
-        $resos_api_key = get_option('hotel_booking_resos_api_key');
+        // Get Resos API key (check new option first, fallback to old)
+        $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
         if (empty($resos_api_key)) {
             return array(
                 'success' => false,
@@ -998,7 +1001,8 @@ class BMA_Booking_Actions {
             return $cached;
         }
 
-        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+        // Get Resos API key (check new option first, fallback to old)
+        $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
         if ( empty( $resos_api_key ) ) {
             error_log( 'BMA: Resos API key not configured' );
             return array();
@@ -1129,7 +1133,8 @@ class BMA_Booking_Actions {
             );
         }
 
-        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+        // Get Resos API key (check new option first, fallback to old)
+        $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
         if ( empty( $resos_api_key ) ) {
             return array(
                 'success' => false,
@@ -1283,7 +1288,8 @@ class BMA_Booking_Actions {
             return $cached;
         }
 
-        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+        // Get Resos API key (check new option first, fallback to old)
+        $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
         if ( empty( $resos_api_key ) ) {
             error_log( 'BMA: Resos API key not configured' );
             return array();
@@ -1350,7 +1356,8 @@ class BMA_Booking_Actions {
      * @return bool True if online booking is available, false otherwise
      */
     public function check_online_booking_available( $from_date, $to_date ) {
-        $resos_api_key = get_option( 'hotel_booking_resos_api_key' );
+        // Get Resos API key (check new option first, fallback to old)
+        $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
 
         if ( empty( $resos_api_key ) ) {
             return false;

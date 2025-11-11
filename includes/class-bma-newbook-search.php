@@ -314,10 +314,11 @@ class BMA_NewBook_Search {
      * Call NewBook API (reuse from existing plugin)
      */
     private function call_api($action, $data = array()) {
-        $username = get_option('hotel_booking_api_username');
-        $password = get_option('hotel_booking_api_password');
-        $api_key = get_option('hotel_booking_api_key');
-        $region = get_option('hotel_booking_api_region', 'au');
+        // Get NewBook API credentials (check new options first, fallback to old)
+        $username = get_option('bma_newbook_username') ?: get_option('hotel_booking_api_username') ?: get_option('hotel_booking_newbook_username');
+        $password = get_option('bma_newbook_password') ?: get_option('hotel_booking_api_password') ?: get_option('hotel_booking_newbook_password');
+        $api_key = get_option('bma_newbook_api_key') ?: get_option('hotel_booking_api_key') ?: get_option('hotel_booking_newbook_api_key');
+        $region = get_option('bma_newbook_region') ?: get_option('hotel_booking_api_region') ?: get_option('hotel_booking_newbook_region', 'au');
 
         if (empty($username) || empty($password) || empty($api_key)) {
             error_log('BMA: API credentials not configured');
