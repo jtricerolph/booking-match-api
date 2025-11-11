@@ -60,7 +60,10 @@ if (empty($bookings)) {
                     <div class="staying-restaurant-line">
                         <span class="material-symbols-outlined">restaurant</span>
                         <?php if (empty($matches)): ?>
-                            <span class="restaurant-status <?php echo $has_package ? 'has-package' : 'no-booking'; ?>">
+                            <span class="restaurant-status <?php echo $has_package ? 'has-package' : 'no-booking'; ?> create-booking-link"
+                                  data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
+                                  data-date="<?php echo esc_attr($date); ?>"
+                                  title="Click to create booking in Restaurant tab">
                                 No booking
                                 <span class="material-symbols-outlined"><?php echo $has_package ? 'flag' : 'add'; ?></span>
                             </span>
@@ -264,5 +267,16 @@ if (empty($bookings)) {
     opacity: 1;
     transform: translateX(4px);
     transition: all 0.2s;
+}
+
+/* Make "No booking" status clickable in collapsed view */
+.restaurant-status.create-booking-link {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.restaurant-status.create-booking-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
 }
 </style>
