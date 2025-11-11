@@ -49,13 +49,23 @@ class BMA_Admin {
      * Register plugin settings
      */
     public function register_settings() {
-        // Register the setting
+        // Register settings
         register_setting(
             'bma_settings_group',
             'bma_booking_page_url',
             array(
                 'type' => 'string',
                 'sanitize_callback' => array($this, 'sanitize_url'),
+                'default' => ''
+            )
+        );
+
+        register_setting(
+            'bma_settings_group',
+            'bma_package_inventory_name',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
                 'default' => ''
             )
         );
@@ -73,6 +83,15 @@ class BMA_Admin {
             'bma_booking_page_url',
             __('Booking Management Page URL', 'booking-match-api'),
             array($this, 'render_booking_url_field'),
+            'booking-match-api',
+            'bma_general_section'
+        );
+
+        // Add package inventory name field
+        add_settings_field(
+            'bma_package_inventory_name',
+            __('Package Inventory Item Name', 'booking-match-api'),
+            array($this, 'render_package_inventory_field'),
             'booking-match-api',
             'bma_general_section'
         );
@@ -113,6 +132,21 @@ class BMA_Admin {
         echo sprintf(__('Example: <code>%s</code>', 'booking-match-api'), 'https://admin.hotelnumberfour.com/bookings/');
         echo '<br />';
         echo sprintf(__('If left empty, will default to: <code>%s</code>', 'booking-match-api'), $placeholder);
+        echo '</p>';
+    }
+
+    /**
+     * Render package inventory name field
+     */
+    public function render_package_inventory_field() {
+        $value = get_option('bma_package_inventory_name', '');
+        echo '<input type="text" name="bma_package_inventory_name" id="bma_package_inventory_name" value="' . esc_attr($value) . '" class="regular-text" placeholder="Dinner" />';
+        echo '<p class="description">';
+        echo __('Enter the text to look for in NewBook inventory item descriptions to identify package bookings.', 'booking-match-api');
+        echo '<br />';
+        echo __('Examples: "Dinner", "DBB", "Half Board", "Package"', 'booking-match-api');
+        echo '<br />';
+        echo __('This is used to determine if a booking should have the DBB/Package field set to "Yes" in Resos.', 'booking-match-api');
         echo '</p>';
     }
 
