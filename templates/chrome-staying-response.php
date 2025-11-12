@@ -293,6 +293,97 @@ if (empty($bookings)) {
     color: #374151;
 }
 
+/* Staying card layout - match summary tab spacing */
+.staying-card {
+    background: #fff;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.staying-card:hover {
+    border-color: #cbd5e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.staying-card.expanded {
+    border-color: #3182ce;
+}
+
+.staying-header {
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+}
+
+.staying-main-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.staying-guest-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.guest-name {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.night-progress {
+    color: #718096;
+    font-size: 12px;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.night-progress .material-symbols-outlined {
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+.staying-restaurant-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #4a5568;
+}
+
+.staying-restaurant-line .material-symbols-outlined {
+    font-size: 16px;
+    color: #718096;
+}
+
+.staying-details {
+    padding: 0 8px 8px 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.staying-expand-icon {
+    font-size: 12px;
+    color: #718096;
+    transition: transform 0.2s;
+    margin-left: 8px;
+    align-self: center;
+}
+
+.staying-card.expanded .staying-expand-icon {
+    transform: rotate(180deg);
+}
+
 /* Clickable Headers - ensure arrow is right-aligned */
 .restaurant-header-link .arrow-icon,
 .checks-header-link .arrow-icon {
@@ -361,10 +452,6 @@ if (empty($bookings)) {
 }
 
 /* Position badges at bottom right under Night x/y */
-.staying-header {
-    position: relative;
-}
-
 .staying-badges {
     position: absolute;
     bottom: 4px;
@@ -405,10 +492,6 @@ if (empty($bookings)) {
 }
 
 /* Status badge styling - room number shows booking status */
-.staying-card {
-    border: 1px solid #e5e7eb !important; /* Neutral border, not status-based */
-}
-
 .staying-card .room-number {
     padding: 4px 8px !important;
     border-radius: 4px !important;
@@ -457,17 +540,5 @@ if (empty($bookings)) {
 .staying-card[data-status="provisional"] .room-number {
     background-color: #fef3c7 !important;
     color: #92400e !important;
-}
-
-/* Night progress badge styling */
-.night-progress {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.night-progress .material-symbols-outlined {
-    font-size: 16px;
-    vertical-align: middle;
 }
 </style>
