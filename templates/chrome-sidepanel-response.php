@@ -260,7 +260,11 @@ if (!defined('ABSPATH')) {
 
                                 <div class="bma-match-actions">
                                     <!-- View Comparison Button (primary action) -->
-                                    <button class="bma-action-btn view-comparison <?php echo $match['match_info']['is_primary'] ? '' : 'suggested'; ?>"
+                                    <?php
+                                    $has_suggestions = $match['has_suggestions'] ?? false;
+                                    $button_class = $has_suggestions ? 'has-updates' : ($match['match_info']['is_primary'] ? '' : 'suggested');
+                                    ?>
+                                    <button class="bma-action-btn view-comparison <?php echo $button_class; ?>"
                                             data-action="view-comparison"
                                             data-date="<?php echo esc_attr($night['date']); ?>"
                                             data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
@@ -269,7 +273,9 @@ if (!defined('ABSPATH')) {
                                             data-is-matched-elsewhere="<?php echo isset($match['match_info']['matched_elsewhere']) && $match['match_info']['matched_elsewhere'] ? '1' : '0'; ?>"
                                             data-hotel-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                             data-guest-name="<?php echo esc_attr($match['guest_name']); ?>">
-                                        <?php if ($match['match_info']['is_primary']): ?>
+                                        <?php if ($has_suggestions): ?>
+                                            <span class="material-symbols-outlined">sync</span> Check Updates
+                                        <?php elseif ($match['match_info']['is_primary']): ?>
                                             <span class="material-symbols-outlined">bar_chart</span> View Match
                                         <?php else: ?>
                                             <span class="material-symbols-outlined">search</span> Check Match
@@ -1609,6 +1615,30 @@ if (!defined('ABSPATH')) {
 
 .bma-action-btn.view-comparison:hover {
     background: #5568d3;
+}
+
+.bma-action-btn.view-comparison.has-updates {
+    background: #3b82f6;
+}
+
+.bma-action-btn.view-comparison.has-updates:hover {
+    background: #2563eb;
+}
+
+.updates-link {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.updates-link:hover {
+    text-decoration: underline;
+}
+
+.updates-icon {
+    vertical-align: middle;
 }
 
 .bma-comparison-container {
