@@ -122,19 +122,16 @@ if (empty($bookings)) {
                     </div>
                 </div>
 
-                <!-- Issue Badges -->
+                <!-- Issue Badge -->
                 <div class="staying-badges">
-                    <?php if ($booking['critical_count'] > 0): ?>
-                        <span class="issue-badge critical-badge">
-                            <span class="material-symbols-outlined">warning</span>
-                            <?php echo esc_html($booking['critical_count']); ?>
-                        </span>
-                    <?php endif; ?>
-
-                    <?php if ($booking['warning_count'] > 0): ?>
-                        <span class="issue-badge warning-badge">
-                            <span class="material-symbols-outlined">flag</span>
-                            <?php echo esc_html($booking['warning_count']); ?>
+                    <?php
+                    $total_issues = $booking['critical_count'] + $booking['warning_count'];
+                    if ($total_issues > 0):
+                        $badge_class = $booking['critical_count'] > 0 ? 'critical-badge' : 'warning-badge';
+                        $title = $booking['critical_count'] . ' critical, ' . $booking['warning_count'] . ' warnings';
+                    ?>
+                        <span class="issue-count-badge <?php echo $badge_class; ?>" title="<?php echo esc_attr($title); ?>">
+                            <?php echo esc_html($total_issues); ?>
                         </span>
                     <?php endif; ?>
                 </div>
@@ -461,28 +458,28 @@ if (empty($bookings)) {
     align-items: center;
 }
 
-.issue-badge {
-    padding: 3px 6px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    display: flex;
+/* Combined circular issue count badge */
+.issue-count-badge {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
     align-items: center;
-    gap: 3px;
+    justify-content: center;
+    line-height: 1;
 }
 
-.issue-badge .material-symbols-outlined {
-    font-size: 12px;
+.issue-count-badge.critical-badge {
+    background: #dc2626;
+    color: white;
 }
 
-.critical-badge {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.warning-badge {
-    background: #fef3c7;
-    color: #92400e;
+.issue-count-badge.warning-badge {
+    background: #f59e0b;
+    color: white;
 }
 
 /* Stale cache indicator styling */
