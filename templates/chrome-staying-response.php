@@ -982,14 +982,7 @@ if (empty($bookings)) {
     /* No padding - let text stay in place */
 }
 
-/* Padding compensation for vacant room content when spanning */
-.vacant-room-line[data-spans-previous="true"] .vacant-room-content {
-    padding-left: 50px !important; /* Just margin compensation, no base horizontal padding */
-}
-
-.vacant-room-line[data-spans-next="true"] .vacant-room-content {
-    padding-right: 50px !important; /* Just margin compensation, no base horizontal padding */
-}
+/* No padding compensation needed - margin handles positioning */
 
 /* Both sides spanning - no radius */
 .staying-card[data-spans-previous="true"][data-spans-next="true"] .staying-header {
