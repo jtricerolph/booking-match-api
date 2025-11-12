@@ -498,8 +498,8 @@ if (empty($bookings)) {
     font-weight: 600 !important;
     font-size: 13px !important;
     display: inline-block !important;
-    background-color: #fef3c7 !important; /* Default amber background for unconfirmed */
-    color: #92400e !important; /* Default amber/brown text */
+    background-color: #f3f4f6 !important; /* Default gray for unknown/unspecified status */
+    color: #4b5563 !important; /* Default gray text */
 }
 
 /* Vacant room numbers don't get badge styling */
