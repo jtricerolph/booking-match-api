@@ -448,11 +448,11 @@ if (empty($bookings)) {
     gap: 2px;
 }
 
-/* Position badges at bottom right under Night x/y */
+/* Position badges at top right above expand arrow */
 .staying-badges {
     position: absolute;
-    bottom: 4px;
-    right: 40px;
+    top: 6px;
+    right: 28px;
     display: flex;
     gap: 6px;
     align-items: center;
@@ -460,11 +460,11 @@ if (empty($bookings)) {
 
 /* Combined circular issue count badge */
 .issue-count-badge {
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
     border-radius: 50%;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     display: inline-flex;
     align-items: center;

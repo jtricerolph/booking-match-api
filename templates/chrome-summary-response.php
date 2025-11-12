@@ -330,15 +330,18 @@ if (empty($bookings)) {
     display: flex;
     gap: 6px;
     align-self: flex-start;
+    position: absolute;
+    top: 6px;
+    right: 28px;
 }
 
 /* Combined circular issue count badge */
 .issue-count-badge {
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
     border-radius: 50%;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
