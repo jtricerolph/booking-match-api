@@ -1161,6 +1161,15 @@ if (empty($bookings)) {
     padding: 0 !important; /* No padding - vacant lines take up minimal space */
 }
 
+/* Spanning vacant content needs padding to stay visible when row extends to edges */
+.vacant-room-line[data-spans-previous="true"] .vacant-room-content {
+    padding-left: 50px !important; /* Compensate for row's -27px margin (50px extension from base 23px) */
+}
+
+.vacant-room-line[data-spans-next="true"] .vacant-room-content {
+    padding-right: 50px !important; /* Compensate for row's -27px margin (50px extension from base 23px) */
+}
+
 /* Ensure staying-main-info doesn't overflow on spanning nights */
 .staying-main-info {
     min-width: 0 !important; /* Allow flex item to shrink below content size */
