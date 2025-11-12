@@ -705,17 +705,11 @@ if (empty($bookings)) {
     color: #312e81;
 }
 
-/* Highlighted state for grouped bookings - only affect header */
+/* Highlighted state for grouped bookings - only affect header background */
 .booking-header.highlighted {
     background-color: #eef2ff !important;
-    border-left: 3px solid #6366f1 !important;
-    margin-left: -1px;
-    border-radius: 7px 0 0 0;
-}
-
-.booking-header.highlighted .group-id-badge {
-    background-color: #6366f1 !important;
-    color: white !important;
+    /* Keep existing borders and radius - just change background */
+    /* Badge highlighting is separate - only on direct hover or when filtering */
 }
 </style>
 
