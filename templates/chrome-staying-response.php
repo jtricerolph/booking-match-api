@@ -595,7 +595,7 @@ if (empty($bookings)) {
     transition: all 0.2s;
     display: inline-flex;
     align-items: center;
-    margin-left: 6px;
+    margin-left: auto; /* Align underneath night-progress badge */
 }
 
 .group-id-badge:hover {
