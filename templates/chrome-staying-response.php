@@ -1145,9 +1145,18 @@ if (empty($bookings)) {
     display: block !important;
 }
 
-/* Vacant row content padding to align with staying-header content */
+/* Vacant row content padding - shorter height to save space */
 .vacant-room-content {
-    padding: 8px !important; /* Match staying-header padding for alignment */
+    padding: 5px 8px !important; /* Reduced vertical padding (5px top/bottom) to save space, match horizontal padding */
+}
+
+/* Maintain padding compensation for spanning vacant rows */
+.vacant-room-line[data-spans-previous="true"] .vacant-room-content {
+    padding-left: 58px !important; /* 50px extension + 8px original padding */
+}
+
+.vacant-room-line[data-spans-next="true"] .vacant-room-content {
+    padding-right: 58px !important; /* 50px extension + 8px original padding */
 }
 
 /* Ensure staying-main-info doesn't overflow on spanning nights */
