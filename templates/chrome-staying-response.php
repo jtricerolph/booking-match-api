@@ -1044,7 +1044,6 @@ if (empty($bookings)) {
     background: white !important;
     overflow: visible !important; /* Allow timeline extensions to show beyond card bounds */
     box-sizing: border-box !important; /* Include padding and border in width calculations */
-    width: 100% !important; /* Stay within card boundaries */
 }
 
 /* Header borders matching status colors - fully wrapped */
@@ -1071,6 +1070,11 @@ if (empty($bookings)) {
 
 .staying-card[data-spans-next="true"] .staying-header {
     border-right: none !important;
+}
+
+/* Constrain width only when NOT spanning (to prevent overflow) */
+.staying-card:not([data-spans-previous="true"]):not([data-spans-next="true"]) .staying-header {
+    width: 100% !important;
 }
 
 /* When expanded with timeline indicators - remove bottom corner radius to connect with details */
