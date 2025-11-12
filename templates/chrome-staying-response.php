@@ -1063,13 +1063,15 @@ if (empty($bookings)) {
     border: 2px solid #a855f7 !important; /* Purple */
 }
 
-/* Remove borders on extending sides */
+/* Remove borders on extending sides and apply padding compensation */
 .staying-card[data-spans-previous="true"] .staying-header {
     border-left: none !important;
+    padding-left: 58px !important; /* 50px extension + 8px original padding */
 }
 
 .staying-card[data-spans-next="true"] .staying-header {
     border-right: none !important;
+    padding-right: 58px !important; /* 50px extension + 8px original padding */
 }
 
 /* Constrain width only when NOT spanning (to prevent overflow) */
@@ -1157,16 +1159,6 @@ if (empty($bookings)) {
 
 .staying-guest-line {
     min-width: 0 !important; /* Prevent overflow */
-}
-
-/* When spanning next, add right margin to main-info to prevent night badge from extending too far */
-.staying-card[data-spans-next="true"] .staying-main-info {
-    margin-right: 50px !important; /* Compensate for header's 50px extension */
-}
-
-/* When spanning previous, add left margin to prevent content shifting */
-.staying-card[data-spans-previous="true"] .staying-main-info {
-    margin-left: 50px !important; /* Compensate for header's 50px extension */
 }
 </style>
 
