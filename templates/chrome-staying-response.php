@@ -632,22 +632,28 @@ if (empty($bookings)) {
 .staying-card[data-previous-status="confirmed"]:not([data-spans-previous="true"]) .staying-header::before {
     content: '';
     position: absolute;
-    left: -20px; /* 15px width + 5px gap */
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(16, 185, 129, 0.5); /* green with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #10b981; /* green border */
+    border-top: 2px solid #10b981;
+    border-bottom: 2px solid #10b981;
     border-radius: 0 8px 8px 0; /* rounded on inner edge */
 }
 /* For vacant rooms: full height since it's single-line */
 .vacant-room-line[data-previous-status="confirmed"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -20px; /* 15px width + 5px gap */
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(16, 185, 129, 0.5); /* green with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #10b981; /* green border */
+    border-top: 2px solid #10b981;
+    border-bottom: 2px solid #10b981;
     border-radius: 0 8px 8px 0; /* rounded on inner edge */
 }
 
@@ -656,11 +662,14 @@ if (empty($bookings)) {
 .staying-card[data-previous-status="arrived"]:not([data-spans-previous="true"]) .staying-header::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(59, 130, 246, 0.5); /* blue with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #3b82f6; /* blue border */
+    border-top: 2px solid #3b82f6;
+    border-bottom: 2px solid #3b82f6;
     border-radius: 0 8px 8px 0;
 }
 .vacant-room-line[data-previous-status="checked-in"]:not([data-spans-previous="true"])::before,
@@ -668,11 +677,14 @@ if (empty($bookings)) {
 .vacant-room-line[data-previous-status="arrived"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(59, 130, 246, 0.5); /* blue with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #3b82f6; /* blue border */
+    border-top: 2px solid #3b82f6;
+    border-bottom: 2px solid #3b82f6;
     border-radius: 0 8px 8px 0;
 }
 
@@ -681,11 +693,14 @@ if (empty($bookings)) {
 .staying-card[data-previous-status="departed"]:not([data-spans-previous="true"]) .staying-header::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(168, 85, 247, 0.5); /* purple with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #a855f7; /* purple border */
+    border-top: 2px solid #a855f7;
+    border-bottom: 2px solid #a855f7;
     border-radius: 0 8px 8px 0;
 }
 .vacant-room-line[data-previous-status="checked-out"]:not([data-spans-previous="true"])::before,
@@ -693,32 +708,41 @@ if (empty($bookings)) {
 .vacant-room-line[data-previous-status="departed"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(168, 85, 247, 0.5); /* purple with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #a855f7; /* purple border */
+    border-top: 2px solid #a855f7;
+    border-bottom: 2px solid #a855f7;
     border-radius: 0 8px 8px 0;
 }
 
 .staying-card[data-previous-status="cancelled"]:not([data-spans-previous="true"]) .staying-header::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(220, 38, 38, 0.5); /* red with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #dc2626; /* red border */
+    border-top: 2px solid #dc2626;
+    border-bottom: 2px solid #dc2626;
     border-radius: 0 8px 8px 0;
 }
 .vacant-room-line[data-previous-status="cancelled"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(220, 38, 38, 0.5); /* red with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #dc2626; /* red border */
+    border-top: 2px solid #dc2626;
+    border-bottom: 2px solid #dc2626;
     border-radius: 0 8px 8px 0;
 }
 
@@ -726,22 +750,28 @@ if (empty($bookings)) {
 .staying-card[data-previous-status="unconfirmed"]:not([data-spans-previous="true"]) .staying-header::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(245, 158, 11, 0.5); /* amber with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #f59e0b; /* amber border */
+    border-top: 2px solid #f59e0b;
+    border-bottom: 2px solid #f59e0b;
     border-radius: 0 8px 8px 0;
 }
 .vacant-room-line[data-previous-status="provisional"]:not([data-spans-previous="true"])::before,
 .vacant-room-line[data-previous-status="unconfirmed"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(245, 158, 11, 0.5); /* amber with 50% opacity */
+    background: transparent;
+    border-right: 2px solid #f59e0b; /* amber border */
+    border-top: 2px solid #f59e0b;
+    border-bottom: 2px solid #f59e0b;
     border-radius: 0 8px 8px 0;
 }
 
@@ -750,13 +780,13 @@ if (empty($bookings)) {
 .vacant-room-line[data-previous-vacant="true"]::before {
     content: '';
     position: absolute;
-    left: -20px;
+    left: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    border-right: 1px solid #d1d5db; /* Only right border (inner side) */
-    border-top: 1px solid #d1d5db;
-    border-bottom: 1px solid #d1d5db;
+    border-right: 2px solid #d1d5db; /* Match vacant room row border thickness */
+    border-top: 2px solid #d1d5db;
+    border-bottom: 2px solid #d1d5db;
     background: transparent;
     border-radius: 0 8px 8px 0;
 }
@@ -775,28 +805,34 @@ if (empty($bookings)) {
 
 /* RIGHT SIDE: Next night indicators */
 
-/* Colored box - different booking tomorrow (with 5px gap and inner radius) */
+/* Colored box - different booking tomorrow (with 8px gap and inner radius) */
 /* Only show if NOT spanning to next */
 /* For staying cards: attached to header only */
 .staying-card[data-next-status="confirmed"]:not([data-spans-next="true"]) .staying-header::after {
     content: '';
     position: absolute;
-    right: -20px; /* 15px width + 5px gap */
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(16, 185, 129, 0.5); /* green with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #10b981; /* green border */
+    border-top: 2px solid #10b981;
+    border-bottom: 2px solid #10b981;
     border-radius: 8px 0 0 8px; /* rounded on inner edge */
 }
 /* For vacant rooms: full height since it's single-line */
 .vacant-room-line[data-next-status="confirmed"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -20px; /* 15px width + 5px gap */
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(16, 185, 129, 0.5); /* green with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #10b981; /* green border */
+    border-top: 2px solid #10b981;
+    border-bottom: 2px solid #10b981;
     border-radius: 8px 0 0 8px; /* rounded on inner edge */
 }
 
@@ -805,11 +841,14 @@ if (empty($bookings)) {
 .staying-card[data-next-status="arrived"]:not([data-spans-next="true"]) .staying-header::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(59, 130, 246, 0.5); /* blue with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #3b82f6; /* blue border */
+    border-top: 2px solid #3b82f6;
+    border-bottom: 2px solid #3b82f6;
     border-radius: 8px 0 0 8px;
 }
 .vacant-room-line[data-next-status="checked-in"]:not([data-spans-next="true"])::after,
@@ -817,11 +856,14 @@ if (empty($bookings)) {
 .vacant-room-line[data-next-status="arrived"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(59, 130, 246, 0.5); /* blue with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #3b82f6; /* blue border */
+    border-top: 2px solid #3b82f6;
+    border-bottom: 2px solid #3b82f6;
     border-radius: 8px 0 0 8px;
 }
 
@@ -830,11 +872,14 @@ if (empty($bookings)) {
 .staying-card[data-next-status="departed"]:not([data-spans-next="true"]) .staying-header::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(168, 85, 247, 0.5); /* purple with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #a855f7; /* purple border */
+    border-top: 2px solid #a855f7;
+    border-bottom: 2px solid #a855f7;
     border-radius: 8px 0 0 8px;
 }
 .vacant-room-line[data-next-status="checked-out"]:not([data-spans-next="true"])::after,
@@ -842,32 +887,41 @@ if (empty($bookings)) {
 .vacant-room-line[data-next-status="departed"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(168, 85, 247, 0.5); /* purple with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #a855f7; /* purple border */
+    border-top: 2px solid #a855f7;
+    border-bottom: 2px solid #a855f7;
     border-radius: 8px 0 0 8px;
 }
 
 .staying-card[data-next-status="cancelled"]:not([data-spans-next="true"]) .staying-header::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(220, 38, 38, 0.5); /* red with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #dc2626; /* red border */
+    border-top: 2px solid #dc2626;
+    border-bottom: 2px solid #dc2626;
     border-radius: 8px 0 0 8px;
 }
 .vacant-room-line[data-next-status="cancelled"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(220, 38, 38, 0.5); /* red with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #dc2626; /* red border */
+    border-top: 2px solid #dc2626;
+    border-bottom: 2px solid #dc2626;
     border-radius: 8px 0 0 8px;
 }
 
@@ -875,22 +929,28 @@ if (empty($bookings)) {
 .staying-card[data-next-status="unconfirmed"]:not([data-spans-next="true"]) .staying-header::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(245, 158, 11, 0.5); /* amber with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #f59e0b; /* amber border */
+    border-top: 2px solid #f59e0b;
+    border-bottom: 2px solid #f59e0b;
     border-radius: 8px 0 0 8px;
 }
 .vacant-room-line[data-next-status="provisional"]:not([data-spans-next="true"])::after,
 .vacant-room-line[data-next-status="unconfirmed"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    background: rgba(245, 158, 11, 0.5); /* amber with 50% opacity */
+    background: transparent;
+    border-left: 2px solid #f59e0b; /* amber border */
+    border-top: 2px solid #f59e0b;
+    border-bottom: 2px solid #f59e0b;
     border-radius: 8px 0 0 8px;
 }
 
@@ -899,13 +959,13 @@ if (empty($bookings)) {
 .vacant-room-line[data-next-vacant="true"]::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -23px; /* 15px width + 8px gap */
     top: 0;
     bottom: 0;
     width: 15px;
-    border-left: 1px solid #d1d5db; /* Only left border (inner side) */
-    border-top: 1px solid #d1d5db;
-    border-bottom: 1px solid #d1d5db;
+    border-left: 2px solid #d1d5db; /* Match vacant room row border thickness */
+    border-top: 2px solid #d1d5db;
+    border-bottom: 2px solid #d1d5db;
     background: transparent;
     border-radius: 8px 0 0 8px;
 }
