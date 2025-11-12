@@ -1016,24 +1016,7 @@ if (empty($bookings)) {
     margin: 0 23px 5px 23px !important; /* Horizontal margin for timeline indicator space (15px indicator + 8px gap) */
     transition: all 0.2s !important;
     position: relative !important;
-    border: 1px solid #e5e7eb !important; /* Keep default border, will be overridden by status colors below */
-}
-
-/* Border colors based on NewBook status - override default */
-.staying-card[data-status="arrived"] {
-    border: 2px solid #3b82f6 !important; /* Blue */
-}
-
-.staying-card[data-status="confirmed"] {
-    border: 2px solid #10b981 !important; /* Green */
-}
-
-.staying-card[data-status="unconfirmed"] {
-    border: 2px solid #f59e0b !important; /* Amber */
-}
-
-.staying-card[data-status="departed"] {
-    border: 2px solid #a855f7 !important; /* Purple */
+    border: none !important; /* No border on card - border is on header only */
 }
 
 .staying-card:hover {
@@ -1060,6 +1043,8 @@ if (empty($bookings)) {
     border-radius: 8px !important; /* Default: fully rounded */
     background: white !important;
     overflow: visible !important; /* Allow timeline extensions to show beyond card bounds */
+    box-sizing: border-box !important; /* Include padding and border in width calculations */
+    width: 100% !important; /* Stay within card boundaries */
 }
 
 /* Header borders matching status colors - fully wrapped */
@@ -1143,6 +1128,31 @@ if (empty($bookings)) {
 
 .staying-card.expanded .staying-expand-icon {
     transform: rotate(180deg) !important;
+}
+
+/* Staying card details - hidden by default, shown when expanded */
+.staying-details {
+    display: none !important;
+}
+
+.staying-card.expanded .staying-details {
+    display: block !important;
+}
+
+/* Vacant row content padding to align with staying-header content */
+.vacant-room-content {
+    padding: 8px !important; /* Match staying-header padding for alignment */
+}
+
+/* Ensure staying-main-info doesn't overflow on spanning nights */
+.staying-main-info {
+    min-width: 0 !important; /* Allow flex item to shrink below content size */
+    flex: 1 !important;
+    overflow: hidden !important; /* Prevent content overflow */
+}
+
+.staying-guest-line {
+    min-width: 0 !important; /* Prevent overflow */
 }
 </style>
 
