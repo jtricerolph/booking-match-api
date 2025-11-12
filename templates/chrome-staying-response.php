@@ -355,6 +355,44 @@ if (empty($bookings)) {
     gap: 2px;
 }
 
+/* Position badges at bottom right under Night x/y */
+.staying-header {
+    position: relative;
+}
+
+.staying-badges {
+    position: absolute;
+    bottom: 4px;
+    right: 40px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.issue-badge {
+    padding: 3px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.issue-badge .material-symbols-outlined {
+    font-size: 12px;
+}
+
+.critical-badge {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.warning-badge {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 /* Stale cache indicator styling */
 .stale-indicator {
     color: #f59e0b !important;
