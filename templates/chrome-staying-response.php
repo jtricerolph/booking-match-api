@@ -320,7 +320,7 @@ if (empty($bookings)) {
     background: #fff;
     border: 1px solid #e5e7eb !important;
     border-radius: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
     transition: all 0.2s;
     position: relative;
 }
