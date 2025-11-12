@@ -15,7 +15,94 @@ if (empty($bookings)) {
     echo '</div>';
     return;
 }
+
+// Calculate stats
+$departs_count = 0;
+$stays_count = 0;
+$arrivals_count = 0;
+$total_adults = 0;
+$total_children = 0;
+$total_infants = 0;
+$twins_count = 0;
+
+foreach ($bookings as $booking) {
+    // Skip vacant rooms
+    if (isset($booking['is_vacant']) && $booking['is_vacant'] === true) {
+        continue;
+    }
+
+    // Get timeline data
+    $previous_status = $booking['previous_night_status'] ?? '';
+    $next_status = $booking['next_night_status'] ?? '';
+
+    // Departing: staying today but not tomorrow
+    if ($next_status === '' || $next_status === 'departed') {
+        $departs_count++;
+    }
+
+    // Stays: was staying yesterday and staying today
+    if ($previous_status === 'staying') {
+        $stays_count++;
+    }
+
+    // Arrivals: not staying yesterday but staying today
+    if ($previous_status === '' || $previous_status === 'vacant') {
+        $arrivals_count++;
+    }
+
+    // Occupancy totals
+    $total_adults += intval($booking['booking_adults'] ?? 0);
+    $total_children += intval($booking['booking_children'] ?? 0);
+    $total_infants += intval($booking['booking_infants'] ?? 0);
+
+    // Twins count - check custom fields for bed type
+    $custom_fields = $booking['custom_fields'] ?? [];
+    foreach ($custom_fields as $field) {
+        if (($field['label'] ?? '') === 'Bed Type' &&
+            stripos($field['value'] ?? '', 'Twin') !== false) {
+            $twins_count++;
+            break;
+        }
+    }
+}
+
+// Format occupancy string
+$occupancy_str = $total_adults . 'A';
+if ($total_children > 0 || $total_infants > 0) {
+    $occupancy_str .= ' | ' . $total_children . 'C';
+    if ($total_infants > 0) {
+        $occupancy_str .= '+' . $total_infants;
+    }
+}
 ?>
+
+<!-- Stats Row -->
+<div class="staying-stats-row">
+    <div class="stat-item">
+        <span class="material-symbols-outlined">flight_takeoff</span>
+        <span class="stat-value"><?php echo $departs_count; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item">
+        <span class="material-symbols-outlined">step_over</span>
+        <span class="stat-value"><?php echo $stays_count; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item">
+        <span class="material-symbols-outlined">flight_land</span>
+        <span class="stat-value"><?php echo $arrivals_count; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item">
+        <span class="material-symbols-outlined">group</span>
+        <span class="stat-value"><?php echo $occupancy_str; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item">
+        <span class="material-symbols-outlined">single_bed</span><span class="material-symbols-outlined">single_bed</span>
+        <span class="stat-value"><?php echo $twins_count; ?></span>
+    </div>
+</div>
 
 <div class="staying-list">
     <?php foreach ($bookings as $booking):
@@ -298,6 +385,42 @@ if (empty($bookings)) {
 </div>
 
 <style>
+/* Stats Row */
+.staying-stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stat-item .material-symbols-outlined {
+    font-size: 18px;
+    color: #64748b;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.stat-divider {
+    color: #cbd5e1;
+    font-weight: 300;
+}
+
 .staying-empty {
     text-align: center;
     padding: 60px 20px;
