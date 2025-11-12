@@ -752,7 +752,7 @@ if (empty($bookings)) {
 
 .vacant-room-line[data-spans-previous="true"] {
     margin-left: -50px;
-    padding-left: 50px;
+    /* No padding - let text stay in place */
 }
 
 /* RIGHT SIDE: Next night indicators */
@@ -899,7 +899,7 @@ if (empty($bookings)) {
 
 .vacant-room-line[data-spans-next="true"] {
     margin-right: -50px;
-    padding-right: 50px;
+    /* No padding - let text stay in place */
 }
 
 /* Both sides spanning - no radius */
