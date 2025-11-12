@@ -409,44 +409,54 @@ if (empty($bookings)) {
     border: 1px solid #e5e7eb !important; /* Neutral border, not status-based */
 }
 
-.room-number {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 13px;
-    display: inline-block;
+.staying-card .room-number {
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    display: inline-block !important;
+    background-color: #f3f4f6 !important; /* Default gray background */
+    color: #4b5563 !important; /* Default gray text */
+}
+
+/* Vacant room numbers don't get badge styling */
+.vacant-room-line .room-number {
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    color: inherit !important;
 }
 
 /* Confirmed status - green badge */
 .staying-card[data-status="confirmed"] .room-number {
-    background-color: #d1fae5;
-    color: #065f46;
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
 }
 
 /* Checked-in status - blue badge */
 .staying-card[data-status="checked-in"] .room-number,
 .staying-card[data-status="checked_in"] .room-number {
-    background-color: #dbeafe;
-    color: #1e40af;
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
 }
 
 /* Checked-out status - gray badge */
 .staying-card[data-status="checked-out"] .room-number,
 .staying-card[data-status="checked_out"] .room-number {
-    background-color: #f3f4f6;
-    color: #4b5563;
+    background-color: #f3f4f6 !important;
+    color: #4b5563 !important;
 }
 
 /* Cancelled status - red badge */
 .staying-card[data-status="cancelled"] .room-number {
-    background-color: #fee2e2;
-    color: #991b1b;
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
 }
 
 /* Provisional status - yellow/orange badge */
 .staying-card[data-status="provisional"] .room-number {
-    background-color: #fef3c7;
-    color: #92400e;
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
 }
 
 /* Night progress badge styling */
