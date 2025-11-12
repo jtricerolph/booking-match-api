@@ -400,4 +400,49 @@ if (empty($bookings)) {
     color: #f59e0b !important;
     opacity: 0.9;
 }
+
+/* Status badge styling - room number shows booking status */
+.staying-card {
+    border: 1px solid #e5e7eb !important; /* Neutral border, not status-based */
+}
+
+.room-number {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 13px;
+    display: inline-block;
+}
+
+/* Confirmed status - green badge */
+.staying-card[data-status="confirmed"] .room-number {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+/* Checked-in status - blue badge */
+.staying-card[data-status="checked-in"] .room-number,
+.staying-card[data-status="checked_in"] .room-number {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+/* Checked-out status - gray badge */
+.staying-card[data-status="checked-out"] .room-number,
+.staying-card[data-status="checked_out"] .room-number {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}
+
+/* Cancelled status - red badge */
+.staying-card[data-status="cancelled"] .room-number {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Provisional status - yellow/orange badge */
+.staying-card[data-status="provisional"] .room-number {
+    background-color: #fef3c7;
+    color: #92400e;
+}
 </style>
