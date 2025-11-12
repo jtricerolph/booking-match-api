@@ -327,10 +327,12 @@ if (empty($bookings)) {
 .clickable-status {
     color: inherit;
     text-decoration: none !important;
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     gap: 4px;
-    width: fit-content;
+    width: fit-content !important;
+    max-width: fit-content !important;
+    flex: none !important;
     padding: 2px 6px;
     border-radius: 4px;
     transition: background-color 0.2s ease;
