@@ -323,6 +323,38 @@ if (empty($bookings)) {
     text-decoration: none;
 }
 
+/* Clickable status links for matches */
+.clickable-status {
+    color: inherit;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-status:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    text-decoration: none !important;
+}
+
+.clickable-status.has-updates:hover {
+    background-color: rgba(59, 130, 246, 0.15);
+}
+
+.clickable-status.has-issue:hover {
+    background-color: rgba(251, 191, 36, 0.1);
+}
+
+.status-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
 /* Stale cache indicator styling */
 .stale-indicator {
     color: #f59e0b !important;
