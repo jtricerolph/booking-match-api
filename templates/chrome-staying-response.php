@@ -1158,6 +1158,16 @@ if (empty($bookings)) {
 .staying-guest-line {
     min-width: 0 !important; /* Prevent overflow */
 }
+
+/* When spanning next, add right margin to main-info to prevent night badge from extending too far */
+.staying-card[data-spans-next="true"] .staying-main-info {
+    margin-right: 50px !important; /* Compensate for header's 50px extension */
+}
+
+/* When spanning previous, add left margin to prevent content shifting */
+.staying-card[data-spans-previous="true"] .staying-main-info {
+    margin-left: 50px !important; /* Compensate for header's 50px extension */
+}
 </style>
 
 <script>
