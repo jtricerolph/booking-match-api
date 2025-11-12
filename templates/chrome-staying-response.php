@@ -800,7 +800,10 @@ if (empty($bookings)) {
 
 .vacant-room-line[data-spans-previous="true"] {
     margin-left: -50px;
-    /* No padding - let text stay in place */
+}
+
+.vacant-room-line[data-spans-previous="true"] .vacant-room-content {
+    padding-left: 50px; /* Compensate for parent's -50px margin */
 }
 
 /* RIGHT SIDE: Next night indicators */
@@ -979,10 +982,11 @@ if (empty($bookings)) {
 
 .vacant-room-line[data-spans-next="true"] {
     margin-right: -50px;
-    /* No padding - let text stay in place */
 }
 
-/* No padding compensation needed - margin handles positioning */
+.vacant-room-line[data-spans-next="true"] .vacant-room-content {
+    padding-right: 50px; /* Compensate for parent's -50px margin */
+}
 
 /* Both sides spanning - no radius */
 .staying-card[data-spans-previous="true"][data-spans-next="true"] .staying-header {
