@@ -705,11 +705,11 @@ if (empty($bookings)) {
     color: #312e81;
 }
 
-/* Highlighted state for grouped bookings */
-.booking-card.highlighted {
-    border-color: #6366f1 !important;
-    background-color: #eef2ff !important;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+/* Highlighted state for grouped bookings - only affect header */
+.booking-card.highlighted .booking-header {
+    background-color: #eef2ff;
+    border-left: 3px solid #6366f1;
+    margin-left: -1px;
 }
 
 .booking-card.highlighted .group-id-badge {
