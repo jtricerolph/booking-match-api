@@ -1145,6 +1145,11 @@ if (empty($bookings)) {
     display: block !important;
 }
 
+/* Vacant row base margin - match staying-card for proper alignment */
+.vacant-room-line {
+    margin: 0 23px 5px 23px !important; /* Match staying-card margins */
+}
+
 /* Vacant row content padding - shorter height to save space */
 .vacant-room-content {
     padding: 5px 8px !important; /* Reduced vertical padding (5px top/bottom) to save space, match horizontal padding */
