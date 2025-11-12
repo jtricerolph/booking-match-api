@@ -448,11 +448,11 @@ if (empty($bookings)) {
     gap: 2px;
 }
 
-/* Position badges at top right above expand arrow */
+/* Position badges at top right corner */
 .staying-badges {
     position: absolute;
-    top: 6px;
-    right: 28px;
+    top: 4px;
+    right: 4px;
     display: flex;
     gap: 6px;
     align-items: center;

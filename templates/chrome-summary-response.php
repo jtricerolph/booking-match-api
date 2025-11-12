@@ -331,8 +331,8 @@ if (empty($bookings)) {
     gap: 6px;
     align-self: flex-start;
     position: absolute;
-    top: 6px;
-    right: 28px;
+    top: 4px;
+    right: 4px;
 }
 
 /* Combined circular issue count badge */
