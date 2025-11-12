@@ -423,9 +423,12 @@ class BMA_NewBook_Search {
      * @return array Array of booking objects
      */
     public function fetch_staying_bookings($date) {
-        // Set time range for the specific date (00:00:00 to 23:59:59)
-        $period_from = $date . ' 00:00:00';
-        $period_to = $date . ' 23:59:59';
+        // Fetch 3-day window for timeline indicators (previous night, selected date, next night)
+        $previous_night = date('Y-m-d', strtotime($date . ' -1 day'));
+        $next_night = date('Y-m-d', strtotime($date . ' +1 day'));
+
+        $period_from = $previous_night . ' 00:00:00';
+        $period_to = $next_night . ' 23:59:59';
 
         $data = array(
             'period_from' => $period_from,

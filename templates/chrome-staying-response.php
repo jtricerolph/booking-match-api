@@ -22,9 +22,18 @@ if (empty($bookings)) {
         // Check if this is a vacant room entry
         if (isset($booking['is_vacant']) && $booking['is_vacant'] === true):
             $room_number = $booking['site_name'] ?? 'N/A';
+            // Extract timeline data for vacant rooms
+            $previous_status = $booking['previous_night_status'] ?? '';
+            $next_status = $booking['next_night_status'] ?? '';
+            $spans_previous = $booking['spans_from_previous'] ?? false;
+            $spans_next = $booking['spans_to_next'] ?? false;
     ?>
             <!-- Vacant Room Line -->
-            <div class="vacant-room-line">
+            <div class="vacant-room-line"
+                 data-previous-status="<?php echo esc_attr($previous_status); ?>"
+                 data-next-status="<?php echo esc_attr($next_status); ?>"
+                 data-spans-previous="<?php echo $spans_previous ? 'true' : 'false'; ?>"
+                 data-spans-next="<?php echo $spans_next ? 'true' : 'false'; ?>">
                 <span class="room-number"><?php echo esc_html($room_number); ?></span>
                 <span class="vacant-label">- Vacant</span>
             </div>
@@ -41,10 +50,20 @@ if (empty($bookings)) {
         $matches = $booking['resos_matches'] ?? [];
         $has_package = $booking['has_package'] ?? false;
         $is_stale = $booking['is_stale'] ?? false;
+
+        // Extract timeline data for Gantt-style visualization
+        $previous_status = $booking['previous_night_status'] ?? '';
+        $next_status = $booking['next_night_status'] ?? '';
+        $spans_previous = $booking['spans_from_previous'] ?? false;
+        $spans_next = $booking['spans_to_next'] ?? false;
     ?>
         <div class="staying-card"
              data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
              data-status="<?php echo esc_attr($status); ?>"
+             data-previous-status="<?php echo esc_attr($previous_status); ?>"
+             data-next-status="<?php echo esc_attr($next_status); ?>"
+             data-spans-previous="<?php echo $spans_previous ? 'true' : 'false'; ?>"
+             data-spans-next="<?php echo $spans_next ? 'true' : 'false'; ?>"
              <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
 
             <!-- Card Header (Collapsed View) -->
@@ -573,5 +592,184 @@ if (empty($bookings)) {
 .staying-header.highlighted .group-id-badge {
     background-color: #6366f1 !important;
     color: white !important;
+}
+
+/* ============================================
+   Gantt-Style Timeline Indicators
+   ============================================ */
+
+/* Ensure cards and vacant lines have relative positioning for pseudo-elements */
+.staying-card,
+.vacant-room-line {
+    position: relative;
+}
+
+/* LEFT SIDE: Previous night indicators */
+
+/* Colored bar - different booking yesterday */
+.staying-card[data-previous-status="confirmed"]::before,
+.vacant-room-line[data-previous-status="confirmed"]::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #10b981; /* green */
+}
+
+.staying-card[data-previous-status="checked-in"]::before,
+.staying-card[data-previous-status="checked_in"]::before,
+.staying-card[data-previous-status="arrived"]::before,
+.vacant-room-line[data-previous-status="checked-in"]::before,
+.vacant-room-line[data-previous-status="checked_in"]::before,
+.vacant-room-line[data-previous-status="arrived"]::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #3b82f6; /* blue */
+}
+
+.staying-card[data-previous-status="checked-out"]::before,
+.staying-card[data-previous-status="checked_out"]::before,
+.staying-card[data-previous-status="departed"]::before,
+.vacant-room-line[data-previous-status="checked-out"]::before,
+.vacant-room-line[data-previous-status="checked_out"]::before,
+.vacant-room-line[data-previous-status="departed"]::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #a855f7; /* purple */
+}
+
+.staying-card[data-previous-status="cancelled"]::before,
+.vacant-room-line[data-previous-status="cancelled"]::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #dc2626; /* red */
+}
+
+.staying-card[data-previous-status="provisional"]::before,
+.staying-card[data-previous-status="unconfirmed"]::before,
+.vacant-room-line[data-previous-status="provisional"]::before,
+.vacant-room-line[data-previous-status="unconfirmed"]::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #f59e0b; /* amber */
+}
+
+/* Gray extension - same booking from yesterday */
+.staying-card[data-spans-previous="true"]::before,
+.vacant-room-line[data-spans-previous="true"]::before {
+    content: '';
+    position: absolute;
+    left: -50px;
+    top: 0;
+    bottom: 0;
+    width: 50px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.05));
+}
+
+/* RIGHT SIDE: Next night indicators */
+
+/* Colored bar - different booking tomorrow */
+.staying-card[data-next-status="confirmed"]::after,
+.vacant-room-line[data-next-status="confirmed"]::after {
+    content: '';
+    position: absolute;
+    right: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #10b981; /* green */
+}
+
+.staying-card[data-next-status="checked-in"]::after,
+.staying-card[data-next-status="checked_in"]::after,
+.staying-card[data-next-status="arrived"]::after,
+.vacant-room-line[data-next-status="checked-in"]::after,
+.vacant-room-line[data-next-status="checked_in"]::after,
+.vacant-room-line[data-next-status="arrived"]::after {
+    content: '';
+    position: absolute;
+    right: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #3b82f6; /* blue */
+}
+
+.staying-card[data-next-status="checked-out"]::after,
+.staying-card[data-next-status="checked_out"]::after,
+.staying-card[data-next-status="departed"]::after,
+.vacant-room-line[data-next-status="checked-out"]::after,
+.vacant-room-line[data-next-status="checked_out"]::after,
+.vacant-room-line[data-next-status="departed"]::after {
+    content: '';
+    position: absolute;
+    right: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #a855f7; /* purple */
+}
+
+.staying-card[data-next-status="cancelled"]::after,
+.vacant-room-line[data-next-status="cancelled"]::after {
+    content: '';
+    position: absolute;
+    right: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #dc2626; /* red */
+}
+
+.staying-card[data-next-status="provisional"]::after,
+.staying-card[data-next-status="unconfirmed"]::after,
+.vacant-room-line[data-next-status="provisional"]::after,
+.vacant-room-line[data-next-status="unconfirmed"]::after {
+    content: '';
+    position: absolute;
+    right: -25px;
+    top: 0;
+    bottom: 0;
+    width: 25px;
+    background: #f59e0b; /* amber */
+}
+
+/* Gray extension - same booking to tomorrow */
+.staying-card[data-spans-next="true"]::after,
+.vacant-room-line[data-spans-next="true"]::after {
+    content: '';
+    position: absolute;
+    right: -50px;
+    top: 0;
+    bottom: 0;
+    width: 50px;
+    background: linear-gradient(to left, transparent, rgba(0, 0, 0, 0.05));
+}
+
+/* Ensure pseudo-elements don't interfere with clickable elements */
+.staying-card::before,
+.staying-card::after,
+.vacant-room-line::before,
+.vacant-room-line::after {
+    pointer-events: none;
+    z-index: -1;
 }
 </style>

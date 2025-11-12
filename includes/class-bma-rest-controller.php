@@ -870,11 +870,11 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             error_log("BMA Staying: Fetching bookings for date = {$date}");
 
-            // Fetch staying bookings from NewBook
+            // Fetch staying bookings from NewBook (3-day window for timeline indicators)
             $searcher = new BMA_NewBook_Search();
-            $staying_bookings = $searcher->fetch_staying_bookings($date);
+            $all_bookings = $searcher->fetch_staying_bookings($date);
 
-            if (empty($staying_bookings)) {
+            if (empty($all_bookings)) {
                 // Return empty success response
                 $formatter = new BMA_Response_Formatter();
                 return array(
@@ -887,13 +887,82 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 );
             }
 
-            // Process each booking
+            // Calculate adjacent dates
+            $previous_date = date('Y-m-d', strtotime($date . ' -1 day'));
+            $next_date = date('Y-m-d', strtotime($date . ' +1 day'));
+
+            // Group bookings by room and date
+            $bookings_by_room = array();
+            foreach ($all_bookings as $booking) {
+                $room = $booking['site_name'] ?? 'N/A';
+                $arrival = substr($booking['booking_arrival'] ?? '', 0, 10);
+                $departure = substr($booking['booking_departure'] ?? '', 0, 10);
+                $booking_id = $booking['booking_id'];
+
+                // Determine which dates this booking covers
+                $arrival_dt = new DateTime($arrival);
+                $departure_dt = new DateTime($departure);
+                $target_dt = new DateTime($date);
+                $previous_dt = new DateTime($previous_date);
+                $next_dt = new DateTime($next_date);
+
+                // Check if booking is staying on each date (arrival <= date < departure)
+                if ($arrival_dt <= $previous_dt && $departure_dt > $previous_dt) {
+                    $bookings_by_room[$room]['previous'] = $booking;
+                }
+                if ($arrival_dt <= $target_dt && $departure_dt > $target_dt) {
+                    $bookings_by_room[$room]['current'] = $booking;
+                }
+                if ($arrival_dt <= $next_dt && $departure_dt > $next_dt) {
+                    $bookings_by_room[$room]['next'] = $booking;
+                }
+            }
+
+            // Process bookings staying on target date
             $processed_bookings = array();
             $total_critical_count = 0;
             $total_warning_count = 0;
 
-            foreach ($staying_bookings as $nb_booking) {
-                $processed = $this->process_booking_for_staying($nb_booking, $date, $force_refresh);
+            foreach ($bookings_by_room as $room => $dates) {
+                if (!isset($dates['current'])) {
+                    continue; // Not staying on target date
+                }
+
+                $current_booking = $dates['current'];
+                $previous_booking = $dates['previous'] ?? null;
+                $next_booking = $dates['next'] ?? null;
+
+                // Determine timeline indicators
+                $timeline_data = array(
+                    'previous_night_status' => null,
+                    'next_night_status' => null,
+                    'spans_from_previous' => false,
+                    'spans_to_next' => false,
+                );
+
+                // Check previous night
+                if ($previous_booking) {
+                    if ($previous_booking['booking_id'] === $current_booking['booking_id']) {
+                        // Same booking continuing
+                        $timeline_data['spans_from_previous'] = true;
+                    } else {
+                        // Different booking
+                        $timeline_data['previous_night_status'] = strtolower($previous_booking['booking_status'] ?? 'confirmed');
+                    }
+                }
+
+                // Check next night
+                if ($next_booking) {
+                    if ($next_booking['booking_id'] === $current_booking['booking_id']) {
+                        // Same booking continuing
+                        $timeline_data['spans_to_next'] = true;
+                    } else {
+                        // Different booking
+                        $timeline_data['next_night_status'] = strtolower($next_booking['booking_status'] ?? 'confirmed');
+                    }
+                }
+
+                $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data);
                 $processed_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
@@ -915,11 +984,39 @@ class BMA_REST_Controller extends WP_REST_Controller {
             foreach ($all_sites as $site) {
                 $site_name = $site['site_name'] ?? '';
                 if (!empty($site_name) && !in_array($site_name, $occupied_rooms)) {
+                    // Calculate timeline indicators for vacant room
+                    $vacant_timeline = array(
+                        'previous_night_status' => null,
+                        'next_night_status' => null,
+                        'spans_from_previous' => false,
+                        'spans_to_next' => false,
+                    );
+
+                    // Check if room was occupied on previous/next nights
+                    if (isset($bookings_by_room[$site_name])) {
+                        $room_dates = $bookings_by_room[$site_name];
+
+                        // Check previous night
+                        if (isset($room_dates['previous'])) {
+                            $prev_booking = $room_dates['previous'];
+                            $vacant_timeline['previous_night_status'] = strtolower($prev_booking['booking_status'] ?? 'confirmed');
+                        }
+
+                        // Check next night
+                        if (isset($room_dates['next'])) {
+                            $next_booking = $room_dates['next'];
+                            $vacant_timeline['next_night_status'] = strtolower($next_booking['booking_status'] ?? 'confirmed');
+                        }
+                    }
+
                     // Add vacant room entry
-                    $processed_bookings[] = array(
-                        'is_vacant' => true,
-                        'site_name' => $site_name,
-                        'site_id' => $site['site_id'] ?? null
+                    $processed_bookings[] = array_merge(
+                        array(
+                            'is_vacant' => true,
+                            'site_name' => $site_name,
+                            'site_id' => $site['site_id'] ?? null
+                        ),
+                        $vacant_timeline
                     );
                 }
             }
@@ -961,7 +1058,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for staying display
      */
-    private function process_booking_for_staying($booking, $target_date, $force_refresh = false) {
+    private function process_booking_for_staying($booking, $target_date, $force_refresh = false, $timeline_data = array()) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -1044,7 +1141,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'has_package' => $has_package,
             'resos_matches' => $matches,
             'critical_count' => $critical_count,
-            'warning_count' => $warning_count
+            'warning_count' => $warning_count,
+            // Timeline indicators for Gantt-style visualization
+            'previous_night_status' => $timeline_data['previous_night_status'] ?? null,
+            'next_night_status' => $timeline_data['next_night_status'] ?? null,
+            'spans_from_previous' => $timeline_data['spans_from_previous'] ?? false,
+            'spans_to_next' => $timeline_data['spans_to_next'] ?? false,
         );
     }
 
