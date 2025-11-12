@@ -54,7 +54,10 @@ if (empty($bookings)) {
                     <div class="staying-guest-line">
                         <span class="room-number"><?php echo esc_html($room_number); ?></span>
                         <span class="guest-name"><?php echo esc_html($booking['guest_name']); ?></span>
-                        <span class="night-progress">Night <?php echo $current_night; ?>/<?php echo $total_nights; ?></span>
+                        <span class="night-progress">
+                            <span class="material-symbols-outlined">bedtime</span>
+                            <?php echo $current_night; ?>/<?php echo $total_nights; ?>
+                        </span>
                     </div>
 
                     <!-- Line 2: Restaurant Status -->
@@ -444,5 +447,17 @@ if (empty($bookings)) {
 .staying-card[data-status="provisional"] .room-number {
     background-color: #fef3c7;
     color: #92400e;
+}
+
+/* Night progress badge styling */
+.night-progress {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.night-progress .material-symbols-outlined {
+    font-size: 16px;
+    vertical-align: middle;
 }
 </style>
