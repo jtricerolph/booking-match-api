@@ -738,7 +738,9 @@ if (empty($bookings)) {
     top: 0;
     bottom: 0;
     width: 15px;
-    border: 1px solid #d1d5db; /* Light grey border like vacant rooms */
+    border-right: 1px solid #d1d5db; /* Only right border (inner side) */
+    border-top: 1px solid #d1d5db;
+    border-bottom: 1px solid #d1d5db;
     background: transparent;
     border-radius: 0 8px 8px 0;
 }
@@ -885,7 +887,9 @@ if (empty($bookings)) {
     top: 0;
     bottom: 0;
     width: 15px;
-    border: 1px solid #d1d5db; /* Light grey border like vacant rooms */
+    border-left: 1px solid #d1d5db; /* Only left border (inner side) */
+    border-top: 1px solid #d1d5db;
+    border-bottom: 1px solid #d1d5db;
     background: transparent;
     border-radius: 8px 0 0 8px;
 }
