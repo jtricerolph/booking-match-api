@@ -1627,8 +1627,11 @@ if (!defined('ABSPATH')) {
 
 .clickable-status {
     color: inherit;
-    text-decoration: none;
-    display: inline-block;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
     padding: 2px 6px;
     border-radius: 4px;
     transition: background-color 0.2s ease;
@@ -1636,6 +1639,7 @@ if (!defined('ABSPATH')) {
 
 .clickable-status:hover {
     background-color: rgba(59, 130, 246, 0.1);
+    text-decoration: none !important;
 }
 
 .clickable-status.has-updates:hover {
