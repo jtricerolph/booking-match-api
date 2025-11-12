@@ -633,6 +633,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $nights = $this->calculate_nights($arrival_date, $departure_date);
         $status = $booking['booking_status'] ?? 'unknown';
 
+        // Try multiple possible field names for group ID
+        $group_id = $booking['booking_group_id']
+                 ?? $booking['group_id']
+                 ?? $booking['bookings_group_id']
+                 ?? null;
+
         // Extract occupants
         $occupants = $this->extract_occupants($booking);
 
@@ -700,6 +706,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'departure_date' => $departure_date,
             'nights' => $nights,
             'status' => $status,
+            'group_id' => $group_id,
             'booking_source' => $booking_source,
             'occupants' => $occupants,
             'tariffs' => $tariffs,

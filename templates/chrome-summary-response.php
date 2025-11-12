@@ -16,8 +16,10 @@ if (empty($bookings)) {
 ?>
 
 <div class="bma-summary">
-    <?php foreach ($bookings as $booking): ?>
-        <div class="booking-card" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>">
+    <?php foreach ($bookings as $booking):
+        $group_id = $booking['group_id'] ?? null;
+    ?>
+        <div class="booking-card" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
             <!-- Collapsed Summary -->
             <div class="booking-header">
                 <div class="booking-main-info">
@@ -27,6 +29,9 @@ if (empty($bookings)) {
                     <div class="booking-dates-compact">
                         <span><?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival_date']))); ?></span>
                         <span class="nights-badge"><?php echo esc_html($booking['nights']); ?> night<?php echo $booking['nights'] > 1 ? 's' : ''; ?></span>
+                        <?php if ($group_id): ?>
+                            <span class="group-id-badge">G#<?php echo esc_html($group_id); ?></span>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -678,6 +683,38 @@ if (empty($bookings)) {
     display: inline-flex;
     align-items: center;
     gap: 2px;
+}
+
+/* Group ID badge styling */
+.group-id-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: #e0e7ff;
+    color: #3730a3;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+}
+
+.group-id-badge:hover {
+    background-color: #c7d2fe;
+    color: #312e81;
+}
+
+/* Highlighted state for grouped bookings */
+.booking-card.highlighted {
+    border-color: #6366f1 !important;
+    background-color: #eef2ff !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+.booking-card.highlighted .group-id-badge {
+    background-color: #6366f1;
+    color: white;
 }
 </style>
 

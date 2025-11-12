@@ -544,4 +544,36 @@ if (empty($bookings)) {
     background-color: #fef3c7 !important;
     color: #92400e !important;
 }
+
+/* Group ID badge styling */
+.group-id-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: #e0e7ff;
+    color: #3730a3;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+}
+
+.group-id-badge:hover {
+    background-color: #c7d2fe;
+    color: #312e81;
+}
+
+/* Highlighted state for grouped bookings */
+.staying-card.highlighted {
+    border-color: #6366f1 !important;
+    background-color: #eef2ff !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+.staying-card.highlighted .group-id-badge {
+    background-color: #6366f1;
+    color: white;
+}
 </style>
