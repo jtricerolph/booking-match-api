@@ -706,29 +706,16 @@ if (empty($bookings)) {
 }
 
 /* Highlighted state for grouped bookings - only affect header */
-.booking-card.highlighted {
-    /* Reset card-level styling to prevent whole card highlight */
-    border-color: #e2e8f0 !important;
-    background-color: #fff !important;
-    box-shadow: none !important;
-}
-
-.booking-card.highlighted .booking-header {
+.booking-header.highlighted {
     background-color: #eef2ff !important;
     border-left: 3px solid #6366f1 !important;
     margin-left: -1px;
     border-radius: 7px 0 0 0;
 }
 
-.booking-card.highlighted .group-id-badge {
+.booking-header.highlighted .group-id-badge {
     background-color: #6366f1 !important;
     color: white !important;
-}
-
-/* Ensure expanded details don't get highlighted */
-.booking-card.highlighted .booking-details {
-    background-color: #fff !important;
-    border-left: none !important;
 }
 </style>
 
