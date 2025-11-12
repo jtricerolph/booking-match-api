@@ -2527,7 +2527,9 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     const hotel = data.hotel || {};
     const resos = data.resos || {};
     const matches = data.matches || {};
-    const suggestions = data.suggested_updates || {};
+    // Only show suggested updates for confirmed matches (primary matches)
+    // Suggested matches should not have update checkboxes
+    const suggestions = isConfirmed ? (data.suggested_updates || {}) : {};
 
     let html = '<!-- TEMPLATE VERSION 1.4.0-2025-01-11 -->';
     html += '<div class="comparison-row-content">';
