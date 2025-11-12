@@ -938,6 +938,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     'next_night_status' => null,
                     'spans_from_previous' => false,
                     'spans_to_next' => false,
+                    'previous_vacant' => false,
+                    'next_vacant' => false,
                 );
 
                 // Check previous night
@@ -949,6 +951,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
                         // Different booking
                         $timeline_data['previous_night_status'] = strtolower($previous_booking['booking_status'] ?? 'confirmed');
                     }
+                } else {
+                    // Room was vacant on previous night
+                    $timeline_data['previous_vacant'] = true;
                 }
 
                 // Check next night
@@ -960,6 +965,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
                         // Different booking
                         $timeline_data['next_night_status'] = strtolower($next_booking['booking_status'] ?? 'confirmed');
                     }
+                } else {
+                    // Room will be vacant on next night
+                    $timeline_data['next_vacant'] = true;
                 }
 
                 $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data);
@@ -990,6 +998,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
                         'next_night_status' => null,
                         'spans_from_previous' => false,
                         'spans_to_next' => false,
+                        'previous_vacant' => false,
+                        'next_vacant' => false,
                     );
 
                     // Check if room was occupied on previous/next nights
@@ -1000,13 +1010,27 @@ class BMA_REST_Controller extends WP_REST_Controller {
                         if (isset($room_dates['previous'])) {
                             $prev_booking = $room_dates['previous'];
                             $vacant_timeline['previous_night_status'] = strtolower($prev_booking['booking_status'] ?? 'confirmed');
+                        } else {
+                            // Room was also vacant on previous night
+                            $vacant_timeline['spans_from_previous'] = true;
+                            $vacant_timeline['previous_vacant'] = true;
                         }
 
                         // Check next night
                         if (isset($room_dates['next'])) {
                             $next_booking = $room_dates['next'];
                             $vacant_timeline['next_night_status'] = strtolower($next_booking['booking_status'] ?? 'confirmed');
+                        } else {
+                            // Room will also be vacant on next night
+                            $vacant_timeline['spans_to_next'] = true;
+                            $vacant_timeline['next_vacant'] = true;
                         }
+                    } else {
+                        // No bookings at all for this room in the 3-day window
+                        $vacant_timeline['spans_from_previous'] = true;
+                        $vacant_timeline['spans_to_next'] = true;
+                        $vacant_timeline['previous_vacant'] = true;
+                        $vacant_timeline['next_vacant'] = true;
                     }
 
                     // Add vacant room entry
@@ -1147,6 +1171,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'next_night_status' => $timeline_data['next_night_status'] ?? null,
             'spans_from_previous' => $timeline_data['spans_from_previous'] ?? false,
             'spans_to_next' => $timeline_data['spans_to_next'] ?? false,
+            'previous_vacant' => $timeline_data['previous_vacant'] ?? false,
+            'next_vacant' => $timeline_data['next_vacant'] ?? false,
         );
     }
 
