@@ -1150,6 +1150,11 @@ if (empty($bookings)) {
     padding: 5px 8px 5px 23px !important; /* 23px left = staying-card margin to align room numbers */
 }
 
+/* Vacant rows with previous-status indicators need extra padding to account for indicator space */
+.vacant-room-line[data-previous-status]:not([data-previous-status=""]):not([data-spans-previous="true"]) .vacant-room-content {
+    padding-left: 46px !important; /* 23px base + 23px for indicator space (15px width + 8px gap) */
+}
+
 /* Ensure staying-main-info doesn't overflow on spanning nights */
 .staying-main-info {
     min-width: 0 !important; /* Allow flex item to shrink below content size */
