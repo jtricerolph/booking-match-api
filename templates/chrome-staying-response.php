@@ -34,8 +34,10 @@ if (empty($bookings)) {
                  data-next-status="<?php echo esc_attr($next_status); ?>"
                  data-spans-previous="<?php echo $spans_previous ? 'true' : 'false'; ?>"
                  data-spans-next="<?php echo $spans_next ? 'true' : 'false'; ?>">
-                <span class="room-number"><?php echo esc_html($room_number); ?></span>
-                <span class="vacant-label">- Vacant</span>
+                <div class="vacant-room-content">
+                    <span class="room-number"><?php echo esc_html($room_number); ?></span>
+                    <span class="vacant-label">- Vacant</span>
+                </div>
             </div>
     <?php
             continue; // Skip to next iteration
@@ -522,6 +524,14 @@ if (empty($bookings)) {
     color: #4b5563 !important; /* Default gray text */
 }
 
+/* Vacant room content layout - match staying-guest-line structure */
+.vacant-room-content {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 14px !important;
+}
+
 /* Vacant room numbers get grey badge styling */
 .vacant-room-line .room-number {
     padding: 2px 6px !important;
@@ -529,6 +539,13 @@ if (empty($bookings)) {
     background-color: #e5e7eb !important; /* Light grey badge */
     color: #6b7280 !important; /* Medium grey text */
     font-weight: 600 !important;
+    font-size: 13px !important;
+}
+
+.vacant-room-line .vacant-label {
+    color: #9ca3af !important;
+    font-style: italic !important;
+    font-size: 14px !important;
 }
 
 /* Confirmed status - green badge */
