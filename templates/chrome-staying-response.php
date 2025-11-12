@@ -522,12 +522,13 @@ if (empty($bookings)) {
     color: #4b5563 !important; /* Default gray text */
 }
 
-/* Vacant room numbers don't get badge styling */
+/* Vacant room numbers get grey badge styling */
 .vacant-room-line .room-number {
-    padding: 0 !important;
-    border-radius: 0 !important;
-    background-color: transparent !important;
-    color: inherit !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    background-color: #e5e7eb !important; /* Light grey badge */
+    color: #6b7280 !important; /* Medium grey text */
+    font-weight: 600 !important;
 }
 
 /* Confirmed status - green badge */
