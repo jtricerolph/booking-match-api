@@ -606,9 +606,7 @@ if (empty($bookings)) {
 /* Highlighted state for grouped bookings - only affect header */
 .staying-header.highlighted {
     background-color: #eef2ff !important;
-    border-left: 3px solid #6366f1 !important;
-    margin-left: -1px;
-    border-radius: 7px 0 0 0;
+    /* Keep existing borders and radius - just change background */
 }
 
 .staying-header.highlighted .group-id-badge {
