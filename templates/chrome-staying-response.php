@@ -725,15 +725,11 @@ if (empty($bookings)) {
     border-radius: 0 8px 8px 0;
 }
 
-/* Multi-night booking extension - extend header to left with border */
+/* Multi-night booking extension - extend header to left */
 .staying-card[data-spans-previous="true"] .staying-header {
     border-radius: 0 8px 0 0 !important;
     margin-left: -50px;
     padding-left: 58px; /* 50px extension + 8px original padding */
-    background: white;
-    border-left: 2px solid;
-    border-top: 2px solid;
-    border-color: inherit; /* Inherit border color from parent card */
 }
 
 .vacant-room-line[data-spans-previous="true"] {
@@ -862,15 +858,11 @@ if (empty($bookings)) {
     border-radius: 8px 0 0 8px;
 }
 
-/* Multi-night booking extension - extend header to right with border */
+/* Multi-night booking extension - extend header to right */
 .staying-card[data-spans-next="true"] .staying-header {
     border-radius: 8px 0 0 0 !important;
     margin-right: -50px;
     padding-right: 58px; /* 50px extension + 8px original padding */
-    background: white;
-    border-right: 2px solid;
-    border-top: 2px solid;
-    border-color: inherit; /* Inherit border color from parent card */
 }
 
 .vacant-room-line[data-spans-next="true"] {
@@ -878,14 +870,9 @@ if (empty($bookings)) {
     padding-right: 50px;
 }
 
-/* Both sides spanning - no radius, top and side borders */
+/* Both sides spanning - no radius */
 .staying-card[data-spans-previous="true"][data-spans-next="true"] .staying-header {
     border-radius: 0 !important;
-    background: white;
-    border-left: 2px solid;
-    border-right: 2px solid;
-    border-top: 2px solid;
-    border-color: inherit; /* Inherit border color from parent card */
 }
 
 /* Ensure pseudo-elements don't interfere with clickable elements */
