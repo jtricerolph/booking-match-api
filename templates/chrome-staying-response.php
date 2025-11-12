@@ -78,36 +78,39 @@ if (empty($bookings)) {
                             $time = date('H:i', strtotime($match['time']));
                             $pax = $match['people'] ?? 0;
                             $has_suggestions = $match['has_suggestions'] ?? false;
+                            $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
-                            <span class="restaurant-status has-booking <?php echo $has_suggestions ? 'has-updates' : ''; ?>">
-                                <?php if ($has_suggestions): ?>
-                                    <a href="#" class="updates-link" data-tab="restaurant" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($match['resos_booking_id']); ?>" title="Has suggested updates - click to review">
-                                        <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
-                                        <span class="material-symbols-outlined updates-icon" style="color: #3b82f6;">sync</span>
-                                    </a>
-                                <?php else: ?>
+                            <?php if ($has_suggestions): ?>
+                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
+                                    <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
+                                    <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
+                                    <span class="material-symbols-outlined" style="color: #10b981;">check</span>
+                                </a>
+                            <?php else: ?>
+                                <span class="restaurant-status has-booking">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <?php if ($is_stale): ?>
                                         <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
                                     <?php else: ?>
                                         <span class="material-symbols-outlined">check</span>
                                     <?php endif; ?>
-                                <?php endif; ?>
-                            </span>
+                                </span>
+                            <?php endif; ?>
                         <?php else: ?>
                             <?php
                             $match = $matches[0];
                             $time = date('H:i', strtotime($match['time']));
                             $pax = $match['people'] ?? 0;
+                            $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
-                            <span class="restaurant-status has-issue">
+                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review">
                                 <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                 <?php if ($is_stale): ?>
                                     <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
                                 <?php else: ?>
                                     <span class="material-symbols-outlined">search</span>
                                 <?php endif; ?>
-                            </span>
+                            </a>
                         <?php endif; ?>
 
                         <?php if ($group_id): ?>
@@ -228,6 +231,7 @@ if (empty($bookings)) {
                                             <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
                                         <?php elseif ($has_suggestions): ?>
                                             <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
+                                            <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                         <?php else: ?>
                                             <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
                                         <?php endif; ?>

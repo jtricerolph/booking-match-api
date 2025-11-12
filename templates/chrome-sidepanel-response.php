@@ -1625,20 +1625,31 @@ if (!defined('ABSPATH')) {
     background: #2563eb;
 }
 
-.updates-link {
+.clickable-status {
     color: inherit;
     text-decoration: none;
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-status:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.clickable-status.has-updates:hover {
+    background-color: rgba(59, 130, 246, 0.15);
+}
+
+.clickable-status.has-issue:hover {
+    background-color: rgba(251, 191, 36, 0.1);
+}
+
+.status-icon {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-}
-
-.updates-link:hover {
-    text-decoration: underline;
-}
-
-.updates-icon {
-    vertical-align: middle;
+    gap: 2px;
 }
 
 .bma-comparison-container {
