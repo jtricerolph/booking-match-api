@@ -109,7 +109,7 @@ if (empty($bookings)) {
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
                             <?php if ($has_suggestions): ?>
-                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
+                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
                                     <span class="material-symbols-outlined" style="color: #10b981;">check</span>
@@ -131,7 +131,7 @@ if (empty($bookings)) {
                             $pax = $match['people'] ?? 0;
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
-                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review">
+                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review">
                                 <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                 <?php if ($is_stale): ?>
                                     <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
