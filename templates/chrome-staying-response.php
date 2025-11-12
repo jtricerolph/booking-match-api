@@ -1186,9 +1186,9 @@ if (empty($bookings)) {
     right: 54px !important; /* 50px extension + 4px original position */
 }
 
+/* Badges stay on right side even when spanning from previous */
 .staying-card[data-spans-previous="true"] .staying-badges {
-    left: 54px !important; /* 50px extension + 4px from edge */
-    right: auto !important; /* Override right positioning */
+    right: 4px !important; /* Keep on right side above expand arrow */
 }
 </style>
 
