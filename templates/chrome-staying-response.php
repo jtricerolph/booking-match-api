@@ -1031,7 +1031,7 @@ if (empty($bookings)) {
 
 /* Staying Card Header - enhanced */
 .staying-header {
-    padding: 8px !important;
+    padding: 4px 8px !important; /* Reduced vertical padding: 4px top/bottom, 8px left/right */
     cursor: pointer !important;
     display: flex !important;
     align-items: flex-start !important;
