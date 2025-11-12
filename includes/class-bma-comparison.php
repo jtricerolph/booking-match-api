@@ -294,8 +294,12 @@ class BMA_Comparison {
         }
 
         // Phone: Suggest if Resos doesn't have one or if they don't match
+        // Don't suggest if phones already match (using same normalization as matching logic)
         if (!empty($hotel_preferred_phone)) {
-            if (empty($resos_phone) || trim($hotel_preferred_phone) !== trim($resos_phone)) {
+            if (empty($resos_phone)) {
+                $suggested_updates['phone'] = $hotel_preferred_phone;
+            } elseif (!isset($matches['phone']) || !$matches['phone']) {
+                // Only suggest if phones don't match (after normalization)
                 $suggested_updates['phone'] = $hotel_preferred_phone;
             }
         }
