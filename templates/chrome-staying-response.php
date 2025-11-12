@@ -606,16 +606,17 @@ if (empty($bookings)) {
 
 /* LEFT SIDE: Previous night indicators */
 
-/* Colored bar - different booking yesterday */
+/* Colored box - different booking yesterday (with 3px gap and inner radius) */
 .staying-card[data-previous-status="confirmed"]::before,
 .vacant-room-line[data-previous-status="confirmed"]::before {
     content: '';
     position: absolute;
-    left: -25px;
+    left: -28px; /* 25px width + 3px gap */
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #10b981; /* green */
+    background: rgba(16, 185, 129, 0.5); /* green with 50% opacity */
+    border-radius: 0 8px 8px 0; /* rounded on inner edge */
 }
 
 .staying-card[data-previous-status="checked-in"]::before,
@@ -626,11 +627,12 @@ if (empty($bookings)) {
 .vacant-room-line[data-previous-status="arrived"]::before {
     content: '';
     position: absolute;
-    left: -25px;
+    left: -28px;
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #3b82f6; /* blue */
+    background: rgba(59, 130, 246, 0.5); /* blue with 50% opacity */
+    border-radius: 0 8px 8px 0;
 }
 
 .staying-card[data-previous-status="checked-out"]::before,
@@ -641,22 +643,24 @@ if (empty($bookings)) {
 .vacant-room-line[data-previous-status="departed"]::before {
     content: '';
     position: absolute;
-    left: -25px;
+    left: -28px;
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #a855f7; /* purple */
+    background: rgba(168, 85, 247, 0.5); /* purple with 50% opacity */
+    border-radius: 0 8px 8px 0;
 }
 
 .staying-card[data-previous-status="cancelled"]::before,
 .vacant-room-line[data-previous-status="cancelled"]::before {
     content: '';
     position: absolute;
-    left: -25px;
+    left: -28px;
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #dc2626; /* red */
+    background: rgba(220, 38, 38, 0.5); /* red with 50% opacity */
+    border-radius: 0 8px 8px 0;
 }
 
 .staying-card[data-previous-status="provisional"]::before,
@@ -665,37 +669,39 @@ if (empty($bookings)) {
 .vacant-room-line[data-previous-status="unconfirmed"]::before {
     content: '';
     position: absolute;
-    left: -25px;
+    left: -28px;
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #f59e0b; /* amber */
+    background: rgba(245, 158, 11, 0.5); /* amber with 50% opacity */
+    border-radius: 0 8px 8px 0;
 }
 
-/* Gray extension - same booking from yesterday */
-.staying-card[data-spans-previous="true"]::before,
-.vacant-room-line[data-spans-previous="true"]::before {
-    content: '';
-    position: absolute;
-    left: -50px;
-    top: 0;
-    bottom: 0;
-    width: 50px;
-    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.05));
+/* Multi-night booking extension - remove left border-radius from header */
+.staying-card[data-spans-previous="true"] .staying-header {
+    border-radius: 0 8px 0 0 !important;
+    margin-left: -50px;
+    padding-left: 58px; /* 50px extension + 8px original padding */
+}
+
+.vacant-room-line[data-spans-previous="true"] {
+    margin-left: -50px;
+    padding-left: 50px;
 }
 
 /* RIGHT SIDE: Next night indicators */
 
-/* Colored bar - different booking tomorrow */
+/* Colored box - different booking tomorrow (with 3px gap and inner radius) */
 .staying-card[data-next-status="confirmed"]::after,
 .vacant-room-line[data-next-status="confirmed"]::after {
     content: '';
     position: absolute;
-    right: -25px;
+    right: -28px; /* 25px width + 3px gap */
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #10b981; /* green */
+    background: rgba(16, 185, 129, 0.5); /* green with 50% opacity */
+    border-radius: 8px 0 0 8px; /* rounded on inner edge */
 }
 
 .staying-card[data-next-status="checked-in"]::after,
@@ -706,11 +712,12 @@ if (empty($bookings)) {
 .vacant-room-line[data-next-status="arrived"]::after {
     content: '';
     position: absolute;
-    right: -25px;
+    right: -28px;
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #3b82f6; /* blue */
+    background: rgba(59, 130, 246, 0.5); /* blue with 50% opacity */
+    border-radius: 8px 0 0 8px;
 }
 
 .staying-card[data-next-status="checked-out"]::after,
@@ -721,22 +728,24 @@ if (empty($bookings)) {
 .vacant-room-line[data-next-status="departed"]::after {
     content: '';
     position: absolute;
-    right: -25px;
+    right: -28px;
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #a855f7; /* purple */
+    background: rgba(168, 85, 247, 0.5); /* purple with 50% opacity */
+    border-radius: 8px 0 0 8px;
 }
 
 .staying-card[data-next-status="cancelled"]::after,
 .vacant-room-line[data-next-status="cancelled"]::after {
     content: '';
     position: absolute;
-    right: -25px;
+    right: -28px;
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #dc2626; /* red */
+    background: rgba(220, 38, 38, 0.5); /* red with 50% opacity */
+    border-radius: 8px 0 0 8px;
 }
 
 .staying-card[data-next-status="provisional"]::after,
@@ -745,23 +754,29 @@ if (empty($bookings)) {
 .vacant-room-line[data-next-status="unconfirmed"]::after {
     content: '';
     position: absolute;
-    right: -25px;
+    right: -28px;
     top: 0;
     bottom: 0;
     width: 25px;
-    background: #f59e0b; /* amber */
+    background: rgba(245, 158, 11, 0.5); /* amber with 50% opacity */
+    border-radius: 8px 0 0 8px;
 }
 
-/* Gray extension - same booking to tomorrow */
-.staying-card[data-spans-next="true"]::after,
-.vacant-room-line[data-spans-next="true"]::after {
-    content: '';
-    position: absolute;
-    right: -50px;
-    top: 0;
-    bottom: 0;
-    width: 50px;
-    background: linear-gradient(to left, transparent, rgba(0, 0, 0, 0.05));
+/* Multi-night booking extension - remove right border-radius from header */
+.staying-card[data-spans-next="true"] .staying-header {
+    border-radius: 8px 0 0 0 !important;
+    margin-right: -50px;
+    padding-right: 58px; /* 50px extension + 8px original padding */
+}
+
+.vacant-room-line[data-spans-next="true"] {
+    margin-right: -50px;
+    padding-right: 50px;
+}
+
+/* Both sides spanning - no radius on header */
+.staying-card[data-spans-previous="true"][data-spans-next="true"] .staying-header {
+    border-radius: 0 !important;
 }
 
 /* Ensure pseudo-elements don't interfere with clickable elements */
