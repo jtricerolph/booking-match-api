@@ -606,12 +606,13 @@ if (empty($bookings)) {
 
 /* LEFT SIDE: Previous night indicators */
 
-/* Colored box - different booking yesterday (with 3px gap and inner radius) */
-.staying-card[data-previous-status="confirmed"]::before,
-.vacant-room-line[data-previous-status="confirmed"]::before {
+/* Colored box - different booking yesterday (with 5px gap and inner radius) */
+/* Only show if NOT spanning from previous */
+.staying-card[data-previous-status="confirmed"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="confirmed"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -28px; /* 25px width + 3px gap */
+    left: -30px; /* 25px width + 5px gap */
     top: 0;
     bottom: 0;
     width: 25px;
@@ -619,15 +620,15 @@ if (empty($bookings)) {
     border-radius: 0 8px 8px 0; /* rounded on inner edge */
 }
 
-.staying-card[data-previous-status="checked-in"]::before,
-.staying-card[data-previous-status="checked_in"]::before,
-.staying-card[data-previous-status="arrived"]::before,
-.vacant-room-line[data-previous-status="checked-in"]::before,
-.vacant-room-line[data-previous-status="checked_in"]::before,
-.vacant-room-line[data-previous-status="arrived"]::before {
+.staying-card[data-previous-status="checked-in"]:not([data-spans-previous="true"])::before,
+.staying-card[data-previous-status="checked_in"]:not([data-spans-previous="true"])::before,
+.staying-card[data-previous-status="arrived"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="checked-in"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="checked_in"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="arrived"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -28px;
+    left: -30px;
     top: 0;
     bottom: 0;
     width: 25px;
@@ -635,15 +636,15 @@ if (empty($bookings)) {
     border-radius: 0 8px 8px 0;
 }
 
-.staying-card[data-previous-status="checked-out"]::before,
-.staying-card[data-previous-status="checked_out"]::before,
-.staying-card[data-previous-status="departed"]::before,
-.vacant-room-line[data-previous-status="checked-out"]::before,
-.vacant-room-line[data-previous-status="checked_out"]::before,
-.vacant-room-line[data-previous-status="departed"]::before {
+.staying-card[data-previous-status="checked-out"]:not([data-spans-previous="true"])::before,
+.staying-card[data-previous-status="checked_out"]:not([data-spans-previous="true"])::before,
+.staying-card[data-previous-status="departed"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="checked-out"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="checked_out"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="departed"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -28px;
+    left: -30px;
     top: 0;
     bottom: 0;
     width: 25px;
@@ -651,11 +652,11 @@ if (empty($bookings)) {
     border-radius: 0 8px 8px 0;
 }
 
-.staying-card[data-previous-status="cancelled"]::before,
-.vacant-room-line[data-previous-status="cancelled"]::before {
+.staying-card[data-previous-status="cancelled"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="cancelled"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -28px;
+    left: -30px;
     top: 0;
     bottom: 0;
     width: 25px;
@@ -663,13 +664,13 @@ if (empty($bookings)) {
     border-radius: 0 8px 8px 0;
 }
 
-.staying-card[data-previous-status="provisional"]::before,
-.staying-card[data-previous-status="unconfirmed"]::before,
-.vacant-room-line[data-previous-status="provisional"]::before,
-.vacant-room-line[data-previous-status="unconfirmed"]::before {
+.staying-card[data-previous-status="provisional"]:not([data-spans-previous="true"])::before,
+.staying-card[data-previous-status="unconfirmed"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="provisional"]:not([data-spans-previous="true"])::before,
+.vacant-room-line[data-previous-status="unconfirmed"]:not([data-spans-previous="true"])::before {
     content: '';
     position: absolute;
-    left: -28px;
+    left: -30px;
     top: 0;
     bottom: 0;
     width: 25px;
@@ -691,12 +692,13 @@ if (empty($bookings)) {
 
 /* RIGHT SIDE: Next night indicators */
 
-/* Colored box - different booking tomorrow (with 3px gap and inner radius) */
-.staying-card[data-next-status="confirmed"]::after,
-.vacant-room-line[data-next-status="confirmed"]::after {
+/* Colored box - different booking tomorrow (with 5px gap and inner radius) */
+/* Only show if NOT spanning to next */
+.staying-card[data-next-status="confirmed"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="confirmed"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -28px; /* 25px width + 3px gap */
+    right: -30px; /* 25px width + 5px gap */
     top: 0;
     bottom: 0;
     width: 25px;
@@ -704,15 +706,15 @@ if (empty($bookings)) {
     border-radius: 8px 0 0 8px; /* rounded on inner edge */
 }
 
-.staying-card[data-next-status="checked-in"]::after,
-.staying-card[data-next-status="checked_in"]::after,
-.staying-card[data-next-status="arrived"]::after,
-.vacant-room-line[data-next-status="checked-in"]::after,
-.vacant-room-line[data-next-status="checked_in"]::after,
-.vacant-room-line[data-next-status="arrived"]::after {
+.staying-card[data-next-status="checked-in"]:not([data-spans-next="true"])::after,
+.staying-card[data-next-status="checked_in"]:not([data-spans-next="true"])::after,
+.staying-card[data-next-status="arrived"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="checked-in"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="checked_in"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="arrived"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -28px;
+    right: -30px;
     top: 0;
     bottom: 0;
     width: 25px;
@@ -720,15 +722,15 @@ if (empty($bookings)) {
     border-radius: 8px 0 0 8px;
 }
 
-.staying-card[data-next-status="checked-out"]::after,
-.staying-card[data-next-status="checked_out"]::after,
-.staying-card[data-next-status="departed"]::after,
-.vacant-room-line[data-next-status="checked-out"]::after,
-.vacant-room-line[data-next-status="checked_out"]::after,
-.vacant-room-line[data-next-status="departed"]::after {
+.staying-card[data-next-status="checked-out"]:not([data-spans-next="true"])::after,
+.staying-card[data-next-status="checked_out"]:not([data-spans-next="true"])::after,
+.staying-card[data-next-status="departed"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="checked-out"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="checked_out"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="departed"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -28px;
+    right: -30px;
     top: 0;
     bottom: 0;
     width: 25px;
@@ -736,11 +738,11 @@ if (empty($bookings)) {
     border-radius: 8px 0 0 8px;
 }
 
-.staying-card[data-next-status="cancelled"]::after,
-.vacant-room-line[data-next-status="cancelled"]::after {
+.staying-card[data-next-status="cancelled"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="cancelled"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -28px;
+    right: -30px;
     top: 0;
     bottom: 0;
     width: 25px;
@@ -748,13 +750,13 @@ if (empty($bookings)) {
     border-radius: 8px 0 0 8px;
 }
 
-.staying-card[data-next-status="provisional"]::after,
-.staying-card[data-next-status="unconfirmed"]::after,
-.vacant-room-line[data-next-status="provisional"]::after,
-.vacant-room-line[data-next-status="unconfirmed"]::after {
+.staying-card[data-next-status="provisional"]:not([data-spans-next="true"])::after,
+.staying-card[data-next-status="unconfirmed"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="provisional"]:not([data-spans-next="true"])::after,
+.vacant-room-line[data-next-status="unconfirmed"]:not([data-spans-next="true"])::after {
     content: '';
     position: absolute;
-    right: -28px;
+    right: -30px;
     top: 0;
     bottom: 0;
     width: 25px;
