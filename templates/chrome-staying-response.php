@@ -73,7 +73,7 @@ if (empty($bookings)) {
              <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
 
             <!-- Card Header (Collapsed View) -->
-            <div class="staying-header">
+            <div class="staying-header" onclick="this.parentElement.classList.toggle('expanded')">
                 <div class="staying-main-info">
                     <!-- Line 1: Room + Guest Name + Night Progress -->
                     <div class="staying-guest-line">
@@ -1004,4 +1004,210 @@ if (empty($bookings)) {
     pointer-events: none;
     z-index: -1;
 }
+
+/* ============================================
+   EXTENSION CSS (Centralized from sidepanel.css)
+   ============================================ */
+
+/* Override/enhance staying card layout with complete styling */
+.staying-card {
+    background: #fff !important;
+    border-radius: 8px !important;
+    margin: 0 23px 5px 23px !important; /* Horizontal margin for timeline indicator space (15px indicator + 8px gap) */
+    transition: all 0.2s !important;
+    position: relative !important;
+    border: 1px solid #e5e7eb !important; /* Keep default border, will be overridden by status colors below */
+}
+
+/* Border colors based on NewBook status - override default */
+.staying-card[data-status="arrived"] {
+    border: 2px solid #3b82f6 !important; /* Blue */
+}
+
+.staying-card[data-status="confirmed"] {
+    border: 2px solid #10b981 !important; /* Green */
+}
+
+.staying-card[data-status="unconfirmed"] {
+    border: 2px solid #f59e0b !important; /* Amber */
+}
+
+.staying-card[data-status="departed"] {
+    border: 2px solid #a855f7 !important; /* Purple */
+}
+
+.staying-card:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
+
+.staying-card.expanded {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Group highlighting */
+.staying-card.group-highlight {
+    background: #fef3c7 !important; /* Light amber background */
+}
+
+/* Staying Card Header - enhanced */
+.staying-header {
+    padding: 8px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    position: relative !important;
+    border-radius: 8px !important; /* Default: fully rounded */
+    background: white !important;
+    overflow: visible !important; /* Allow timeline extensions to show beyond card bounds */
+}
+
+/* Header borders matching status colors - fully wrapped */
+.staying-card[data-status="arrived"] .staying-header {
+    border: 2px solid #3b82f6 !important; /* Blue */
+}
+
+.staying-card[data-status="confirmed"] .staying-header {
+    border: 2px solid #10b981 !important; /* Green */
+}
+
+.staying-card[data-status="unconfirmed"] .staying-header {
+    border: 2px solid #f59e0b !important; /* Amber */
+}
+
+.staying-card[data-status="departed"] .staying-header {
+    border: 2px solid #a855f7 !important; /* Purple */
+}
+
+/* Remove borders on extending sides */
+.staying-card[data-spans-previous="true"] .staying-header {
+    border-left: none !important;
+}
+
+.staying-card[data-spans-next="true"] .staying-header {
+    border-right: none !important;
+}
+
+/* When expanded with timeline indicators - remove bottom corner radius to connect with details */
+
+/* Grey vacant indicators */
+.staying-card.expanded[data-previous-vacant="true"] .staying-header {
+    border-radius: 8px 8px 8px 0 !important; /* Remove bottom-left radius */
+}
+
+.staying-card.expanded[data-next-vacant="true"] .staying-header {
+    border-radius: 8px 8px 0 8px !important; /* Remove bottom-right radius */
+}
+
+.staying-card.expanded[data-previous-vacant="true"][data-next-vacant="true"] .staying-header {
+    border-radius: 8px 8px 0 0 !important; /* Remove both bottom corners */
+}
+
+/* Colored status indicators (different booking on adjacent night) */
+.staying-card.expanded[data-previous-status]:not([data-previous-status=""]) .staying-header {
+    border-radius: 8px 8px 8px 0 !important; /* Remove bottom-left radius */
+}
+
+.staying-card.expanded[data-next-status]:not([data-next-status=""]) .staying-header {
+    border-radius: 8px 8px 0 8px !important; /* Remove bottom-right radius */
+}
+
+.staying-card.expanded[data-previous-status]:not([data-previous-status=""])[data-next-status]:not([data-next-status=""]) .staying-header {
+    border-radius: 8px 8px 0 0 !important; /* Remove both bottom corners */
+}
+
+/* Mixed indicators - vacant on one side, status on other */
+.staying-card.expanded[data-previous-vacant="true"][data-next-status]:not([data-next-status=""]) .staying-header,
+.staying-card.expanded[data-previous-status]:not([data-previous-status=""])[data-next-vacant="true"] .staying-header {
+    border-radius: 8px 8px 0 0 !important; /* Remove both bottom corners */
+}
+
+/* Spanning bookings when expanded - connect bottom to expanded section */
+.staying-card.expanded[data-spans-previous="true"]:not([data-spans-next="true"]) .staying-header {
+    border-radius: 0 8px 0 0 !important; /* Left flat, only top-right rounded */
+}
+
+.staying-card.expanded[data-spans-next="true"]:not([data-spans-previous="true"]) .staying-header {
+    border-radius: 8px 0 0 0 !important; /* Right flat, only top-left rounded */
+}
+
+.staying-card.expanded[data-spans-previous="true"][data-spans-next="true"] .staying-header {
+    border-radius: 0 !important; /* All corners square when spanning both sides */
+}
+
+.staying-expand-icon {
+    font-size: 12px !important;
+    color: #a0aec0 !important;
+    transition: transform 0.2s !important;
+}
+
+.staying-card.expanded .staying-expand-icon {
+    transform: rotate(180deg) !important;
+}
 </style>
+
+<script>
+// ===== STAYING TAB INTERACTIONS (INLINE) =====
+
+// Filter staying cards by group ID
+function filterStayingByGroup(groupId) {
+  const cards = document.querySelectorAll('.staying-card');
+  const vacantRows = document.querySelectorAll('.vacant-room-line');
+
+  if (groupId === null) {
+    cards.forEach(card => card.style.display = '');
+    vacantRows.forEach(row => row.style.display = '');
+    window.activeGroupFilter = null;
+  } else {
+    cards.forEach(card => {
+      const cardGroupId = card.dataset.groupId;
+      card.style.display = (cardGroupId === groupId.toString()) ? '' : 'none';
+    });
+    vacantRows.forEach(row => row.style.display = 'none');
+    window.activeGroupFilter = groupId;
+  }
+
+  updateGroupBadgeUI(groupId);
+}
+
+// Update visual state of group badges
+function updateGroupBadgeUI(activeGroupId) {
+  const badges = document.querySelectorAll('.group-id-badge');
+
+  badges.forEach(badge => {
+    const badgeGroupId = parseInt(badge.textContent.replace('G#', ''));
+
+    if (activeGroupId === null) {
+      badge.style.backgroundColor = '';
+      badge.style.color = '';
+      badge.style.opacity = '';
+    } else if (badgeGroupId === activeGroupId) {
+      badge.style.backgroundColor = '#6366f1';
+      badge.style.color = 'white';
+      badge.style.opacity = '';
+    } else {
+      badge.style.opacity = '0.5';
+    }
+  });
+}
+
+// Initialize group badge click handlers
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.group-id-badge').forEach(badge => {
+    badge.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      const groupId = parseInt(this.textContent.replace('G#', ''));
+
+      if (window.activeGroupFilter === groupId) {
+        console.log('Clearing group filter');
+        filterStayingByGroup(null);
+      } else {
+        console.log('Filtering to group:', groupId);
+        filterStayingByGroup(groupId);
+      }
+    });
+  });
+});
+</script>
