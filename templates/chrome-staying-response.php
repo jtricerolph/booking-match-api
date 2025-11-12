@@ -498,8 +498,8 @@ if (empty($bookings)) {
     font-weight: 600 !important;
     font-size: 13px !important;
     display: inline-block !important;
-    background-color: #f3f4f6 !important; /* Default gray background */
-    color: #4b5563 !important; /* Default gray text */
+    background-color: #fef3c7 !important; /* Default amber background for unconfirmed */
+    color: #92400e !important; /* Default amber/brown text */
 }
 
 /* Vacant room numbers don't get badge styling */
@@ -516,18 +516,20 @@ if (empty($bookings)) {
     color: #065f46 !important;
 }
 
-/* Checked-in status - blue badge */
+/* Checked-in/Arrived status - blue badge */
 .staying-card[data-status="checked-in"] .room-number,
-.staying-card[data-status="checked_in"] .room-number {
+.staying-card[data-status="checked_in"] .room-number,
+.staying-card[data-status="arrived"] .room-number {
     background-color: #dbeafe !important;
     color: #1e40af !important;
 }
 
-/* Checked-out status - gray badge */
+/* Checked-out/Departed status - purple badge */
 .staying-card[data-status="checked-out"] .room-number,
-.staying-card[data-status="checked_out"] .room-number {
-    background-color: #f3f4f6 !important;
-    color: #4b5563 !important;
+.staying-card[data-status="checked_out"] .room-number,
+.staying-card[data-status="departed"] .room-number {
+    background-color: #e9d5ff !important;
+    color: #6b21a8 !important;
 }
 
 /* Cancelled status - red badge */
@@ -536,8 +538,9 @@ if (empty($bookings)) {
     color: #991b1b !important;
 }
 
-/* Provisional status - yellow/orange badge */
-.staying-card[data-status="provisional"] .room-number {
+/* Provisional/Unconfirmed status - amber badge */
+.staying-card[data-status="provisional"] .room-number,
+.staying-card[data-status="unconfirmed"] .room-number {
     background-color: #fef3c7 !important;
     color: #92400e !important;
 }
