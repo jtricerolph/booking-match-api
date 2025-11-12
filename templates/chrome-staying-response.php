@@ -78,17 +78,17 @@ if ($total_children > 0 || $total_infants > 0) {
 
 <!-- Stats Row -->
 <div class="staying-stats-row">
-    <div class="stat-item">
+    <div class="stat-item stat-filter" data-filter="departs" title="Click to filter departing bookings">
         <span class="material-symbols-outlined">flight_takeoff</span>
         <span class="stat-value"><?php echo $departs_count; ?></span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item">
+    <div class="stat-item stat-filter" data-filter="stays" title="Click to filter staying bookings (hide vacant)">
         <span class="material-symbols-outlined">step_over</span>
         <span class="stat-value"><?php echo $stays_count; ?></span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item">
+    <div class="stat-item stat-filter" data-filter="arrivals" title="Click to filter arriving bookings">
         <span class="material-symbols-outlined">flight_land</span>
         <span class="stat-value"><?php echo $arrivals_count; ?></span>
     </div>
@@ -98,7 +98,7 @@ if ($total_children > 0 || $total_infants > 0) {
         <span class="stat-value"><?php echo $occupancy_str; ?></span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item">
+    <div class="stat-item stat-filter" data-filter="twins" title="Click to filter twin bed bookings">
         <span class="material-symbols-outlined">single_bed</span><span class="material-symbols-outlined">single_bed</span>
         <span class="stat-value"><?php echo $twins_count; ?></span>
     </div>
@@ -147,6 +147,22 @@ if ($total_children > 0 || $total_infants > 0) {
         $spans_next = $booking['spans_to_next'] ?? false;
         $previous_vacant = $booking['previous_vacant'] ?? false;
         $next_vacant = $booking['next_vacant'] ?? false;
+
+        // Calculate filter attributes
+        $is_arriving = ($previous_status === '' || $previous_status === 'vacant');
+        $is_departing = ($next_status === '' || $next_status === 'departed');
+        $is_staying_filter = true; // All non-vacant bookings match "stays" filter
+
+        // Check for twin bed type
+        $has_twin = false;
+        $custom_fields = $booking['custom_fields'] ?? [];
+        foreach ($custom_fields as $field) {
+            if (($field['label'] ?? '') === 'Bed Type' &&
+                stripos($field['value'] ?? '', 'Twin') !== false) {
+                $has_twin = true;
+                break;
+            }
+        }
     ?>
         <div class="staying-card"
              data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
@@ -157,6 +173,10 @@ if ($total_children > 0 || $total_infants > 0) {
              data-spans-next="<?php echo $spans_next ? 'true' : 'false'; ?>"
              data-previous-vacant="<?php echo $previous_vacant ? 'true' : 'false'; ?>"
              data-next-vacant="<?php echo $next_vacant ? 'true' : 'false'; ?>"
+             data-is-arriving="<?php echo $is_arriving ? 'true' : 'false'; ?>"
+             data-is-departing="<?php echo $is_departing ? 'true' : 'false'; ?>"
+             data-is-staying="<?php echo $is_staying_filter ? 'true' : 'false'; ?>"
+             data-has-twin="<?php echo $has_twin ? 'true' : 'false'; ?>"
              <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
 
             <!-- Card Header (Collapsed View) -->
@@ -404,6 +424,30 @@ if ($total_children > 0 || $total_infants > 0) {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.stat-filter {
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.stat-filter:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
+.stat-filter.active {
+    background-color: #6366f1;
+    color: white;
+}
+
+.stat-filter.active .material-symbols-outlined {
+    color: white !important;
+}
+
+.stat-filter.active .stat-value {
+    color: white !important;
 }
 
 .stat-item .material-symbols-outlined {
