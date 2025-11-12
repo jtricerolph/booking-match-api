@@ -1147,6 +1147,15 @@ if (empty($bookings)) {
     margin: 0 23px 5px 23px !important; /* Match staying-card margins */
 }
 
+/* Vacant row spanning margins - extend borders to edges */
+.vacant-room-line[data-spans-previous="true"] {
+    margin-left: -27px !important; /* -50px extension + 23px base = -27px net */
+}
+
+.vacant-room-line[data-spans-next="true"] {
+    margin-right: -27px !important; /* -50px extension + 23px base = -27px net */
+}
+
 /* Vacant row content - no padding to minimize height */
 .vacant-room-content {
     padding: 0 !important; /* No padding - vacant lines take up minimal space */
