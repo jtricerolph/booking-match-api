@@ -982,13 +982,13 @@ if (empty($bookings)) {
     /* No padding - let text stay in place */
 }
 
-/* Padding compensation for vacant room content - keeps text visible when box extends off-screen */
+/* Padding compensation for vacant room content - match staying-header spanning padding */
 .vacant-room-line[data-spans-previous="true"] .vacant-room-content {
-    padding-left: 81px !important; /* 50px margin compensation + 31px base inset */
+    padding-left: 58px !important; /* Same as staying-header: 50px compensation + 8px padding */
 }
 
 .vacant-room-line[data-spans-next="true"] .vacant-room-content {
-    padding-right: 58px !important; /* 50px margin compensation + 8px base padding */
+    padding-right: 58px !important; /* Same as staying-header: 50px compensation + 8px padding */
 }
 
 /* Both sides spanning - no radius */
@@ -1145,9 +1145,14 @@ if (empty($bookings)) {
     display: block !important;
 }
 
-/* Vacant row content padding - inset to align with staying headers */
+/* Vacant row base margin - match staying-card structure */
+.vacant-room-line {
+    margin: 0 23px 5px 23px !important; /* Match staying-card margins */
+}
+
+/* Vacant row content padding - match staying-header padding */
 .vacant-room-content {
-    padding: 5px 8px 5px 31px !important; /* 31px left = 23px staying-card margin + 8px header padding */
+    padding: 5px 8px !important; /* Same as staying-header but with 5px vertical for shorter height */
 }
 
 /* Ensure staying-main-info doesn't overflow on spanning nights */
