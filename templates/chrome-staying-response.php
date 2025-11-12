@@ -725,9 +725,9 @@ if (empty($bookings)) {
     border-radius: 0 8px 8px 0;
 }
 
-/* Multi-night booking extension - extend header to left */
+/* Multi-night booking extension - extend header to left, keep right side rounded */
 .staying-card[data-spans-previous="true"] .staying-header {
-    border-radius: 0 8px 0 0 !important;
+    border-radius: 0 8px 8px 0 !important;
     margin-left: -50px;
     padding-left: 58px; /* 50px extension + 8px original padding */
 }
@@ -858,9 +858,9 @@ if (empty($bookings)) {
     border-radius: 8px 0 0 8px;
 }
 
-/* Multi-night booking extension - extend header to right */
+/* Multi-night booking extension - extend header to right, keep left side rounded */
 .staying-card[data-spans-next="true"] .staying-header {
-    border-radius: 8px 0 0 0 !important;
+    border-radius: 8px 0 0 8px !important;
     margin-right: -50px;
     padding-right: 58px; /* 50px extension + 8px original padding */
 }
