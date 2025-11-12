@@ -73,7 +73,7 @@ if (empty($bookings)) {
              <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
 
             <!-- Card Header (Collapsed View) -->
-            <div class="staying-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="staying-header">
                 <div class="staying-main-info">
                     <!-- Line 1: Room + Guest Name + Night Progress -->
                     <div class="staying-guest-line">
@@ -1192,68 +1192,4 @@ if (empty($bookings)) {
 }
 </style>
 
-<script>
-// ===== STAYING TAB INTERACTIONS (INLINE) =====
-
-// Filter staying cards by group ID
-function filterStayingByGroup(groupId) {
-  const cards = document.querySelectorAll('.staying-card');
-  const vacantRows = document.querySelectorAll('.vacant-room-line');
-
-  if (groupId === null) {
-    cards.forEach(card => card.style.display = '');
-    vacantRows.forEach(row => row.style.display = '');
-    window.activeGroupFilter = null;
-  } else {
-    cards.forEach(card => {
-      const cardGroupId = card.dataset.groupId;
-      card.style.display = (cardGroupId === groupId.toString()) ? '' : 'none';
-    });
-    vacantRows.forEach(row => row.style.display = 'none');
-    window.activeGroupFilter = groupId;
-  }
-
-  updateGroupBadgeUI(groupId);
-}
-
-// Update visual state of group badges
-function updateGroupBadgeUI(activeGroupId) {
-  const badges = document.querySelectorAll('.group-id-badge');
-
-  badges.forEach(badge => {
-    const badgeGroupId = parseInt(badge.textContent.replace('G#', ''));
-
-    if (activeGroupId === null) {
-      badge.style.backgroundColor = '';
-      badge.style.color = '';
-      badge.style.opacity = '';
-    } else if (badgeGroupId === activeGroupId) {
-      badge.style.backgroundColor = '#6366f1';
-      badge.style.color = 'white';
-      badge.style.opacity = '';
-    } else {
-      badge.style.opacity = '0.5';
-    }
-  });
-}
-
-// Initialize group badge click handlers
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.group-id-badge').forEach(badge => {
-    badge.addEventListener('click', function(e) {
-      e.stopPropagation();
-      e.preventDefault();
-
-      const groupId = parseInt(this.textContent.replace('G#', ''));
-
-      if (window.activeGroupFilter === groupId) {
-        console.log('Clearing group filter');
-        filterStayingByGroup(null);
-      } else {
-        console.log('Filtering to group:', groupId);
-        filterStayingByGroup(groupId);
-      }
-    });
-  });
-});
-</script>
+<!-- Interactivity handled by extension's initializeStayingCards() function -->
