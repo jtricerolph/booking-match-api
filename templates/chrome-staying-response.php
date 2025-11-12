@@ -56,6 +56,8 @@ if (empty($bookings)) {
         $next_status = $booking['next_night_status'] ?? '';
         $spans_previous = $booking['spans_from_previous'] ?? false;
         $spans_next = $booking['spans_to_next'] ?? false;
+        $previous_vacant = $booking['previous_vacant'] ?? false;
+        $next_vacant = $booking['next_vacant'] ?? false;
     ?>
         <div class="staying-card"
              data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
@@ -64,6 +66,8 @@ if (empty($bookings)) {
              data-next-status="<?php echo esc_attr($next_status); ?>"
              data-spans-previous="<?php echo $spans_previous ? 'true' : 'false'; ?>"
              data-spans-next="<?php echo $spans_next ? 'true' : 'false'; ?>"
+             data-previous-vacant="<?php echo $previous_vacant ? 'true' : 'false'; ?>"
+             data-next-vacant="<?php echo $next_vacant ? 'true' : 'false'; ?>"
              <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
 
             <!-- Card Header (Collapsed View) -->
@@ -725,6 +729,20 @@ if (empty($bookings)) {
     border-radius: 0 8px 8px 0;
 }
 
+/* Grey outline box - room was vacant yesterday */
+.staying-card[data-previous-vacant="true"] .staying-header::before,
+.vacant-room-line[data-previous-vacant="true"]::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 0;
+    bottom: 0;
+    width: 15px;
+    border: 1px solid #d1d5db; /* Light grey border like vacant rooms */
+    background: transparent;
+    border-radius: 0 8px 8px 0;
+}
+
 /* Multi-night booking extension - extend header to left, keep right side rounded */
 .staying-card[data-spans-previous="true"] .staying-header {
     border-radius: 0 8px 8px 0 !important;
@@ -855,6 +873,20 @@ if (empty($bookings)) {
     bottom: 0;
     width: 15px;
     background: rgba(245, 158, 11, 0.5); /* amber with 50% opacity */
+    border-radius: 8px 0 0 8px;
+}
+
+/* Grey outline box - room will be vacant tomorrow */
+.staying-card[data-next-vacant="true"] .staying-header::after,
+.vacant-room-line[data-next-vacant="true"]::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 0;
+    bottom: 0;
+    width: 15px;
+    border: 1px solid #d1d5db; /* Light grey border like vacant rooms */
+    background: transparent;
     border-radius: 8px 0 0 8px;
 }
 
