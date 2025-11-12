@@ -563,10 +563,18 @@ if (empty($bookings)) {
 }
 
 /* Highlighted state for grouped bookings - only affect header */
+.staying-card.highlighted {
+    /* Reset card-level styling to prevent whole card highlight */
+    border-color: #e5e7eb !important;
+    background-color: #fff !important;
+    box-shadow: none !important;
+}
+
 .staying-card.highlighted .staying-header {
     background-color: #eef2ff !important;
     border-left: 3px solid #6366f1 !important;
     margin-left: -1px;
+    border-radius: 7px 0 0 0;
 }
 
 .staying-card.highlighted .group-id-badge {
@@ -576,7 +584,7 @@ if (empty($bookings)) {
 
 /* Ensure expanded details don't get highlighted */
 .staying-card.highlighted .staying-details {
-    background-color: transparent !important;
+    background-color: #fff !important;
     border-left: none !important;
 }
 </style>
