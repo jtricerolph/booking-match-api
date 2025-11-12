@@ -1160,6 +1160,16 @@ if (empty($bookings)) {
 .staying-guest-line {
     min-width: 0 !important; /* Prevent overflow */
 }
+
+/* Adjust absolutely-positioned badges when spanning to keep them visible */
+.staying-card[data-spans-next="true"] .staying-badges {
+    right: 54px !important; /* 50px extension + 4px original position */
+}
+
+.staying-card[data-spans-previous="true"] .staying-badges {
+    left: 54px !important; /* 50px extension + 4px from edge */
+    right: auto !important; /* Override right positioning */
+}
 </style>
 
 <script>
