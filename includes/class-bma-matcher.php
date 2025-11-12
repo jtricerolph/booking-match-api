@@ -908,7 +908,7 @@ class BMA_Matcher {
      * Check if booking has a package for a specific date
      * Uses the same logic as reservation-management-integration plugin
      */
-    private function check_has_package($booking, $date) {
+    public function check_has_package($booking, $date) {
         // Get package inventory name (check new option first, fallback to old)
         $package_inventory_name = get_option('bma_package_inventory_name') ?: get_option('hotel_booking_package_inventory_name', '');
 

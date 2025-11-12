@@ -989,11 +989,11 @@ class BMA_REST_Controller extends WP_REST_Controller {
         // Extract tariff types
         $tariffs = $this->extract_tariffs($booking);
 
-        // Check if has package
-        $has_package = in_array('DBB', $tariffs);
-
         // Match with restaurant for this specific date using existing match_single_night method
         $matcher = new BMA_Matcher();
+
+        // Check if has package using matcher's method
+        $has_package = $matcher->check_has_package($booking, $target_date);
 
         // Use reflection to access private match_single_night method
         $reflection = new ReflectionClass($matcher);
