@@ -35,17 +35,13 @@ foreach ($bookings as $booking) {
     $arrival_date = $booking['arrival_date'] ?? '';
     $departure_date = $booking['departure_date'] ?? '';
 
-    // Calculate day after $date for departure comparisons
-    // Departure date is checkout date (day after last night)
-    $day_after = date('Y-m-d', strtotime($date . ' +1 day'));
-
-    // Departing: last night is the date set (checkout is day after)
-    if ($departure_date === $day_after) {
+    // Departing: leaving on set date (departure_date = checkout date)
+    if ($departure_date === $date) {
         $departs_count++;
     }
 
-    // Stopovers: arrived before date set AND checkout after day after date set
-    if ($arrival_date < $date && $departure_date > $day_after) {
+    // Stopovers: arrived before set date AND departing after set date (not arriving today)
+    if ($arrival_date < $date && $departure_date > $date) {
         $stopovers_count++;
     }
 
@@ -71,10 +67,10 @@ foreach ($bookings as $booking) {
     }
 }
 
-// Format occupancy string
-$occupancy_str = $total_adults . 'A';
+// Format occupancy string as x+y+z
+$occupancy_str = (string)$total_adults;
 if ($total_children > 0 || $total_infants > 0) {
-    $occupancy_str .= ' | ' . $total_children . 'C';
+    $occupancy_str .= '+' . $total_children;
     if ($total_infants > 0) {
         $occupancy_str .= '+' . $total_infants;
     }
@@ -163,11 +159,10 @@ if ($total_children > 0 || $total_infants > 0) {
         // Calculate filter attributes based on actual booking dates (already in YYYY-MM-DD format)
         $arrival_date = $booking['arrival_date'] ?? '';
         $departure_date = $booking['departure_date'] ?? '';
-        $day_after = date('Y-m-d', strtotime($date . ' +1 day'));
 
         $is_arriving = ($arrival_date === $date);
-        $is_departing = ($departure_date === $day_after); // Checkout is day after last night
-        $is_stopover = ($arrival_date < $date && $departure_date > $day_after);
+        $is_departing = ($departure_date === $date); // Leaving on set date
+        $is_stopover = ($arrival_date < $date && $departure_date > $date); // Arrived before, leaving after
 
         // Check for twin bed type
         $has_twin = false;
