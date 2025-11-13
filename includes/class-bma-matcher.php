@@ -17,8 +17,9 @@ class BMA_Matcher {
 
     /**
      * Cache for hotel bookings by date to prevent duplicate API calls
+     * STATIC to share cache across all matcher instances (summary, staying, restaurant tabs)
      */
-    private $hotel_bookings_cache = array();
+    private static $hotel_bookings_cache = array();
 
     /**
      * Track dates that are using stale cache (fallback due to API failures)
@@ -745,10 +746,10 @@ class BMA_Matcher {
      * Uses caching to prevent duplicate API calls for the same date
      */
     private function fetch_hotel_bookings_for_date($date) {
-        // Check cache first
-        if (isset($this->hotel_bookings_cache[$date])) {
-            bma_log('BMA_Matcher: Using cached hotel bookings for date ' . $date, 'debug');
-            return $this->hotel_bookings_cache[$date];
+        // Check static cache first (shared across all matcher instances)
+        if (isset(self::$hotel_bookings_cache[$date])) {
+            bma_log('BMA_Matcher: Using STATIC cached hotel bookings for date ' . $date, 'debug');
+            return self::$hotel_bookings_cache[$date];
         }
 
         // Log the call with caller info
@@ -760,9 +761,9 @@ class BMA_Matcher {
         $searcher = new BMA_NewBook_Search();
         $data = $searcher->fetch_hotel_bookings_for_date($date);
 
-        // Cache the result
-        $this->hotel_bookings_cache[$date] = $data;
-        bma_log('BMA_Matcher: Cached ' . count($data) . ' hotel bookings for date ' . $date, 'debug');
+        // Cache the result in static cache
+        self::$hotel_bookings_cache[$date] = $data;
+        bma_log('BMA_Matcher: Cached ' . count($data) . ' hotel bookings in STATIC cache for date ' . $date, 'debug');
 
         return $data;
     }
