@@ -1309,7 +1309,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $date,
                     $resos_booking['_id'] ?? $resos_booking['id'] ?? '',
                     $hotel_booking['booking_id'] ?? $booking_id,
-                    $hotel_booking['guest_name'] ?? ''
+                    $hotel_booking['guest_name'] ?? '',
+                    $resos_booking
                 );
 
                 $response = array(
@@ -1344,11 +1345,22 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Build comparison HTML for chrome-sidepanel context
      */
-    private function build_comparison_html($comparison_data, $date, $resos_booking_id, $hotel_booking_id, $guest_name) {
+    private function build_comparison_html($comparison_data, $date, $resos_booking_id, $hotel_booking_id, $guest_name, $resos_booking = array()) {
         $hotel = $comparison_data['hotel'] ?? array();
         $resos = $comparison_data['resos'] ?? array();
         $matches = $comparison_data['matches'] ?? array();
         $suggested_updates = $comparison_data['suggested_updates'] ?? array();
+
+        // Extract GROUP/EXCLUDE field from custom fields
+        $group_exclude_field = '';
+        if (!empty($resos_booking['customFields'])) {
+            foreach ($resos_booking['customFields'] as $field) {
+                if (isset($field['name']) && $field['name'] === 'GROUP/EXCLUDE') {
+                    $group_exclude_field = $field['value'] ?? '';
+                    break;
+                }
+            }
+        }
 
         // Determine if confirmed and matched elsewhere
         $is_confirmed = !empty($hotel['is_primary_match']);
@@ -1405,6 +1417,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
                             data-resos-booking-id="<?php echo esc_attr($resos_booking_id); ?>"
                             data-hotel-booking-id="<?php echo esc_attr($hotel_booking_id); ?>"
                             data-date="<?php echo esc_attr($date); ?>"
+                            data-resos-time="<?php echo esc_attr($resos['time'] ?? ''); ?>"
+                            data-resos-guest="<?php echo esc_attr($resos['name'] ?? ''); ?>"
+                            data-resos-people="<?php echo esc_attr($resos['people'] ?? '0'); ?>"
+                            data-group-exclude="<?php echo esc_attr($group_exclude_field); ?>"
                             title="Manage Group">
                         <span class="material-symbols-outlined">groups</span>
                     </button>

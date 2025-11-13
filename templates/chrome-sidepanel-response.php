@@ -3241,7 +3241,10 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     console.log('BMA: Manage Group button check:', { resosBookingId, hotelBookingId, date });
     if (resosBookingId) {
         console.log('BMA: Adding Manage Group button');
-        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}" title="Manage Group">`;
+        const resosTime = escapeHTML(resos.time || '');
+        const resosGuest = escapeHTML(resos.name || '');
+        const resosPeople = escapeHTML(resos.people || '0');
+        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}" data-resos-time="${resosTime}" data-resos-guest="${resosGuest}" data-resos-people="${resosPeople}" title="Manage Group">`;
         html += '<span class="material-symbols-outlined">groups</span>';
         html += '</button>';
     } else {
