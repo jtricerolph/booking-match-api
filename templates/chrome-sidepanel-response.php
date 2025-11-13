@@ -2453,9 +2453,17 @@ if (!defined('ABSPATH')) {
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
 <script>
-// Get API configuration from parent window or use defaults
+// Get API configuration from window or parent window
 function getAPIConfig() {
-    // Try to get from parent window's APIClient if available
+    // Try current window first (Chrome extension context)
+    if (window.apiClient) {
+        return {
+            baseUrl: window.apiClient.baseUrl,
+            authHeader: window.apiClient.authHeader
+        };
+    }
+
+    // Try parent window (iframe context)
     if (window.parent && window.parent.apiClient) {
         return {
             baseUrl: window.parent.apiClient.baseUrl,
