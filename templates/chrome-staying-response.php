@@ -113,13 +113,11 @@ if (isset($departing_bookings) && is_array($departing_bookings)) {
     }
 }
 
-// Format occupancy string as x+y+z
+// Format occupancy string as x+y (adults + combined children/infants)
 $occupancy_str = (string)$total_adults;
-if ($total_children > 0 || $total_infants > 0) {
-    $occupancy_str .= '+' . $total_children;
-    if ($total_infants > 0) {
-        $occupancy_str .= '+' . $total_infants;
-    }
+$total_minors = $total_children + $total_infants;
+if ($total_minors > 0) {
+    $occupancy_str .= '+' . $total_minors;
 }
 
 // Format departs stat value (x/y if today, otherwise just count)
