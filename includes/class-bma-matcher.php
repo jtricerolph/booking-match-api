@@ -750,6 +750,11 @@ class BMA_Matcher {
             return $this->hotel_bookings_cache[$date];
         }
 
+        // Log the call with caller info
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        $caller = isset($backtrace[1]) ? $backtrace[1]['function'] : 'unknown';
+        bma_log('BMA_Matcher: CACHE MISS - Fetching hotel bookings for date ' . $date . ' (called from: ' . $caller . ')', 'error');
+
         // Use the working BMA_NewBook_Search method
         $searcher = new BMA_NewBook_Search();
         $data = $searcher->fetch_hotel_bookings_for_date($date);
