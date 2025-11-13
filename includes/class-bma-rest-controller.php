@@ -1204,6 +1204,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $date = $request->get_param('date');
             $resos_booking_id = $request->get_param('resos_booking_id');
             $force_refresh = $request->get_param('force_refresh') ?: false;
+            $context = $request->get_param('context') ?: 'json';
 
             // Fetch hotel booking
             $searcher = new BMA_NewBook_Search();
@@ -1291,7 +1292,25 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $comparison = new BMA_Comparison();
             $comparison_data = $comparison->prepare_comparison_data($hotel_booking, $resos_booking, $date);
 
-            // Add metadata
+            // If context is chrome-sidepanel, return HTML
+            if ($context === 'chrome-sidepanel') {
+                $html = $this->build_comparison_html(
+                    $comparison_data,
+                    $date,
+                    $resos_booking['_id'] ?? $resos_booking['id'] ?? '',
+                    $hotel_booking['booking_id'] ?? $booking_id,
+                    $hotel_booking['guest_name'] ?? ''
+                );
+
+                $response = array(
+                    'success' => true,
+                    'html' => $html
+                );
+
+                return rest_ensure_response($response);
+            }
+
+            // Default: return JSON data (backward compatible)
             $response = array(
                 'success' => true,
                 'booking_id' => $booking_id,
@@ -1310,6 +1329,156 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 array('status' => 500)
             );
         }
+    }
+
+    /**
+     * Build comparison HTML for chrome-sidepanel context
+     */
+    private function build_comparison_html($comparison_data, $date, $resos_booking_id, $hotel_booking_id, $guest_name) {
+        $hotel = $comparison_data['hotel'] ?? array();
+        $resos = $comparison_data['resos'] ?? array();
+        $matches = $comparison_data['matches'] ?? array();
+        $suggested_updates = $comparison_data['suggested_updates'] ?? array();
+
+        // Determine if confirmed and matched elsewhere
+        $is_confirmed = !empty($hotel['is_primary_match']);
+        $is_matched_elsewhere = !empty($hotel['matched_elsewhere']);
+
+        // Only show suggested updates for confirmed matches
+        $suggestions = $is_confirmed ? $suggested_updates : array();
+        $has_suggestions = !empty($suggestions);
+
+        $container_id = 'comparison-' . $date . '-' . $resos_booking_id;
+
+        ob_start();
+        ?>
+        <!-- TEMPLATE VERSION 1.4.0-PHP -->
+        <div class="comparison-row-content">
+            <div class="comparison-table-wrapper">
+                <div class="comparison-header">Match Comparison [v1.4.0-PHP-SERVER]</div>
+                <table class="comparison-table">
+                    <thead><tr>
+                        <th>Field</th>
+                        <th>Newbook</th>
+                        <th>ResOS</th>
+                    </tr></thead>
+                    <tbody>
+                        <?php echo $this->build_comparison_row('Name', 'name', $hotel['name'] ?? '', $resos['name'] ?? '', $matches['name'] ?? false, $suggestions['name'] ?? null); ?>
+                        <?php echo $this->build_comparison_row('Phone', 'phone', $hotel['phone'] ?? '', $resos['phone'] ?? '', $matches['phone'] ?? false, $suggestions['phone'] ?? null); ?>
+                        <?php echo $this->build_comparison_row('Email', 'email', $hotel['email'] ?? '', $resos['email'] ?? '', $matches['email'] ?? false, $suggestions['email'] ?? null); ?>
+                        <?php echo $this->build_comparison_row('People', 'people', $hotel['people'] ?? '', $resos['people'] ?? '', $matches['people'] ?? false, $suggestions['people'] ?? null); ?>
+                        <?php echo $this->build_comparison_row('Package', 'dbb', $hotel['rate_type'] ?? '', $resos['dbb'] ?? '', $matches['dbb'] ?? false, $suggestions['dbb'] ?? null); ?>
+                        <?php echo $this->build_comparison_row('#', 'booking_ref', $hotel['booking_id'] ?? '', $resos['booking_ref'] ?? '', $matches['booking_ref'] ?? false, $suggestions['booking_ref'] ?? null); ?>
+                        <?php
+                        $hotel_guest_value = !empty($hotel['is_hotel_guest']) ? 'Yes' : '-';
+                        echo $this->build_comparison_row('Resident', 'hotel_guest', $hotel_guest_value, $resos['hotel_guest'] ?? '', false, $suggestions['hotel_guest'] ?? null);
+                        ?>
+                        <?php
+                        $status = $resos['status'] ?? 'request';
+                        $status_icon = $this->get_status_icon($status);
+                        $status_display = '<span class="material-symbols-outlined">' . $status_icon . '</span> ' . ucfirst($status);
+                        echo $this->build_comparison_row('Status', 'status', $hotel['status'] ?? '', $status_display, false, $suggestions['status'] ?? null, true);
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="comparison-actions-buttons">
+                <!-- 1. Close button -->
+                <button class="btn-close-comparison" data-action="close-comparison" data-container-id="<?php echo esc_attr($container_id); ?>">
+                    <span class="material-symbols-outlined">close</span> Close
+                </button>
+
+                <!-- 2. Manage Group button (ALWAYS SHOWN for matched bookings) -->
+                <?php if (!empty($resos_booking_id)): ?>
+                    <button class="btn-manage-group" data-action="manage-group"
+                            data-resos-booking-id="<?php echo esc_attr($resos_booking_id); ?>"
+                            data-hotel-booking-id="<?php echo esc_attr($hotel_booking_id); ?>"
+                            data-date="<?php echo esc_attr($date); ?>">
+                        <span class="material-symbols-outlined">groups</span> Manage Group
+                    </button>
+                <?php endif; ?>
+
+                <!-- 3. Exclude Match button -->
+                <?php if (!$is_confirmed && !$is_matched_elsewhere && !empty($resos_booking_id) && !empty($hotel_booking_id)): ?>
+                    <button class="btn-exclude-match" data-action="exclude-match"
+                            data-resos-booking-id="<?php echo esc_attr($resos_booking_id); ?>"
+                            data-hotel-booking-id="<?php echo esc_attr($hotel_booking_id); ?>"
+                            data-guest-name="<?php echo esc_attr($guest_name); ?>">
+                        <span class="material-symbols-outlined">close</span> Exclude Match
+                    </button>
+                <?php endif; ?>
+
+                <!-- 4. Update button -->
+                <?php if ($has_suggestions): ?>
+                    <?php
+                    $button_label = $is_confirmed ? 'Update Selected' : 'Update Selected & Match';
+                    $button_class = $is_confirmed ? 'btn-confirm-match btn-update-confirmed' : 'btn-confirm-match';
+                    ?>
+                    <button class="<?php echo esc_attr($button_class); ?>" data-action="submit-suggestions"
+                            data-date="<?php echo esc_attr($date); ?>"
+                            data-resos-booking-id="<?php echo esc_attr($resos['id'] ?? ''); ?>"
+                            data-hotel-booking-id="<?php echo esc_attr($hotel_booking_id); ?>"
+                            data-is-confirmed="<?php echo $is_confirmed ? 'true' : 'false'; ?>">
+                        <span class="material-symbols-outlined">check_circle</span> <?php echo esc_html($button_label); ?>
+                    </button>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Build a single comparison table row
+     */
+    private function build_comparison_row($label, $field, $hotel_value, $resos_value, $is_match, $suggestion_value, $is_html = false) {
+        $match_class = $is_match ? ' class="match-row"' : '';
+        $has_suggestion = $suggestion_value !== null && $suggestion_value !== '';
+
+        $html = '<tr' . $match_class . '>';
+        $html .= '<td class="field-label">' . esc_html($label) . '</td>';
+        $html .= '<td class="hotel-value">' . ($is_html ? $hotel_value : esc_html($hotel_value)) . '</td>';
+
+        // ResOS column
+        $html .= '<td class="resos-value">';
+        if ($has_suggestion) {
+            $html .= '<div class="suggestion-container">';
+            $html .= '<div class="current-value">' . ($is_html ? $resos_value : esc_html($resos_value)) . '</div>';
+            $html .= '<div class="suggestion-value">';
+            $html .= '<input type="checkbox" class="suggestion-checkbox" data-field="' . esc_attr($field) . '" checked>';
+            $html .= '<span class="suggestion-arrow">→</span>';
+            $html .= '<span class="suggested-text">' . ($is_html ? $suggestion_value : esc_html($suggestion_value)) . '</span>';
+            $html .= '</div>';
+            $html .= '</div>';
+        } else {
+            $html .= $is_html ? $resos_value : esc_html($resos_value);
+        }
+        $html .= '</td>';
+        $html .= '</tr>';
+
+        return $html;
+    }
+
+    /**
+     * Get status icon for a given status
+     */
+    private function get_status_icon($status) {
+        $icons = array(
+            'request' => 'pending',
+            'confirmed' => 'check_circle',
+            'declined' => 'thumb_down',
+            'waitlist' => 'pending_actions',
+            'arrived' => 'directions_walk',
+            'seated' => 'airline_seat_recline_normal',
+            'left' => 'flight_takeoff',
+            'no_show' => 'block',
+            'no-show' => 'block',
+            'canceled' => 'cancel',
+            'cancelled' => 'cancel',
+        );
+
+        return $icons[$status] ?? 'help';
     }
 
     /**
@@ -1362,6 +1531,13 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'type' => 'boolean',
                 'required' => false,
                 'default' => false,
+            ),
+            'context' => array(
+                'description' => __('Response format context (json, chrome-sidepanel, etc.)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'default' => 'json',
+                'sanitize_callback' => 'sanitize_text_field',
             ),
         );
     }

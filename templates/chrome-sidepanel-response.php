@@ -3125,15 +3125,16 @@ async function loadComparisonView(date, bookingId, resosBookingId, buttonElement
             body: JSON.stringify({
                 booking_id: bookingId,
                 resos_booking_id: resosBookingId,
-                date: date
+                date: date,
+                context: 'chrome-sidepanel'
             })
         });
 
         const result = await response.json();
 
-        if (result.success && result.comparison) {
-            const comparisonHTML = buildComparisonHTML(result.comparison, date, resosBookingId, isConfirmed, isMatchedElsewhere, hotelBookingId, guestName);
-            container.innerHTML = comparisonHTML;
+        if (result.success && result.html) {
+            // Use server-generated HTML (includes Manage Group button!)
+            container.innerHTML = result.html;
 
             // Attach event listeners to suggestion checkboxes for visual feedback
             attachSuggestionCheckboxListeners(container);
