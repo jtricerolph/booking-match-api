@@ -272,7 +272,7 @@ if (!defined('ABSPATH')) {
                                     <?php if ($match['match_info']['is_primary'] && !empty($match['resos_booking_id']) && !empty($match['restaurant_id'])): ?>
                                         <a href="https://app.resos.com/<?php echo esc_attr($match['restaurant_id']); ?>/bookings/timetable/<?php echo esc_attr($night['date']); ?>/<?php echo esc_attr($match['resos_booking_id']); ?>"
                                            class="bma-action-link bma-resos-link" target="_blank">
-                                            <span class="material-symbols-outlined">visibility</span> View in ResOS
+                                            <span class="material-symbols-outlined">visibility</span> ResOS
                                         </a>
                                     <?php endif; ?>
                                 </div>
@@ -3240,8 +3240,8 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     console.log('BMA: Manage Group button check:', { resosBookingId, hotelBookingId, date });
     if (resosBookingId) {
         console.log('BMA: Adding Manage Group button');
-        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}">`;
-        html += '<span class="material-symbols-outlined">groups</span> Manage Group';
+        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}" title="Manage Group">`;
+        html += '<span class="material-symbols-outlined">groups</span>';
         html += '</button>';
     } else {
         console.log('BMA: Manage Group button NOT added - resosBookingId is falsy');
@@ -3249,8 +3249,8 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
 
     // 3. Exclude Match button (only for non-confirmed, non-matched-elsewhere matches)
     if (!isConfirmed && !isMatchedElsewhere && resosBookingId && hotelBookingId) {
-        html += `<button class="btn-exclude-match" data-action="exclude-match" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-guest-name="${escapeHTML(guestName || 'Guest')}">`;
-        html += '<span class="material-symbols-outlined">close</span> Exclude Match';
+        html += `<button class="btn-exclude-match" data-action="exclude-match" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-guest-name="${escapeHTML(guestName || 'Guest')}" title="Exclude Match">`;
+        html += '<span class="material-symbols-outlined">close</span>';
         html += '</button>';
     }
 
