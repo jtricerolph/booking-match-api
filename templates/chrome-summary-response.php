@@ -129,33 +129,37 @@ if (empty($bookings)) {
                                 <?php
                                 $match = $matches[0];
                                 $is_primary = $match['match_info']['is_primary'] ?? false;
+                                $is_group_member = $match['match_info']['is_group_member'] ?? false;
                                 $has_suggestions = $match['has_suggestions'] ?? false;
                                 $time = date('H:i', strtotime($match['time']));
                                 $pax = $match['people'] ?? 0;
                                 $resos_id = $match['resos_booking_id'] ?? '';
                                 $restaurant_id = $match['restaurant_id'] ?? '';
                                 ?>
-                                <div class="night-row <?php echo ($is_primary && !$has_suggestions) ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                <div class="night-row <?php echo (($is_primary && !$has_suggestions) || $is_group_member) ? 'resos-deep-link' : 'clickable-issue'; ?>"
                                      data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                      data-date="<?php echo esc_attr($night_date); ?>"
-                                     <?php if ($is_primary && !$has_suggestions): ?>
+                                     <?php if (($is_primary && !$has_suggestions) || $is_group_member): ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                         title="Click to view in ResOS"
+                                         title="<?php echo $is_group_member ? 'Group booking - click to view in ResOS' : 'Click to view in ResOS'; ?>"
                                      <?php else: ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                     <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
-                                    <span class="status-icon <?php echo ($is_primary && !$has_suggestions) ? 'ok' : ($has_suggestions ? 'updates' : 'warning'); ?>">
+                                    <span class="status-icon <?php echo (($is_primary && !$has_suggestions) || $is_group_member) ? 'ok' : ($has_suggestions ? 'updates' : 'warning'); ?>">
                                         <?php if ($is_stale): ?>
                                             <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                        <?php elseif ($is_group_member): ?>
+                                            <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
+                                            <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                         <?php elseif ($has_suggestions): ?>
                                             <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
                                             <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                         <?php else: ?>
-                                            <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                            <span class="material-symbols-outlined" style="color: <?php echo $is_primary ? '#10b981' : '#f59e0b'; ?>;"><?php echo $is_primary ? 'check' : 'search'; ?></span>
                                         <?php endif; ?>
                                     </span>
                                 </div>

@@ -159,10 +159,11 @@ class BMA_Matcher {
                     $booking_time = date('H:i', strtotime($resos_booking['time']));
                 }
 
-                // Check if there are suggested updates (only for primary matches)
-                // Suggested matches (non-primary) should not show update checkboxes
+                // Check if there are suggested updates (only for primary matches that are NOT group members)
+                // Suggested matches (non-primary) and group members should not show update checkboxes
                 $has_suggestions = false;
-                if ($match_info['is_primary']) {
+                $is_group_member = $match_info['is_group_member'] ?? false;
+                if ($match_info['is_primary'] && !$is_group_member) {
                     $comparison = new BMA_Comparison();
                     $comparison_data = $comparison->prepare_comparison_data($booking, $resos_booking, $date);
                     if (!empty($comparison_data['suggested_updates'])) {
