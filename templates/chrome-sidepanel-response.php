@@ -2834,6 +2834,22 @@ async function openGroupManagementModal(resosBookingId, hotelBookingId, date) {
 
 // Fetch bookings for a specific date
 async function fetchBookingsForDate(date, excludeBookingId) {
+  // Check if getAPIConfig is available
+  if (typeof getAPIConfig !== 'function') {
+    console.error('getAPIConfig function is not defined! Checking window.apiClient...');
+    // Fallback: try to use window.apiClient directly
+    if (!window.apiClient) {
+      throw new Error('API configuration not available. Please ensure the extension is properly initialized.');
+    }
+    // Define getAPIConfig locally if it doesn't exist
+    window.getAPIConfig = function() {
+      return {
+        baseUrl: window.apiClient.baseUrl,
+        authHeader: window.apiClient.authHeader
+      };
+    };
+  }
+
   const config = getAPIConfig();
   let url = `${config.baseUrl}/bookings/for-date?date=${date}`;
   if (excludeBookingId) {
