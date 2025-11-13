@@ -169,15 +169,25 @@ if (!defined('ABSPATH')) {
                             </div>
                         <?php else: ?>
                             <?php $match = $night['resos_matches'][0]; ?>
-                            <div class="bma-night-status matched">
-                                <span class="bma-status-icon">✓</span>
-                                <span>Restaurant booking found</span>
-                                <?php if ($match['match_info']['is_primary']): ?>
-                                    <span class="bma-badge primary">Primary Match</span>
-                                <?php else: ?>
-                                    <span class="bma-badge suggested"><?php echo esc_html(ucfirst($match['match_info']['confidence'])); ?></span>
-                                <?php endif; ?>
-                            </div>
+                            <?php $is_group_member = !empty($match['match_info']['is_group_member']); ?>
+                            <?php if ($is_group_member): ?>
+                                <!-- Group member match - show simplified format with lead room -->
+                                <div class="bma-night-status matched group-member">
+                                    <span><?php echo esc_html($match['time'] ?? 'N/A'); ?> with <?php echo esc_html($match['match_info']['lead_booking_room'] ?? 'N/A'); ?></span>
+                                    <span class="material-symbols-outlined group-icon" style="font-size: 20px; vertical-align: middle; margin-left: 6px;">groups</span>
+                                </div>
+                            <?php else: ?>
+                                <!-- Standard match -->
+                                <div class="bma-night-status matched">
+                                    <span class="bma-status-icon">✓</span>
+                                    <span>Restaurant booking found</span>
+                                    <?php if ($match['match_info']['is_primary']): ?>
+                                        <span class="bma-badge primary">Primary Match</span>
+                                    <?php else: ?>
+                                        <span class="bma-badge suggested"><?php echo esc_html(ucfirst($match['match_info']['confidence'])); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <?php foreach ($night['resos_matches'] as $index => $match): ?>
@@ -194,13 +204,17 @@ if (!defined('ABSPATH')) {
                                 <?php endif; ?>
 
                                 <div class="bma-match-details<?php echo !empty($match['match_info']['is_group_member']) ? ' grouped' : ''; ?>">
-                                    <!-- Line 1: Guest Name - Time (People pax) -->
+                                    <!-- Line 1: Format depends on if it's a group member or not -->
                                     <div class="bma-match-primary">
-                                        <?php echo esc_html($match['guest_name']); ?> -
-                                        <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
-                                        (<?php echo esc_html($match['people']); ?> pax)
                                         <?php if (!empty($match['match_info']['is_group_member'])): ?>
+                                            <!-- Group member: {time} with {lead room} {icon} -->
+                                            <?php echo esc_html($match['time'] ?? 'N/A'); ?> with <?php echo esc_html($match['match_info']['lead_booking_room'] ?? 'N/A'); ?>
                                             <span class="material-symbols-outlined group-icon" title="Group Booking">groups</span>
+                                        <?php else: ?>
+                                            <!-- Standard: Guest Name - Time (People pax) -->
+                                            <?php echo esc_html($match['guest_name']); ?> -
+                                            <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
+                                            (<?php echo esc_html($match['people']); ?> pax)
                                         <?php endif; ?>
                                     </div>
 
