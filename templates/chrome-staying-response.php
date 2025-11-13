@@ -35,17 +35,21 @@ foreach ($bookings as $booking) {
     $arrival_date = isset($booking['booking_arrival']) ? substr($booking['booking_arrival'], 0, 10) : '';
     $departure_date = isset($booking['booking_departure']) ? substr($booking['booking_departure'], 0, 10) : '';
 
-    // Departing: checkout date is the date set
-    if ($departure_date === $date) {
+    // Calculate day after $date for departure comparisons
+    // Departure date is checkout date (day after last night)
+    $day_after = date('Y-m-d', strtotime($date . ' +1 day'));
+
+    // Departing: last night is the date set (checkout is day after)
+    if ($departure_date === $day_after) {
         $departs_count++;
     }
 
-    // Stopovers: arrived before date set AND departing after date set
-    if ($arrival_date < $date && $departure_date > $date) {
+    // Stopovers: arrived before date set AND checkout after day after date set
+    if ($arrival_date < $date && $departure_date > $day_after) {
         $stopovers_count++;
     }
 
-    // Arrivals: checkin date is the date set
+    // Arrivals: checkin date is the date set (first night is the date set)
     if ($arrival_date === $date) {
         $arrivals_count++;
     }
@@ -158,10 +162,11 @@ if ($total_children > 0 || $total_infants > 0) {
         // Calculate filter attributes based on actual booking dates
         $arrival_date = isset($booking['booking_arrival']) ? substr($booking['booking_arrival'], 0, 10) : '';
         $departure_date = isset($booking['booking_departure']) ? substr($booking['booking_departure'], 0, 10) : '';
+        $day_after = date('Y-m-d', strtotime($date . ' +1 day'));
 
         $is_arriving = ($arrival_date === $date);
-        $is_departing = ($departure_date === $date);
-        $is_stopover = ($arrival_date < $date && $departure_date > $date);
+        $is_departing = ($departure_date === $day_after); // Checkout is day after last night
+        $is_stopover = ($arrival_date < $date && $departure_date > $day_after);
 
         // Check for twin bed type
         $has_twin = false;
@@ -420,28 +425,25 @@ if ($total_children > 0 || $total_infants > 0) {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 6px 8px;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border-bottom: 1px solid #e2e8f0;
-    margin-bottom: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #475569;
+    margin-bottom: 5px;
 }
 
 .stat-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    min-width: 60px;
+    gap: 2px;
+    min-width: 50px;
 }
 
 .stat-filter {
     cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 4px 6px;
+    border-radius: 6px;
     transition: all 0.2s ease;
 }
 
@@ -467,28 +469,33 @@ if ($total_children > 0 || $total_infants > 0) {
 }
 
 .stat-item .material-symbols-outlined {
-    font-size: 28px;
+    font-size: 20px;
     color: #64748b;
 }
 
 .twin-beds-icon {
     display: flex;
-    gap: 3px;
+    gap: 2px;
+}
+
+.twin-beds-icon .material-symbols-outlined {
+    font-size: 16px;
 }
 
 .stat-value {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 13px;
     color: #1e293b;
     line-height: 1;
 }
 
 .stat-label {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 500;
     color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+    line-height: 1;
 }
 
 .stat-divider {
@@ -497,6 +504,7 @@ if ($total_children > 0 || $total_infants > 0) {
     align-self: stretch;
     display: flex;
     align-items: center;
+    font-size: 12px;
 }
 
 .staying-empty {
