@@ -3219,10 +3219,14 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     html += '</button>';
 
     // 2. Manage Group button (always shown for matched bookings)
+    console.log('BMA: Manage Group button check:', { resosBookingId, hotelBookingId, date });
     if (resosBookingId) {
+        console.log('BMA: Adding Manage Group button');
         html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}">`;
         html += '<span class="material-symbols-outlined">groups</span> Manage Group';
         html += '</button>';
+    } else {
+        console.log('BMA: Manage Group button NOT added - resosBookingId is falsy');
     }
 
     // 3. Exclude Match button (only for non-confirmed, non-matched-elsewhere matches)
