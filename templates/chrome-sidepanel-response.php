@@ -194,26 +194,13 @@ if (!defined('ABSPATH')) {
                                 <?php endif; ?>
 
                                 <div class="bma-match-details<?php echo !empty($match['match_info']['is_group_member']) ? ' grouped' : ''; ?>">
-                                    <!-- Line 1: Guest Name - Time (People pax) OR Time - Group Icon - Lead ID (People pax) -->
+                                    <!-- Line 1: Guest Name - Time (People pax) -->
                                     <div class="bma-match-primary">
+                                        <?php echo esc_html($match['guest_name']); ?> -
+                                        <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
+                                        (<?php echo esc_html($match['people']); ?> pax)
                                         <?php if (!empty($match['match_info']['is_group_member'])): ?>
-                                            <?php echo esc_html($match['time'] ?? 'Not specified'); ?> -
                                             <span class="material-symbols-outlined group-icon" title="Group Booking">groups</span>
-                                            <?php
-                                            // Get lead booking ID from custom fields
-                                            $lead_booking_id = '';
-                                            if (!empty($match['booking_number'])) {
-                                                $lead_booking_id = $match['booking_number'];
-                                            }
-                                            if (!empty($lead_booking_id)) {
-                                                echo '<span class="lead-booking-id">#' . esc_html($lead_booking_id) . '</span>';
-                                            }
-                                            ?>
-                                            (<?php echo esc_html($match['people']); ?> pax)
-                                        <?php else: ?>
-                                            <?php echo esc_html($match['guest_name']); ?> -
-                                            <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
-                                            (<?php echo esc_html($match['people']); ?> pax)
                                         <?php endif; ?>
                                     </div>
 
@@ -2081,10 +2068,10 @@ if (!defined('ABSPATH')) {
 }
 
 .group-icon {
-    color: #3b82f6;
-    font-size: 1.25rem;
+    color: #10b981;
+    font-size: 1.1rem;
     vertical-align: middle;
-    margin: 0 4px;
+    margin-left: 6px;
 }
 
 .lead-booking-id {
