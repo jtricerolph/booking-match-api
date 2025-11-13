@@ -20,10 +20,18 @@ if (empty($bookings)) {
 // Calculate stats from staying bookings
 $stopovers_count = 0;
 $arrivals_count = 0;
+$arrivals_arrived_count = 0; // How many arriving bookings have status "arrived"
 $total_adults = 0;
 $total_children = 0;
 $total_infants = 0;
 $twins_count = 0;
+$in_house_count = 0; // Total bookings staying (not vacant)
+$restaurant_match_count = 0; // Bookings with confirmed/primary matches
+$total_staying_count = 0; // Total for restaurant stat denominator
+
+// Check if selected date is today
+$today = date('Y-m-d');
+$is_today = ($date === $today);
 
 foreach ($bookings as $booking) {
     // Skip vacant rooms
@@ -31,9 +39,14 @@ foreach ($bookings as $booking) {
         continue;
     }
 
+    // Count in-house bookings (all non-vacant)
+    $in_house_count++;
+    $total_staying_count++;
+
     // Get booking dates (already in YYYY-MM-DD format from processed booking)
     $arrival_date = $booking['arrival_date'] ?? '';
     $departure_date = $booking['departure_date'] ?? '';
+    $status = strtolower($booking['status'] ?? '');
 
     // Stopovers: arrived before set date AND departing after set date
     if ($arrival_date < $date && $departure_date > $date) {
@@ -43,6 +56,24 @@ foreach ($bookings as $booking) {
     // Arrivals: checkin date is the date set
     if ($arrival_date === $date) {
         $arrivals_count++;
+        // If today, check if status is "arrived"
+        if ($is_today && ($status === 'arrived' || $status === 'checked in' || $status === 'checked-in' || $status === 'checked_in')) {
+            $arrivals_arrived_count++;
+        }
+    }
+
+    // Restaurant matches: check if booking has confirmed or primary matches
+    $resos_matches = $booking['resos_matches'] ?? [];
+    $has_match = false;
+    foreach ($resos_matches as $match) {
+        $match_type = strtolower($match['match_type'] ?? '');
+        if ($match_type === 'confirmed' || $match_type === 'primary') {
+            $has_match = true;
+            break;
+        }
+    }
+    if ($has_match) {
+        $restaurant_match_count++;
     }
 
     // Occupancy totals from occupants array
@@ -64,12 +95,20 @@ foreach ($bookings as $booking) {
 
 // Calculate departs from separate departing bookings array
 $departs_count = 0;
+$departs_departed_count = 0; // How many departing bookings have status "departed"
 if (isset($departing_bookings) && is_array($departing_bookings)) {
     foreach ($departing_bookings as $booking) {
         // Verify this is actually a departing booking
         $departure_date = substr($booking['booking_departure'] ?? '', 0, 10);
         if ($departure_date === $date) {
             $departs_count++;
+            // If today, check if status is "departed"
+            if ($is_today) {
+                $status = strtolower($booking['booking_status'] ?? '');
+                if ($status === 'departed' || $status === 'checked out' || $status === 'checked-out' || $status === 'checked_out') {
+                    $departs_departed_count++;
+                }
+            }
         }
     }
 }
@@ -82,13 +121,24 @@ if ($total_children > 0 || $total_infants > 0) {
         $occupancy_str .= '+' . $total_infants;
     }
 }
+
+// Format departs stat value (x/y if today, otherwise just count)
+$departs_value = $is_today ? "{$departs_departed_count}/{$departs_count}" : (string)$departs_count;
+$departs_title = $is_today ? "Departing bookings (departed/total)" : "Departing bookings";
+
+// Format arrives stat value (x/y if today, otherwise just count)
+$arrives_value = $is_today ? "{$arrivals_arrived_count}/{$arrivals_count}" : (string)$arrivals_count;
+$arrives_title = $is_today ? "Arriving bookings (arrived/total)" : "Arriving bookings";
+
+// Format restaurant stat value (x/y)
+$restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
 ?>
 
 <!-- Stats Row -->
 <div class="staying-stats-row">
-    <div class="stat-item stat-filter" data-filter="departs" title="Departing bookings">
+    <div class="stat-item stat-filter" data-filter="departs" title="<?php echo $departs_title; ?>">
         <span class="material-symbols-outlined">flight_takeoff</span>
-        <span class="stat-value"><?php echo $departs_count; ?></span>
+        <span class="stat-value"><?php echo $departs_value; ?></span>
     </div>
     <div class="stat-divider">|</div>
     <div class="stat-item stat-filter" data-filter="stopovers" title="Stopover bookings (arrived before, departing after)">
@@ -96,9 +146,14 @@ if ($total_children > 0 || $total_infants > 0) {
         <span class="stat-value"><?php echo $stopovers_count; ?></span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item stat-filter" data-filter="arrivals" title="Arriving bookings">
+    <div class="stat-item stat-filter" data-filter="arrivals" title="<?php echo $arrives_title; ?>">
         <span class="material-symbols-outlined">flight_land</span>
-        <span class="stat-value"><?php echo $arrivals_count; ?></span>
+        <span class="stat-value"><?php echo $arrives_value; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item stat-filter" data-filter="in-house" title="In-house bookings">
+        <span class="material-symbols-outlined">night_shelter</span>
+        <span class="stat-value"><?php echo $in_house_count; ?></span>
     </div>
     <div class="stat-divider">|</div>
     <div class="stat-item stat-filter" data-filter="occupancy" title="Total occupancy (hide vacant)">
@@ -111,6 +166,11 @@ if ($total_children > 0 || $total_infants > 0) {
             <span class="material-symbols-outlined">single_bed</span><span class="material-symbols-outlined">single_bed</span>
         </span>
         <span class="stat-value"><?php echo $twins_count; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item stat-filter" data-filter="restaurant" title="Restaurant bookings (matched/total)">
+        <span class="material-symbols-outlined">restaurant</span>
+        <span class="stat-value"><?php echo $restaurant_value; ?></span>
     </div>
 </div>
 
@@ -176,6 +236,16 @@ if ($total_children > 0 || $total_infants > 0) {
                 break;
             }
         }
+
+        // Check for restaurant match (confirmed or primary)
+        $has_restaurant_match = false;
+        foreach ($matches as $match) {
+            $match_type = strtolower($match['match_type'] ?? '');
+            if ($match_type === 'confirmed' || $match_type === 'primary') {
+                $has_restaurant_match = true;
+                break;
+            }
+        }
     ?>
         <div class="staying-card"
              data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
@@ -190,6 +260,7 @@ if ($total_children > 0 || $total_infants > 0) {
              data-is-departing="<?php echo $is_departing ? 'true' : 'false'; ?>"
              data-is-stopover="<?php echo $is_stopover ? 'true' : 'false'; ?>"
              data-has-twin="<?php echo $has_twin ? 'true' : 'false'; ?>"
+             data-has-restaurant-match="<?php echo $has_restaurant_match ? 'true' : 'false'; ?>"
              <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
 
             <!-- Card Header (Collapsed View) -->
@@ -432,15 +503,18 @@ if ($total_children > 0 || $total_infants > 0) {
 
 .stat-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
+    min-width: 50px;
 }
 
 .stat-filter {
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 4px 6px;
     border-radius: 6px;
     transition: all 0.2s ease;
+    position: relative;
 }
 
 .stat-filter:hover {
@@ -460,8 +534,53 @@ if ($total_children > 0 || $total_infants > 0) {
     color: white !important;
 }
 
+/* Restaurant filter - has match (green with tick) */
+.stat-filter.restaurant-has-match {
+    background-color: #10b981;
+    color: white;
+}
+
+.stat-filter.restaurant-has-match .material-symbols-outlined {
+    color: white !important;
+}
+
+.stat-filter.restaurant-has-match .stat-value {
+    color: white !important;
+}
+
+/* Restaurant filter - no match (red with plus) */
+.stat-filter.restaurant-no-match {
+    background-color: #ef4444;
+    color: white;
+}
+
+.stat-filter.restaurant-no-match .material-symbols-outlined {
+    color: white !important;
+}
+
+.stat-filter.restaurant-no-match .stat-value {
+    color: white !important;
+}
+
+/* Corner icon for restaurant filter */
+.filter-corner-icon {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 12px !important;
+    color: white !important;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+}
+
 .stat-item .material-symbols-outlined {
-    font-size: 18px;
+    font-size: 20px;
     color: #64748b;
 }
 
@@ -471,12 +590,12 @@ if ($total_children > 0 || $total_infants > 0) {
 }
 
 .twin-beds-icon .material-symbols-outlined {
-    font-size: 14px;
+    font-size: 16px;
 }
 
 .stat-value {
     font-weight: 700;
-    font-size: 12px;
+    font-size: 13px;
     color: #1e293b;
     line-height: 1;
 }
