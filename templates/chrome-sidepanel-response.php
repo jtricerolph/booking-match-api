@@ -3457,6 +3457,8 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
         }
     });
 
+    console.log('BMA: Submitting updates:', { booking_id: resosBookingId, updates: updates });
+
     // Find the submit button to show loading state
     const submitBtn = container.querySelector('.btn-confirm-match');
     if (submitBtn) {

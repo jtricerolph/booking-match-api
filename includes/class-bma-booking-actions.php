@@ -23,6 +23,8 @@ class BMA_Booking_Actions {
      * @return array Success/error response
      */
     public function update_resos_booking($booking_id, $updates) {
+        bma_log('BMA: update_resos_booking called with booking_id=' . $booking_id . ', updates=' . json_encode($updates), 'debug');
+
         // Validate parameters
         if (empty($booking_id)) {
             return array(
