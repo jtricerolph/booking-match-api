@@ -189,6 +189,14 @@ class BMA_Comparison {
         $resos_people = isset($resos_booking['people']) ? intval($resos_booking['people']) : 0;
         $resos_status = isset($resos_booking['status']) ? $resos_booking['status'] : 'request';
 
+        // Extract time - use timeString if available, otherwise format from time
+        $resos_time = '';
+        if (isset($resos_booking['timeString'])) {
+            $resos_time = $resos_booking['timeString'];
+        } elseif (isset($resos_booking['time'])) {
+            $resos_time = date('H:i', strtotime($resos_booking['time']));
+        }
+
         // Determine which fields match for highlighting
         $matches = array();
 
@@ -379,7 +387,8 @@ class BMA_Comparison {
                 'notes' => $resos_notes,
                 'hotel_guest' => $resos_hotel_guest,
                 'dbb' => $resos_dbb,
-                'status' => $resos_status
+                'status' => $resos_status,
+                'time' => $resos_time
             ),
             'matches' => $matches,
             'suggested_updates' => $suggested_updates
