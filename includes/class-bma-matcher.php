@@ -787,7 +787,8 @@ class BMA_Matcher {
         $data = json_decode($body, true);
 
         if (!is_array($data)) {
-            bma_log('BMA_Matcher: Invalid response when fetching hotel bookings for date ' . $date, 'error');
+            $status_code = wp_remote_retrieve_response_code($response);
+            bma_log('BMA_Matcher: Invalid response when fetching hotel bookings for date ' . $date . ' - Status: ' . $status_code . ' - Body: ' . substr($body, 0, 500), 'error');
             $this->hotel_bookings_cache[$date] = array(); // Cache empty result to prevent retry
             return array();
         }
