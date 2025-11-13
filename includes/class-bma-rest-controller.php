@@ -1424,6 +1424,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                             data-resos-time="<?php echo esc_attr($resos['time'] ?? ''); ?>"
                             data-resos-guest="<?php echo esc_attr($resos['name'] ?? ''); ?>"
                             data-resos-people="<?php echo esc_attr($resos['people'] ?? '0'); ?>"
+                            data-resos-booking-ref="<?php echo esc_attr($resos['booking_ref'] ?? ''); ?>"
                             data-group-exclude="<?php echo esc_attr($group_exclude_field); ?>"
                             title="Manage Group">
                         <span class="material-symbols-outlined">groups</span>
