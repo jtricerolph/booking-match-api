@@ -1125,6 +1125,7 @@ if (!defined('ABSPATH')) {
 
 .bma-action-link:hover {
     background: #5568d3;
+    text-decoration: none;
 }
 
 .bma-action-link.bma-resos-link {

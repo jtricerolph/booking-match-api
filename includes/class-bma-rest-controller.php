@@ -1438,26 +1438,31 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $match_class = $is_match ? ' class="match-row"' : '';
         $has_suggestion = $suggestion_value !== null && $suggestion_value !== '';
 
+        // Main comparison row
         $html = '<tr' . $match_class . '>';
-        $html .= '<td class="field-label">' . esc_html($label) . '</td>';
-        $html .= '<td class="hotel-value">' . ($is_html ? $hotel_value : esc_html($hotel_value)) . '</td>';
-
-        // ResOS column
-        $html .= '<td class="resos-value">';
-        if ($has_suggestion) {
-            $html .= '<div class="suggestion-container">';
-            $html .= '<div class="current-value">' . ($is_html ? $resos_value : esc_html($resos_value)) . '</div>';
-            $html .= '<div class="suggestion-value">';
-            $html .= '<input type="checkbox" class="suggestion-checkbox" data-field="' . esc_attr($field) . '" checked>';
-            $html .= '<span class="suggestion-arrow">→</span>';
-            $html .= '<span class="suggested-text">' . ($is_html ? $suggestion_value : esc_html($suggestion_value)) . '</span>';
-            $html .= '</div>';
-            $html .= '</div>';
-        } else {
-            $html .= $is_html ? $resos_value : esc_html($resos_value);
-        }
-        $html .= '</td>';
+        $html .= '<td><strong>' . esc_html($label) . '</strong></td>';
+        $html .= '<td>' . ($is_html ? $hotel_value : esc_html($hotel_value)) . '</td>';
+        $html .= '<td class="resos-value" data-field="' . esc_attr($field) . '">' . ($is_html ? $resos_value : esc_html($resos_value)) . '</td>';
         $html .= '</tr>';
+
+        // If there's a suggestion, add a suggestion row below
+        if ($has_suggestion) {
+            $is_checked_by_default = ($field !== 'people'); // Uncheck "people" by default, check all others
+            $checked_attr = $is_checked_by_default ? ' checked' : '';
+
+            $suggestion_display = $suggestion_value === '' ? '<em style="color: #999;">(Remove)</em>' : ($is_html ? $suggestion_value : esc_html($suggestion_value));
+
+            $html .= '<tr class="suggestion-row">';
+            $html .= '<td colspan="3">';
+            $html .= '<div class="suggestion-content">';
+            $html .= '<label>';
+            $html .= '<input type="checkbox" class="suggestion-checkbox" name="suggestion_' . esc_attr($field) . '" data-field="' . esc_attr($field) . '" value="' . esc_attr($suggestion_value) . '"' . $checked_attr . '> ';
+            $html .= '<span class="suggestion-text" data-field="' . esc_attr($field) . '">Update to: ' . $suggestion_display . '</span>';
+            $html .= '</label>';
+            $html .= '</div>';
+            $html .= '</td>';
+            $html .= '</tr>';
+        }
 
         return $html;
     }
