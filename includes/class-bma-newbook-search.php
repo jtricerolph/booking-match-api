@@ -318,51 +318,24 @@ class BMA_NewBook_Search {
      * @return array Array of bookings for the date
      */
     public function fetch_hotel_bookings_for_date($date) {
-        // Get NewBook API credentials (check new options first, fallback to old)
-        $username = get_option('bma_newbook_username') ?: get_option('hotel_booking_newbook_username');
-        $password = get_option('bma_newbook_password') ?: get_option('hotel_booking_newbook_password');
-        $api_key = get_option('bma_newbook_api_key') ?: get_option('hotel_booking_newbook_api_key');
-        $region = get_option('bma_newbook_region') ?: get_option('hotel_booking_newbook_region', 'au');
-        $hotel_id = get_option('bma_hotel_id') ?: get_option('hotel_booking_default_hotel_id', '1');
+        $period_from = $date . ' 00:00:00';
+        $period_to = $date . ' 23:59:59';
 
-        if (empty($username) || empty($password) || empty($api_key)) {
-            bma_log('BMA: NewBook API credentials not configured', 'error');
-            return array();
-        }
-
-        // Build NewBook API URL
-        $url = "https://api.{$region}.newbook.cloud/rest/v1/site/{$hotel_id}/bookings";
-        $url .= '?from_date=' . urlencode($date);
-        $url .= '&to_date=' . urlencode($date);
-        $url .= '&expand=guests,guests.contact_details,tariffs_quoted,inventory_items';
-
-        $args = array(
-            'headers' => array(
-                'Authorization' => 'Basic ' . base64_encode($username . ':' . $password),
-                'x-api-key' => $api_key
-            ),
-            'timeout' => 30
+        $data = array(
+            'period_from' => $period_from,
+            'period_to' => $period_to,
+            'list_type' => 'staying'
         );
 
-        bma_log("BMA: Fetching hotel bookings for date {$date} from {$url}", 'debug');
+        $response = $this->call_api('bookings_list', $data);
 
-        $response = wp_remote_get($url, $args);
-
-        if (is_wp_error($response)) {
-            bma_log('BMA: Error fetching hotel bookings - ' . $response->get_error_message(), 'error');
+        if (!$response || !isset($response['data'])) {
+            bma_log('BMA: Failed to fetch hotel bookings for date ' . $date, 'error');
             return array();
         }
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-
-        if (!isset($data['data'])) {
-            bma_log('BMA: Invalid response structure from NewBook API', 'error');
-            return array();
-        }
-
-        bma_log('BMA: Fetched ' . count($data['data']) . ' hotel bookings for date ' . $date, 'debug');
-        return $data['data'];
+        bma_log('BMA: Fetched ' . count($response['data']) . ' hotel bookings for date ' . $date, 'debug');
+        return $response['data'];
     }
 
     /**
