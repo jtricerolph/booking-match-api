@@ -244,14 +244,14 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function permissions_check($request) {
         // Log key request details
-        error_log(sprintf(
+        bma_log(sprintf(
             'BMA-AUTH: Request [%s %s] Origin: %s | Auth: %s | PHP_AUTH_USER: %s',
             $_SERVER['REQUEST_METHOD'],
             $_SERVER['REQUEST_URI'],
             isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'none',
             isset($_SERVER['HTTP_AUTHORIZATION']) ? 'present' : 'missing',
             isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : 'not set'
-        ));
+        ), 'debug');
 
         // If not logged in via cookie, try manual Application Password authentication
         if (!is_user_logged_in() && isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
@@ -266,7 +266,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
                 // Check if user has required capability
                 if (!$user->has_cap('read')) {
-                    error_log("BMA-AUTH: REJECTED - User '{$user->user_login}' lacks read capability");
+                    bma_log("BMA-AUTH: REJECTED - User '{$user->user_login}' lacks read capability", 'warning');
                     return new WP_Error(
                         'rest_forbidden',
                         __('You do not have permission to access this resource.', 'booking-match-api'),
@@ -274,16 +274,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     );
                 }
 
-                error_log("BMA-AUTH: ACCEPTED - User '{$user->user_login}' authenticated via Application Password");
+                bma_log("BMA-AUTH: ACCEPTED - User '{$user->user_login}' authenticated via Application Password", 'debug');
                 return true;
             } else {
-                error_log("BMA-AUTH: Manual Application Password auth failed for user: {$username}");
+                bma_log("BMA-AUTH: Manual Application Password auth failed for user: {$username}", 'warning');
             }
         }
 
         // Require WordPress authentication (supports Application Passwords)
         if (!is_user_logged_in()) {
-            error_log('BMA-AUTH: REJECTED - No valid authentication provided (not logged in, no valid PHP_AUTH)');
+            bma_log('BMA-AUTH: REJECTED - No valid authentication provided (not logged in, no valid PHP_AUTH)', 'warning');
             return new WP_Error(
                 'rest_forbidden',
                 __('Authentication required. Please provide valid WordPress credentials.', 'booking-match-api'),
@@ -294,7 +294,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         // User must have at least 'read' capability
         if (!current_user_can('read')) {
             $current_user = wp_get_current_user();
-            error_log("BMA-AUTH: REJECTED - User '{$current_user->user_login}' lacks read capability");
+            bma_log("BMA-AUTH: REJECTED - User '{$current_user->user_login}' lacks read capability", 'warning');
             return new WP_Error(
                 'rest_forbidden',
                 __('You do not have permission to access this resource.', 'booking-match-api'),
@@ -303,7 +303,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         }
 
         $current_user = wp_get_current_user();
-        error_log("BMA-AUTH: ACCEPTED - User '{$current_user->user_login}' authenticated");
+        bma_log("BMA-AUTH: ACCEPTED - User '{$current_user->user_login}' authenticated", 'debug');
         return true;
     }
 
@@ -443,7 +443,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return rest_ensure_response($response);
 
         } catch (Exception $e) {
-            error_log('BMA: Exception in match_booking: ' . $e->getMessage());
+            bma_log('BMA: Exception in match_booking: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'server_error',
                 __('An error occurred processing your request', 'booking-match-api'),
@@ -550,7 +550,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $limit = $request->get_param('limit') ?: 5;
             $force_refresh = $request->get_param('force_refresh') ?: false;
 
-            error_log("BMA Summary: Requested limit = {$limit}, context = {$context}");
+            bma_log("BMA Summary: Requested limit = {$limit}, context = {$context}", 'debug');
 
             // Fetch recently placed bookings from NewBook
             $searcher = new BMA_NewBook_Search();
@@ -612,7 +612,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             );
 
         } catch (Exception $e) {
-            error_log('BMA Summary Error: ' . $e->getMessage());
+            bma_log('BMA Summary Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'summary_error',
                 __('Error retrieving summary', 'booking-match-api'),
@@ -834,7 +834,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             );
 
         } catch (Exception $e) {
-            error_log('BMA Checks Error: ' . $e->getMessage());
+            bma_log('BMA Checks Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'checks_error',
                 __('Error retrieving checks', 'booking-match-api'),
@@ -868,7 +868,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 );
             }
 
-            error_log("BMA Staying: Fetching bookings for date = {$date}");
+            bma_log("BMA Staying: Fetching bookings for date = {$date}", 'debug');
 
             // Fetch staying bookings from NewBook (3-day window for timeline indicators)
             $searcher = new BMA_NewBook_Search();
@@ -1085,7 +1085,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             );
 
         } catch (Exception $e) {
-            error_log('BMA Staying Error: ' . $e->getMessage());
+            bma_log('BMA Staying Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'staying_error',
                 __('Error retrieving staying bookings: ' . $e->getMessage(), 'booking-match-api'),
@@ -1115,10 +1115,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
         // Debug log to see if group ID is found
         if ($group_id) {
-            error_log("BMA Staying: Found group_id = {$group_id} for booking {$booking_id}");
+            bma_log("BMA Staying: Found group_id = {$group_id} for booking {$booking_id}", 'debug');
         } else {
             // Log available fields to help debug
-            error_log("BMA Staying: No group_id found for booking {$booking_id}. Available fields: " . implode(', ', array_keys($booking)));
+            bma_log("BMA Staying: No group_id found for booking {$booking_id}. Available fields: " . implode(', ', array_keys($booking)), 'debug');
         }
 
         // Calculate which night this is
@@ -1322,7 +1322,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return rest_ensure_response($response);
 
         } catch (Exception $e) {
-            error_log('BMA Comparison Error: ' . $e->getMessage());
+            bma_log('BMA Comparison Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'comparison_error',
                 __('Error generating comparison', 'booking-match-api'),
@@ -1572,7 +1572,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return rest_ensure_response($result);
 
         } catch (Exception $e) {
-            error_log('BMA Update Booking Error: ' . $e->getMessage());
+            bma_log('BMA Update Booking Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'update_error',
                 __('Error updating booking', 'booking-match-api'),
@@ -1610,7 +1610,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return rest_ensure_response($result);
 
         } catch (Exception $e) {
-            error_log('BMA Exclude Match Error: ' . $e->getMessage());
+            bma_log('BMA Exclude Match Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'exclude_error',
                 __('Error excluding match', 'booking-match-api'),
@@ -1681,7 +1681,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             ));
 
         } catch (Exception $e) {
-            error_log('BMA Update Group Error: ' . $e->getMessage());
+            bma_log('BMA Update Group Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'update_group_error',
                 __('Error updating group', 'booking-match-api'),
@@ -1776,7 +1776,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             ));
 
         } catch (Exception $e) {
-            error_log('BMA Get Bookings for Date Error: ' . $e->getMessage());
+            bma_log('BMA Get Bookings for Date Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'get_bookings_error',
                 __('Error fetching bookings for date', 'booking-match-api'),
@@ -1932,7 +1932,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return rest_ensure_response($result);
 
         } catch (Exception $e) {
-            error_log('BMA Create Booking Error: ' . $e->getMessage());
+            bma_log('BMA Create Booking Error: ' . $e->getMessage(), 'error');
             return new WP_Error(
                 'create_error',
                 __('Error creating booking', 'booking-match-api'),
@@ -2067,7 +2067,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $date = $request->get_param('date');
         $context = $request->get_param('context');
 
-        error_log("BMA Opening Hours: date = " . ($date ? $date : 'all') . ", context = " . ($context ? $context : 'json'));
+        bma_log("BMA Opening Hours: date = " . ($date ? $date : 'all') . ", context = " . ($context ? $context : 'json'), 'debug');
 
         $actions = new BMA_Booking_Actions();
         $data = $actions->fetch_opening_hours($date);
@@ -2109,7 +2109,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $opening_hour_id = $request->get_param('opening_hour_id');
         $context = $request->get_param('context');
 
-        error_log("BMA Available Times: date = $date, people = $people, context = " . ($context ? $context : 'json'));
+        bma_log("BMA Available Times: date = $date, people = $people, context = " . ($context ? $context : 'json'), 'debug');
 
         $actions = new BMA_Booking_Actions();
         $result = $actions->fetch_available_times($date, $people, $opening_hour_id);
@@ -2154,7 +2154,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     public function get_dietary_choices($request) {
         $context = $request->get_param('context');
 
-        error_log("BMA Dietary Choices: context = " . ($context ? $context : 'json'));
+        bma_log("BMA Dietary Choices: context = " . ($context ? $context : 'json'), 'debug');
 
         $actions = new BMA_Booking_Actions();
         $choices = $actions->fetch_dietary_choices();
@@ -2189,7 +2189,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             return new WP_Error('missing_date', 'Date parameter is required', array('status' => 400));
         }
 
-        error_log("BMA All Bookings: Fetching all bookings for date = $date");
+        bma_log("BMA All Bookings: Fetching all bookings for date = $date", 'debug');
 
         $matcher = new BMA_Matcher();
         $bookings = $matcher->fetch_all_bookings_for_gantt($date);
@@ -2222,7 +2222,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $date = $request->get_param('date');
         $context = $request->get_param('context');
 
-        error_log("BMA Special Events: date = $date, context = " . ($context ? $context : 'json'));
+        bma_log("BMA Special Events: date = $date, context = " . ($context ? $context : 'json'), 'debug');
 
         $actions = new BMA_Booking_Actions();
         $events = $actions->fetch_special_events($date);

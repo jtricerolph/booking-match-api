@@ -184,7 +184,7 @@ class BMA_Response_Formatter {
 
         // Check if template exists, fallback to default if not
         if (!file_exists($template_file)) {
-            error_log("BMA: Template not found: {$template_file}, using default chrome-extension template");
+            bma_log("BMA: Template not found: {$template_file}, using default chrome-extension template", 'warning');
             $template_file = BMA_PLUGIN_DIR . 'templates/chrome-extension-response.php';
         }
 

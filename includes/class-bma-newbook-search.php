@@ -290,7 +290,7 @@ class BMA_NewBook_Search {
         $response = $this->call_api('bookings_list', $data);
 
         if (!$response || !isset($response['data'])) {
-            error_log('BMA: Error fetching recent placed bookings - no data returned');
+            bma_log('BMA: Error fetching recent placed bookings - no data returned', 'error');
             return array();
         }
 
@@ -301,11 +301,11 @@ class BMA_NewBook_Search {
             return ($b['booking_id'] ?? 0) - ($a['booking_id'] ?? 0);
         });
 
-        error_log("BMA NewBook Search: Fetched " . count($bookings) . " bookings, applying limit = {$limit}");
+        bma_log("BMA NewBook Search: Fetched " . count($bookings) . " bookings, applying limit = {$limit}", 'debug');
 
         // Apply limit
         $limited_bookings = array_slice($bookings, 0, $limit);
-        error_log("BMA NewBook Search: Returning " . count($limited_bookings) . " bookings after limit");
+        bma_log("BMA NewBook Search: Returning " . count($limited_bookings) . " bookings after limit", 'debug');
 
         return $limited_bookings;
     }
@@ -321,7 +321,7 @@ class BMA_NewBook_Search {
         $region = get_option('bma_newbook_region') ?: get_option('hotel_booking_api_region') ?: get_option('hotel_booking_newbook_region', 'au');
 
         if (empty($username) || empty($password) || empty($api_key)) {
-            error_log('BMA: API credentials not configured');
+            bma_log('BMA: API credentials not configured', 'error');
             return false;
         }
 
@@ -347,7 +347,7 @@ class BMA_NewBook_Search {
         $response = wp_remote_post($url, $args);
 
         if (is_wp_error($response)) {
-            error_log('BMA: API request failed: ' . $response->get_error_message());
+            bma_log('BMA: API request failed: ' . $response->get_error_message(), 'error');
             return false;
         }
 
@@ -355,14 +355,14 @@ class BMA_NewBook_Search {
         $response_body = wp_remote_retrieve_body($response);
 
         if ($response_code !== 200) {
-            error_log('BMA: API returned error code: ' . $response_code);
+            bma_log('BMA: API returned error code: ' . $response_code, 'error');
             return false;
         }
 
         $data = json_decode($response_body, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log('BMA: Failed to parse API response');
+            bma_log('BMA: Failed to parse API response', 'error');
             return false;
         }
 
@@ -463,7 +463,7 @@ class BMA_NewBook_Search {
         $response = $this->call_api('sites_list', $data);
 
         if (!$response || !isset($response['data'])) {
-            error_log('BMA_NewBook_Search: Failed to fetch sites list');
+            bma_log('BMA_NewBook_Search: Failed to fetch sites list', 'error');
             return array();
         }
 
