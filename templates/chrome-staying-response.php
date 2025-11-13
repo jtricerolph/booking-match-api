@@ -301,7 +301,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                             ?>
                             <?php if ($is_group_member): ?>
                                 <span class="restaurant-status has-booking">
-                                    <?php echo esc_html($time); ?> with <?php echo esc_html($lead_room); ?>
+                                    with <?php echo esc_html($lead_room); ?>
                                     <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
                                 </span>
                             <?php elseif ($has_suggestions): ?>
@@ -431,6 +431,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                 $is_group_member = $match['match_info']['is_group_member'] ?? false;
                                 $time = date('H:i', strtotime($match['time']));
                                 $pax = $match['people'] ?? 0;
+                                $lead_room = $match['match_info']['lead_booking_room'] ?? 'N/A';
                                 $resos_id = $match['resos_booking_id'] ?? '';
                                 $restaurant_id = $match['restaurant_id'] ?? '';
                                 $has_suggestions = $match['has_suggestions'] ?? false;
@@ -447,12 +448,18 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
+                                    <span class="night-time">
+                                        <?php if ($is_group_member): ?>
+                                            with <?php echo esc_html($lead_room); ?>
+                                            <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
+                                        <?php else: ?>
+                                            <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
+                                        <?php endif; ?>
+                                    </span>
                                     <span class="status-icon <?php echo (($is_primary && !$has_suggestions) || $is_group_member) ? 'ok' : (($is_primary && $has_suggestions) ? 'updates' : 'warning'); ?>">
                                         <?php if ($is_stale): ?>
                                             <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
                                         <?php elseif ($is_group_member): ?>
-                                            <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
                                             <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                         <?php elseif ($is_primary && $has_suggestions): ?>
                                             <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
