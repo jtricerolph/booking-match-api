@@ -760,8 +760,8 @@ class BMA_Matcher {
             return array();
         }
 
-        // Build NewBook API URL
-        $url = "https://api.{$region}.newbook.cloud/rest/v1/site/{$hotel_id}/bookings";
+        // Build NewBook API URL (REST v1 API, no region subdomain)
+        $url = "https://api.newbook.cloud/rest/v1/site/{$hotel_id}/bookings";
         $url .= '?from_date=' . urlencode($date);
         $url .= '&to_date=' . urlencode($date);
         $url .= '&expand=guests,guests.contact_details,tariffs_quoted,inventory_items';
