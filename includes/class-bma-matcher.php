@@ -240,32 +240,7 @@ class BMA_Matcher {
             }
         }
 
-        // Check for group/individual match in GROUP/EXCLUDE field (Priority 0.5 - before "Booking #" field)
-        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data);
-        if ($group_match !== false) {
-            return $group_match;
-        }
-
-        // Check if this Resos booking's "Booking #" field matches ANY OTHER hotel booking ID
-        // If so, it's "matched elsewhere" and should not be considered for this booking
-        if (!empty($other_booking_ids)) {
-            $custom_fields = $resos_booking['customFields'] ?? array();
-            foreach ($custom_fields as $field) {
-                if (($field['name'] ?? '') === 'Booking #') {
-                    $value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
-                    if (!empty($value) && in_array(strval($value), $other_booking_ids, true)) {
-                        // This Resos booking is matched to a different hotel booking
-                        return array(
-                            'matched' => false,
-                            'matched_elsewhere' => true,
-                            'matched_to_booking_id' => $value
-                        );
-                    }
-                }
-            }
-        }
-
-        // Priority 1: Booking ID in custom fields
+        // Priority 1: Booking ID in custom fields (PRIMARY MATCH - highest priority)
         $custom_fields = $resos_booking['customFields'] ?? array();
         foreach ($custom_fields as $field) {
             if (($field['name'] ?? '') === 'Booking #') {
@@ -282,7 +257,31 @@ class BMA_Matcher {
             }
         }
 
-        // Priority 2: Agent reference match
+        // Check if this Resos booking's "Booking #" field matches ANY OTHER hotel booking ID
+        // If so, it's "matched elsewhere" and should not be considered for this booking
+        if (!empty($other_booking_ids)) {
+            foreach ($custom_fields as $field) {
+                if (($field['name'] ?? '') === 'Booking #') {
+                    $value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
+                    if (!empty($value) && in_array(strval($value), $other_booking_ids, true)) {
+                        // This Resos booking is matched to a different hotel booking
+                        return array(
+                            'matched' => false,
+                            'matched_elsewhere' => true,
+                            'matched_to_booking_id' => $value
+                        );
+                    }
+                }
+            }
+        }
+
+        // Priority 2: Check for group/individual match in GROUP/EXCLUDE field (secondary group member match)
+        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data);
+        if ($group_match !== false) {
+            return $group_match;
+        }
+
+        // Priority 3: Agent reference match
         foreach ($custom_fields as $field) {
             $value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
             if (!empty($hotel_ref) && !empty($value) && $value == $hotel_ref) {
@@ -296,7 +295,7 @@ class BMA_Matcher {
             }
         }
 
-        // Priority 3: Booking ID in notes (SUGGESTED - should be in custom field)
+        // Priority 4: Booking ID in notes (SUGGESTED - should be in custom field)
         $notes = $this->get_resos_notes($resos_booking);
         if (!empty($hotel_booking_id) && stripos($notes, (string)$hotel_booking_id) !== false) {
             // Check current custom fields to suggest updates
@@ -325,7 +324,7 @@ class BMA_Matcher {
             );
         }
 
-        // Priority 4: Agent ref in notes (SUGGESTED - should be in custom field)
+        // Priority 5: Agent ref in notes (SUGGESTED - should be in custom field)
         if (!empty($hotel_ref) && stripos($notes, $hotel_ref) !== false) {
             // Check current custom fields
             $current_booking_number = '';
