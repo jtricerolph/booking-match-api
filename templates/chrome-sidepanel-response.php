@@ -2194,16 +2194,13 @@ if (!defined('ABSPATH')) {
 
 .group-modal-resos-info {
   margin-bottom: 16px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: #f0f9ff;
   border-left: 3px solid #3b82f6;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 500;
   color: #1e40af;
-}
-
-.group-modal-resos-info strong {
-  color: #1e3a8a;
 }
 
 .toggle-label {
@@ -2810,10 +2807,11 @@ async function openGroupManagementModal(resosBookingId, hotelBookingId, date, re
   modal.classList.remove('hidden');
 
   // Show ResOS booking info
+  console.log('BMA: ResOS data - time:', resosTime, 'guest:', resosGuest, 'people:', resosPeople);
   const time = (resosTime && resosTime.trim()) || 'N/A';
   const guestName = (resosGuest && resosGuest.trim()) || 'Unknown';
   const people = resosPeople || '0';
-  resosInfo.innerHTML = `<strong>ResOS Booking:</strong> ${time} - ${guestName} (${people} pax)`;
+  resosInfo.innerHTML = `${time} - ${guestName} (${people} pax)`;
 
   // Show loading
   loading.classList.remove('hidden');
