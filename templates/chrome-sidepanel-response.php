@@ -2128,8 +2128,7 @@ if (!defined('ABSPATH')) {
 }
 
 .group-modal-loading.hidden,
-.group-modal-error.hidden,
-.group-link-toggle.hidden {
+.group-modal-error.hidden {
   display: none;
 }
 
@@ -2201,12 +2200,18 @@ if (!defined('ABSPATH')) {
   font-size: 14px;
 }
 
-.group-link-toggle {
-  margin-bottom: 20px;
-  padding: 12px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+.group-modal-resos-info {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: #f0f9ff;
+  border-left: 3px solid #3b82f6;
   border-radius: 4px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.group-modal-resos-info strong {
+  color: #1e3a8a;
 }
 
 .toggle-label {
@@ -2288,8 +2293,14 @@ if (!defined('ABSPATH')) {
 }
 
 .group-bookings-table td {
-  padding: 8px 4px;
+  padding: 4px 4px;
   font-size: 13px;
+}
+
+.booking-info-compact {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #374151;
 }
 
 .group-bookings-table input[type="radio"],
@@ -2414,17 +2425,9 @@ if (!defined('ABSPATH')) {
         <strong>Date:</strong> <span id="group-modal-date-value"></span>
       </div>
 
-      <div class="group-link-toggle">
-        <label class="toggle-label">
-          <input type="checkbox" id="group-link-whole-group">
-          <span>Link whole group <span id="group-link-group-id"></span></span>
-        </label>
-      </div>
+      <div class="group-modal-resos-info" id="group-modal-resos-info"></div>
 
-      <div class="group-bookings-container">
-        <div id="group-section-container" class="group-section"></div>
-        <div id="other-section-container" class="other-section"></div>
-      </div>
+      <div class="group-bookings-container"></div>
 
       <div class="group-modal-loading hidden">
         <div class="spinner"></div>
@@ -2772,28 +2775,59 @@ const GROUP_MODAL_STATE = {
   hotelBookingId: null,
   date: null,
   bookings: [],
-  groups: {},
-  currentGroupId: null
+  groupExcludeData: { groups: [], excludes: [] },
+  leadBookingId: null
 };
 
+// Parse GROUP/EXCLUDE field value
+function parseGroupExcludeField(fieldValue) {
+  const result = { groups: [], excludes: [] };
+  if (!fieldValue) return result;
+
+  const parts = fieldValue.split(',').map(p => p.trim());
+  parts.forEach(part => {
+    if (part.startsWith('G-')) {
+      result.groups.push(part.substring(2)); // New format: G-{booking_id}
+    } else if (part.startsWith('N-')) {
+      result.excludes.push(part.substring(2)); // Exclude format: N-{booking_id}
+    } else if (part.startsWith('#')) {
+      result.groups.push(part.substring(1)); // Legacy/current format: #{booking_id}
+    }
+  });
+
+  console.log('BMA: parseGroupExcludeField - input:', fieldValue, 'output:', result);
+  return result;
+}
+
 // Open group management modal
-async function openGroupManagementModal(resosBookingId, hotelBookingId, date) {
+async function openGroupManagementModal(resosBookingId, hotelBookingId, date, resosTime = '', resosGuest = '', resosPeople = '0', resosBookingRef = '', groupExcludeField = '') {
   const modal = document.getElementById('group-management-modal');
   const dateValue = document.getElementById('group-modal-date-value');
-  const groupSection = document.getElementById('group-section-container');
-  const otherSection = document.getElementById('other-section-container');
+  const resosInfo = document.getElementById('group-modal-resos-info');
   const loading = modal.querySelector('.group-modal-loading');
   const error = modal.querySelector('.group-modal-error');
   const container = modal.querySelector('.group-bookings-container');
 
-  // Store state
+  // Store state including lead booking ID from ResOS Booking # field
   GROUP_MODAL_STATE.resosBookingId = resosBookingId;
   GROUP_MODAL_STATE.hotelBookingId = hotelBookingId;
   GROUP_MODAL_STATE.date = date;
+  GROUP_MODAL_STATE.leadBookingId = resosBookingRef;
+
+  console.log('BMA: openGroupManagementModal - resosBookingRef (lead):', resosBookingRef);
+  console.log('BMA: openGroupManagementModal - groupExcludeField raw:', groupExcludeField);
+  GROUP_MODAL_STATE.groupExcludeData = parseGroupExcludeField(groupExcludeField);
+  console.log('BMA: openGroupManagementModal - parsed groupExcludeData:', GROUP_MODAL_STATE.groupExcludeData);
 
   // Show modal
   modal.classList.remove('hidden');
   dateValue.textContent = date;
+
+  // Show ResOS booking info
+  const time = resosTime || 'N/A';
+  const guestName = resosGuest || 'Unknown';
+  const people = resosPeople || '0';
+  resosInfo.innerHTML = `<strong>ResOS Booking:</strong> ${time} - ${guestName} (${people} pax)`;
 
   // Show loading
   loading.classList.remove('hidden');
@@ -2803,13 +2837,7 @@ async function openGroupManagementModal(resosBookingId, hotelBookingId, date) {
   try {
     // Fetch bookings for date
     const bookingsData = await fetchBookingsForDate(date, hotelBookingId);
-
     GROUP_MODAL_STATE.bookings = bookingsData.bookings;
-    GROUP_MODAL_STATE.groups = bookingsData.groups;
-
-    // Find current booking's group
-    const currentBooking = bookingsData.bookings.find(b => b.booking_id == hotelBookingId);
-    GROUP_MODAL_STATE.currentGroupId = currentBooking?.bookings_group_id || null;
 
     // Render bookings
     renderGroupModal();
@@ -2867,96 +2895,56 @@ async function fetchBookingsForDate(date, excludeBookingId) {
 
 // Render the group modal with bookings
 function renderGroupModal() {
-  const groupSection = document.getElementById('group-section-container');
-  const otherSection = document.getElementById('other-section-container');
-  const groupLinkCheckbox = document.getElementById('group-link-whole-group');
-  const groupLinkGroupId = document.getElementById('group-link-group-id');
-  const groupLinkToggle = document.querySelector('.group-link-toggle');
+  const container = document.querySelector('.group-bookings-container');
 
-  // Separate bookings into groups and others
-  const groupBookings = [];
-  const otherBookings = [];
-
-  GROUP_MODAL_STATE.bookings.forEach(booking => {
-    if (booking.bookings_group_id === GROUP_MODAL_STATE.currentGroupId && GROUP_MODAL_STATE.currentGroupId) {
-      groupBookings.push(booking);
-    } else {
-      otherBookings.push(booking);
-    }
-  });
-
-  // Show/hide group link toggle
-  if (GROUP_MODAL_STATE.currentGroupId) {
-    groupLinkToggle.classList.remove('hidden');
-    groupLinkGroupId.textContent = `G#${GROUP_MODAL_STATE.currentGroupId}`;
-  } else {
-    groupLinkToggle.classList.add('hidden');
-    groupLinkCheckbox.checked = false;
+  if (!GROUP_MODAL_STATE.bookings || GROUP_MODAL_STATE.bookings.length === 0) {
+    container.innerHTML = '<p style="text-align: center; padding: 20px; color: #6b7280;">No bookings found for this date</p>';
+    return;
   }
 
-  // Render group section
-  if (groupBookings.length > 0) {
-    groupSection.classList.remove('hidden');
-    groupSection.innerHTML = renderBookingsTable(groupBookings, true);
-  } else {
-    groupSection.classList.add('hidden');
-  }
-
-  // Render other section
-  if (otherBookings.length > 0) {
-    otherSection.classList.remove('hidden');
-    otherSection.innerHTML = renderBookingsTable(otherBookings, false);
-  } else {
-    otherSection.classList.add('hidden');
-  }
-
-  // Attach event listeners
+  // Render all bookings in a single table
+  container.innerHTML = renderBookingsTable(GROUP_MODAL_STATE.bookings);
   attachGroupModalEventListeners();
 }
 
 // Render bookings table
-function renderBookingsTable(bookings, isGroupSection) {
-  const linkWhole = document.getElementById('group-link-whole-group').checked;
-  const isGroupActive = isGroupSection && linkWhole;
+function renderBookingsTable(bookings) {
+  const groupExcludeData = GROUP_MODAL_STATE.groupExcludeData || { groups: [], excludes: [] };
 
-  let html = '';
-
-  if (isGroupSection) {
-    html += `<div class="group-section-header ${isGroupActive ? 'exclude-mode' : ''}">`;
-    html += isGroupActive ? 'Exclude from Group' : `Bookings in Group #${GROUP_MODAL_STATE.currentGroupId}`;
-    html += '</div>';
-  } else {
-    html += '<div class="other-section-header">Other Bookings</div>';
-  }
-
-  html += '<table class="group-bookings-table"><thead><tr>';
+  let html = '<table class="group-bookings-table"><thead><tr>';
   html += '<th>Lead</th>';
-  html += `<th>${isGroupActive ? 'Exclude' : 'Group'}</th>`;
+  html += '<th>Group</th>';
   html += '<th>Booking</th>';
   html += '</tr></thead><tbody>';
 
   bookings.forEach(booking => {
     html += '<tr>';
 
-    // Lead radio
-    html += '<td>';
-    html += `<input type="radio" name="lead-booking" value="${booking.booking_id}" class="lead-radio">`;
-    html += '</td>';
-
-    // Group/Exclude checkbox
-    html += '<td>';
-    if (isGroupActive) {
-      html += `<input type="checkbox" value="${booking.booking_id}" class="exclude-checkbox">`;
-    } else {
-      html += `<input type="checkbox" value="${booking.booking_id}" class="group-checkbox">`;
+    // Lead radio - pre-select based on ResOS "Booking #" field
+    const isLeadBooking = String(booking.booking_id) === String(GROUP_MODAL_STATE.leadBookingId);
+    const checkedAttr = isLeadBooking ? ' checked' : '';
+    if (isLeadBooking) {
+      console.log('BMA: Booking', booking.booking_id, 'matches ResOS Booking # field, pre-selected as lead');
     }
+    html += '<td>';
+    html += `<input type="radio" name="lead-booking" value="${booking.booking_id}" class="lead-radio"${checkedAttr}>`;
     html += '</td>';
 
-    // Booking info
+    // Group checkbox - pre-select if in GROUP/EXCLUDE field or is lead booking
+    const isInGroupField = groupExcludeData.groups.includes(String(booking.booking_id));
+    const autoChecked = isLeadBooking || isInGroupField;
+    const checkedGroupAttr = autoChecked ? ' checked' : '';
+    if (autoChecked) {
+      console.log('BMA: Auto-checking group checkbox for booking', booking.booking_id, '(lead or in field)');
+    }
     html += '<td>';
-    html += '<div class="booking-info">';
-    html += `<span class="booking-guest-name">${booking.guest_name || 'Guest'}</span>`;
-    html += `<span class="booking-room">Room ${booking.site_name || 'N/A'}</span>`;
+    html += `<input type="checkbox" value="${booking.booking_id}" class="group-checkbox"${checkedGroupAttr}>`;
+    html += '</td>';
+
+    // Booking info - compact single line format
+    html += '<td>';
+    html += '<div class="booking-info-compact">';
+    html += `${booking.site_name || 'N/A'} - ${booking.guest_name || 'Guest'}`;
     html += '</div>';
     html += '</td>';
 
@@ -2969,18 +2957,6 @@ function renderBookingsTable(bookings, isGroupSection) {
 
 // Attach event listeners for group modal
 function attachGroupModalEventListeners() {
-  // Group link toggle
-  const groupLinkCheckbox = document.getElementById('group-link-whole-group');
-  groupLinkCheckbox.addEventListener('change', () => {
-    const groupSection = document.getElementById('group-section-container');
-    if (groupLinkCheckbox.checked) {
-      groupSection.classList.add('active');
-    } else {
-      groupSection.classList.remove('active');
-    }
-    renderGroupModal();
-  });
-
   // Lead radio auto-checks group checkbox
   document.querySelectorAll('.lead-radio').forEach(radio => {
     radio.addEventListener('change', (e) => {
@@ -2995,10 +2971,8 @@ function attachGroupModalEventListeners() {
 
 // Save group configuration
 async function saveGroupConfiguration() {
-  const groupLinkCheckbox = document.getElementById('group-link-whole-group');
   const leadRadios = document.querySelectorAll('.lead-radio');
   const groupCheckboxes = document.querySelectorAll('.group-checkbox');
-  const excludeCheckboxes = document.querySelectorAll('.exclude-checkbox');
 
   // Get lead booking ID
   let leadBookingId = null;
@@ -3008,29 +2982,13 @@ async function saveGroupConfiguration() {
     }
   });
 
-  // Get group configuration
-  let groupId = null;
-  const individualIds = [];
-  const excludeIds = [];
-
-  if (groupLinkCheckbox.checked && GROUP_MODAL_STATE.currentGroupId) {
-    // Use group ID
-    groupId = GROUP_MODAL_STATE.currentGroupId;
-
-    // Get excluded IDs
-    excludeCheckboxes.forEach(checkbox => {
-      if (checkbox.checked) {
-        excludeIds.push(checkbox.value);
-      }
-    });
-  } else {
-    // Use individual IDs
-    groupCheckboxes.forEach(checkbox => {
-      if (checkbox.checked) {
-        individualIds.push(checkbox.value);
-      }
-    });
-  }
+  // Get selected booking IDs
+  const selectedIds = [];
+  groupCheckboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      selectedIds.push(checkbox.value);
+    }
+  });
 
   // Make API call
   try {
@@ -3044,9 +3002,7 @@ async function saveGroupConfiguration() {
       body: JSON.stringify({
         resos_booking_id: GROUP_MODAL_STATE.resosBookingId,
         lead_booking_id: leadBookingId,
-        group_id: groupId,
-        individual_ids: individualIds,
-        exclude_ids: excludeIds
+        group_booking_ids: selectedIds
       })
     });
 
@@ -3245,7 +3201,17 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
         const resosGuest = escapeHTML(resos.name || '');
         const resosPeople = escapeHTML(resos.people || '0');
         const resosBookingRef = escapeHTML(resos.booking_ref || '');
-        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}" data-resos-time="${resosTime}" data-resos-guest="${resosGuest}" data-resos-people="${resosPeople}" data-resos-booking-ref="${resosBookingRef}" title="Manage Group">`;
+
+        // Extract GROUP/EXCLUDE field from customFields
+        let groupExcludeField = '';
+        if (resos.customFields && Array.isArray(resos.customFields)) {
+            const field = resos.customFields.find(f => f.name === 'GROUP/EXCLUDE');
+            if (field && field.value) {
+                groupExcludeField = escapeHTML(field.value);
+            }
+        }
+
+        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}" data-resos-time="${resosTime}" data-resos-guest="${resosGuest}" data-resos-people="${resosPeople}" data-resos-booking-ref="${resosBookingRef}" data-group-exclude="${groupExcludeField}" title="Manage Group">`;
         html += '<span class="material-symbols-outlined">groups</span>';
         html += '</button>';
     } else {
@@ -3564,13 +3530,23 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
                     window.parent.openGroupManagementModal(
                         button.dataset.resosBookingId,
                         button.dataset.hotelBookingId,
-                        button.dataset.date
+                        button.dataset.date,
+                        button.dataset.resosTime || '',
+                        button.dataset.resosGuest || '',
+                        button.dataset.resosPeople || '0',
+                        button.dataset.resosBookingRef || '',
+                        button.dataset.groupExclude || ''
                     );
                 } else if (window.openGroupManagementModal) {
                     window.openGroupManagementModal(
                         button.dataset.resosBookingId,
                         button.dataset.hotelBookingId,
-                        button.dataset.date
+                        button.dataset.date,
+                        button.dataset.resosTime || '',
+                        button.dataset.resosGuest || '',
+                        button.dataset.resosPeople || '0',
+                        button.dataset.resosBookingRef || '',
+                        button.dataset.groupExclude || ''
                     );
                 }
                 break;
