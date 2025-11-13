@@ -583,8 +583,11 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_critical_count = 0;
             $total_warning_count = 0;
 
+            // Create matcher ONCE and reuse for all bookings to share cache
+            $matcher = new BMA_Matcher();
+
             foreach ($recent_bookings as $nb_booking) {
-                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh);
+                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh, $matcher);
                 $summary_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
@@ -624,7 +627,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for summary display
      */
-    private function process_booking_for_summary($booking, $force_refresh = false) {
+    private function process_booking_for_summary($booking, $force_refresh = false, $matcher = null) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -645,8 +648,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
         // Extract tariff types
         $tariffs = $this->extract_tariffs($booking);
 
-        // Match with restaurants
-        $matcher = new BMA_Matcher();
+        // Match with restaurants - reuse matcher if provided, otherwise create new one
+        if ($matcher === null) {
+            $matcher = new BMA_Matcher();
+        }
         $match_result = $matcher->match_booking_all_nights($booking, $force_refresh);
 
         // Determine booking source (placeholder)
