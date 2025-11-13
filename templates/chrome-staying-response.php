@@ -311,14 +311,14 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                     <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                 </a>
                             <?php else: ?>
-                                <span class="restaurant-status has-booking">
+                                <a href="#" class="restaurant-status has-booking clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Click to view in Restaurant tab">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <?php if ($is_stale): ?>
                                         <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
                                     <?php else: ?>
                                         <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                     <?php endif; ?>
-                                </span>
+                                </a>
                             <?php endif; ?>
                         <?php else: ?>
                             <?php

@@ -136,13 +136,13 @@ if (empty($bookings)) {
                                 $resos_id = $match['resos_booking_id'] ?? '';
                                 $restaurant_id = $match['restaurant_id'] ?? '';
                                 ?>
-                                <div class="night-row <?php echo (($is_primary && !$has_suggestions) || $is_group_member) ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                <div class="night-row <?php echo $is_group_member ? 'resos-deep-link' : 'clickable-issue'; ?>"
                                      data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                      data-date="<?php echo esc_attr($night_date); ?>"
-                                     <?php if (($is_primary && !$has_suggestions) || $is_group_member): ?>
+                                     <?php if ($is_group_member): ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                         title="<?php echo $is_group_member ? 'Group booking - click to view in ResOS' : 'Click to view in ResOS'; ?>"
+                                         title="Group booking - click to view in ResOS"
                                      <?php else: ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
@@ -178,16 +178,11 @@ if (empty($bookings)) {
                                     $resos_id = $match['resos_booking_id'] ?? '';
                                     $restaurant_id = $match['restaurant_id'] ?? '';
                                 ?>
-                                    <div class="night-row <?php echo $is_primary ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                    <div class="night-row clickable-issue"
                                          data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
-                                         <?php if ($is_primary): ?>
-                                             data-resos-id="<?php echo esc_attr($resos_id); ?>"
-                                             data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                             data-date="<?php echo esc_attr($night_date); ?>"
-                                             title="Click to view in ResOS"
-                                         <?php else: ?>
-                                             title="Click to view in Restaurant tab"
-                                         <?php endif; ?>>
+                                         data-resos-id="<?php echo esc_attr($resos_id); ?>"
+                                         data-date="<?php echo esc_attr($night_date); ?>"
+                                         title="Click to view in Restaurant tab">
                                         <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                         <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                         <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
