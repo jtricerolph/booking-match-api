@@ -257,8 +257,16 @@ class BMA_Matcher {
             }
         }
 
-        // Check if this Resos booking's "Booking #" field matches ANY OTHER hotel booking ID
+        // Priority 2: Check for group/individual match in GROUP/EXCLUDE field (secondary group member match)
+        // This must come BEFORE the "matched elsewhere" check, so group members match correctly
+        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data);
+        if ($group_match !== false) {
+            return $group_match;
+        }
+
+        // Priority 3: Check if this Resos booking's "Booking #" field matches ANY OTHER hotel booking ID
         // If so, it's "matched elsewhere" and should not be considered for this booking
+        // This comes AFTER group matching, so group members don't get flagged as "matched elsewhere"
         if (!empty($other_booking_ids)) {
             foreach ($custom_fields as $field) {
                 if (($field['name'] ?? '') === 'Booking #') {
@@ -275,13 +283,7 @@ class BMA_Matcher {
             }
         }
 
-        // Priority 2: Check for group/individual match in GROUP/EXCLUDE field (secondary group member match)
-        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data);
-        if ($group_match !== false) {
-            return $group_match;
-        }
-
-        // Priority 3: Agent reference match
+        // Priority 4: Agent reference match
         foreach ($custom_fields as $field) {
             $value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
             if (!empty($hotel_ref) && !empty($value) && $value == $hotel_ref) {
@@ -295,7 +297,7 @@ class BMA_Matcher {
             }
         }
 
-        // Priority 4: Booking ID in notes (SUGGESTED - should be in custom field)
+        // Priority 5: Booking ID in notes (SUGGESTED - should be in custom field)
         $notes = $this->get_resos_notes($resos_booking);
         if (!empty($hotel_booking_id) && stripos($notes, (string)$hotel_booking_id) !== false) {
             // Check current custom fields to suggest updates
@@ -324,7 +326,7 @@ class BMA_Matcher {
             );
         }
 
-        // Priority 5: Agent ref in notes (SUGGESTED - should be in custom field)
+        // Priority 6: Agent ref in notes (SUGGESTED - should be in custom field)
         if (!empty($hotel_ref) && stripos($notes, $hotel_ref) !== false) {
             // Check current custom fields
             $current_booking_number = '';
