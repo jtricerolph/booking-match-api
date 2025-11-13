@@ -929,6 +929,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_critical_count = 0;
             $total_warning_count = 0;
 
+            // Create matcher ONCE and reuse for all bookings to share cache
+            $matcher = new BMA_Matcher();
+
             foreach ($bookings_by_room as $room => $dates) {
                 // Check if room has a booking staying on target date
                 $current_booking = $dates['current'] ?? null;
@@ -990,7 +993,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $timeline_data['next_vacant'] = true;
                 }
 
-                $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data);
+                $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data, $matcher);
                 $processed_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
@@ -1102,7 +1105,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for staying display
      */
-    private function process_booking_for_staying($booking, $target_date, $force_refresh = false, $timeline_data = array()) {
+    private function process_booking_for_staying($booking, $target_date, $force_refresh = false, $timeline_data = array(), $matcher = null) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -1137,8 +1140,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
         // Extract tariff types
         $tariffs = $this->extract_tariffs($booking);
 
-        // Match with restaurant for this specific date using existing match_single_night method
-        $matcher = new BMA_Matcher();
+        // Match with restaurant for this specific date - reuse matcher if provided, otherwise create new one
+        if ($matcher === null) {
+            $matcher = new BMA_Matcher();
+        }
 
         // Check if has package using matcher's method
         $has_package = $matcher->check_has_package($booking, $target_date);
