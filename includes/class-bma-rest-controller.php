@@ -1344,8 +1344,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $is_confirmed = !empty($hotel['is_primary_match']);
         $is_matched_elsewhere = !empty($hotel['matched_elsewhere']);
 
-        // Only show suggested updates for confirmed matches
-        $suggestions = $is_confirmed ? $suggested_updates : array();
+        // Show suggested updates for all matches
+        $suggestions = $suggested_updates;
         $has_suggestions = !empty($suggestions);
 
         $container_id = 'comparison-' . $date . '-' . $resos_booking_id;
@@ -1355,7 +1355,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         <!-- TEMPLATE VERSION 1.4.0-PHP -->
         <div class="comparison-row-content">
             <div class="comparison-table-wrapper">
-                <div class="comparison-header">Match Comparison [v1.4.0-PHP-SERVER]</div>
+                <div class="comparison-header">Match Comparison</div>
                 <table class="comparison-table">
                     <thead><tr>
                         <th>Field</th>
@@ -1394,8 +1394,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     <button class="btn-manage-group" data-action="manage-group"
                             data-resos-booking-id="<?php echo esc_attr($resos_booking_id); ?>"
                             data-hotel-booking-id="<?php echo esc_attr($hotel_booking_id); ?>"
-                            data-date="<?php echo esc_attr($date); ?>">
-                        <span class="material-symbols-outlined">groups</span> Manage Group
+                            data-date="<?php echo esc_attr($date); ?>"
+                            title="Manage Group">
+                        <span class="material-symbols-outlined">groups</span>
                     </button>
                 <?php endif; ?>
 
@@ -1404,8 +1405,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     <button class="btn-exclude-match" data-action="exclude-match"
                             data-resos-booking-id="<?php echo esc_attr($resos_booking_id); ?>"
                             data-hotel-booking-id="<?php echo esc_attr($hotel_booking_id); ?>"
-                            data-guest-name="<?php echo esc_attr($guest_name); ?>">
-                        <span class="material-symbols-outlined">close</span> Exclude Match
+                            data-guest-name="<?php echo esc_attr($guest_name); ?>"
+                            title="Exclude Match">
+                        <span class="material-symbols-outlined">close</span>
                     </button>
                 <?php endif; ?>
 
