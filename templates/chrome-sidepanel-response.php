@@ -3432,24 +3432,28 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
     // Build updates object from checked checkboxes
     const updates = {};
     checkboxes.forEach(checkbox => {
-        const name = checkbox.name.replace('suggestion_', '');
+        const field = checkbox.dataset.field;
         let value = checkbox.value;
 
-        // Handle special mappings
-        if (name === 'name') {
-            updates.guest_name = value;
-        } else if (name === 'booking_ref') {
-            updates.booking_ref = value;
-        } else if (name === 'hotel_guest') {
-            updates.hotel_guest = value;
-        } else if (name === 'dbb') {
-            updates.dbb = value; // Empty string means remove
-        } else if (name === 'people') {
+        // Map fields to what the API expects
+        if (field === 'name') {
+            updates.name = value;
+        } else if (field === 'email') {
+            updates.email = value;
+        } else if (field === 'phone') {
+            updates.phone = value;
+        } else if (field === 'people') {
             updates.people = parseInt(value);
-        } else if (name === 'status') {
+        } else if (field === 'booking_ref') {
+            updates.booking_ref = value;
+        } else if (field === 'hotel_guest') {
+            updates.hotel_guest = value;
+        } else if (field === 'dbb') {
+            updates.dbb = value; // Empty string means remove
+        } else if (field === 'status') {
             updates.status = value;
         } else {
-            updates[name] = value;
+            updates[field] = value;
         }
     });
 
