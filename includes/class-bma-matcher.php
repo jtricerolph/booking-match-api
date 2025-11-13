@@ -746,10 +746,21 @@ class BMA_Matcher {
      * Uses caching to prevent duplicate API calls for the same date
      */
     private function fetch_hotel_bookings_for_date($date) {
-        // Check static cache first (shared across all matcher instances)
+        // Check static cache first (fastest - within this request only)
         if (isset(self::$hotel_bookings_cache[$date])) {
             bma_log('BMA_Matcher: Using STATIC cached hotel bookings for date ' . $date, 'debug');
             return self::$hotel_bookings_cache[$date];
+        }
+
+        // Check WordPress transient cache (persists across HTTP requests)
+        $transient_key = 'bma_hotel_bookings_' . $date;
+        $cached_data = get_transient($transient_key);
+
+        if ($cached_data !== false) {
+            bma_log('BMA_Matcher: Using TRANSIENT cached hotel bookings for date ' . $date, 'debug');
+            // Store in static cache too for subsequent calls in this request
+            self::$hotel_bookings_cache[$date] = $cached_data;
+            return $cached_data;
         }
 
         // Log the call with caller info
@@ -761,9 +772,10 @@ class BMA_Matcher {
         $searcher = new BMA_NewBook_Search();
         $data = $searcher->fetch_hotel_bookings_for_date($date);
 
-        // Cache the result in static cache
+        // Cache the result in both transient (60s, cross-request) and static cache (this request only)
+        set_transient($transient_key, $data, 60);
         self::$hotel_bookings_cache[$date] = $data;
-        bma_log('BMA_Matcher: Cached ' . count($data) . ' hotel bookings in STATIC cache for date ' . $date, 'debug');
+        bma_log('BMA_Matcher: Cached ' . count($data) . ' hotel bookings in TRANSIENT and STATIC cache for date ' . $date, 'debug');
 
         return $data;
     }
