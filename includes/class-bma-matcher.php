@@ -749,49 +749,9 @@ class BMA_Matcher {
             return $this->hotel_bookings_cache[$date];
         }
 
-        // Get NewBook API credentials (check new options first, fallback to old)
-        $username = get_option('bma_newbook_username') ?: get_option('hotel_booking_newbook_username');
-        $password = get_option('bma_newbook_password') ?: get_option('hotel_booking_newbook_password');
-        $api_key = get_option('bma_newbook_api_key') ?: get_option('hotel_booking_newbook_api_key');
-        $region = get_option('bma_newbook_region') ?: get_option('hotel_booking_newbook_region', 'au');
-        $hotel_id = get_option('bma_hotel_id') ?: get_option('hotel_booking_default_hotel_id', '1');
-
-        if (empty($username) || empty($password) || empty($api_key)) {
-            return array();
-        }
-
-        // Build NewBook API URL (REST v1 API, no region subdomain)
-        $url = "https://api.newbook.cloud/rest/v1/site/{$hotel_id}/bookings";
-        $url .= '?from_date=' . urlencode($date);
-        $url .= '&to_date=' . urlencode($date);
-        $url .= '&expand=guests,guests.contact_details,tariffs_quoted,inventory_items';
-
-        $args = array(
-            'headers' => array(
-                'Authorization' => 'Basic ' . base64_encode($username . ':' . $password),
-                'x-api-key' => $api_key
-            ),
-            'timeout' => 30
-        );
-
-        bma_log('BMA_Matcher: Fetching hotel bookings for date ' . $date . ' from NewBook API', 'debug');
-        $response = wp_remote_get($url, $args);
-
-        if (is_wp_error($response)) {
-            bma_log('BMA_Matcher: Failed to fetch hotel bookings for date ' . $date . ': ' . $response->get_error_message(), 'error');
-            $this->hotel_bookings_cache[$date] = array(); // Cache empty result to prevent retry
-            return array();
-        }
-
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-
-        if (!is_array($data)) {
-            $status_code = wp_remote_retrieve_response_code($response);
-            bma_log('BMA_Matcher: Invalid response when fetching hotel bookings for date ' . $date . ' - Status: ' . $status_code . ' - Body: ' . substr($body, 0, 500), 'error');
-            $this->hotel_bookings_cache[$date] = array(); // Cache empty result to prevent retry
-            return array();
-        }
+        // Use the working BMA_NewBook_Search method
+        $searcher = new BMA_NewBook_Search();
+        $data = $searcher->fetch_hotel_bookings_for_date($date);
 
         // Cache the result
         $this->hotel_bookings_cache[$date] = $data;
