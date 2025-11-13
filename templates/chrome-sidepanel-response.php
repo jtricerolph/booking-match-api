@@ -3185,7 +3185,7 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     let html = '<!-- TEMPLATE VERSION 1.4.0-2025-01-11 -->';
     html += '<div class="comparison-row-content">';
     html += '<div class="comparison-table-wrapper">';
-    html += '<div class="comparison-header">Match Comparison [v1.4.0-TEST]</div>';
+    html += '<div class="comparison-header">Match Comparison</div>';
     html += '<table class="comparison-table">';
     html += '<thead><tr>';
     html += '<th>Field</th>';
