@@ -18,7 +18,7 @@ if (empty($bookings)) {
 
 // Calculate stats
 $departs_count = 0;
-$stays_count = 0;
+$stopovers_count = 0;
 $arrivals_count = 0;
 $total_adults = 0;
 $total_children = 0;
@@ -31,22 +31,22 @@ foreach ($bookings as $booking) {
         continue;
     }
 
-    // Get timeline data
-    $previous_status = $booking['previous_night_status'] ?? '';
-    $next_status = $booking['next_night_status'] ?? '';
+    // Parse booking dates (extract date portion only, ignore time)
+    $arrival_date = isset($booking['booking_arrival']) ? substr($booking['booking_arrival'], 0, 10) : '';
+    $departure_date = isset($booking['booking_departure']) ? substr($booking['booking_departure'], 0, 10) : '';
 
-    // Departing: staying today but not tomorrow
-    if ($next_status === '' || $next_status === 'departed') {
+    // Departing: checkout date is the date set
+    if ($departure_date === $date) {
         $departs_count++;
     }
 
-    // Stays: was staying yesterday and staying today
-    if ($previous_status === 'staying') {
-        $stays_count++;
+    // Stopovers: arrived before date set AND departing after date set
+    if ($arrival_date < $date && $departure_date > $date) {
+        $stopovers_count++;
     }
 
-    // Arrivals: not staying yesterday but staying today
-    if ($previous_status === '' || $previous_status === 'vacant') {
+    // Arrivals: checkin date is the date set
+    if ($arrival_date === $date) {
         $arrivals_count++;
     }
 
@@ -83,9 +83,9 @@ if ($total_children > 0 || $total_infants > 0) {
         <span class="stat-value"><?php echo $departs_count; ?></span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item stat-filter" data-filter="stays" title="Click to filter staying bookings (hide vacant)">
+    <div class="stat-item stat-filter" data-filter="stopovers" title="Click to filter stopover bookings (arrived before, departing after)">
         <span class="material-symbols-outlined">step_over</span>
-        <span class="stat-value"><?php echo $stays_count; ?></span>
+        <span class="stat-value"><?php echo $stopovers_count; ?></span>
     </div>
     <div class="stat-divider">|</div>
     <div class="stat-item stat-filter" data-filter="arrivals" title="Click to filter arriving bookings">
@@ -99,7 +99,9 @@ if ($total_children > 0 || $total_infants > 0) {
     </div>
     <div class="stat-divider">|</div>
     <div class="stat-item stat-filter" data-filter="twins" title="Click to filter twin bed bookings">
-        <span class="material-symbols-outlined">single_bed</span><span class="material-symbols-outlined">single_bed</span>
+        <span class="twin-beds-icon">
+            <span class="material-symbols-outlined">single_bed</span><span class="material-symbols-outlined">single_bed</span>
+        </span>
         <span class="stat-value"><?php echo $twins_count; ?></span>
     </div>
 </div>
@@ -148,10 +150,13 @@ if ($total_children > 0 || $total_infants > 0) {
         $previous_vacant = $booking['previous_vacant'] ?? false;
         $next_vacant = $booking['next_vacant'] ?? false;
 
-        // Calculate filter attributes
-        $is_arriving = ($previous_status === '' || $previous_status === 'vacant');
-        $is_departing = ($next_status === '' || $next_status === 'departed');
-        $is_staying_filter = true; // All non-vacant bookings match "stays" filter
+        // Calculate filter attributes based on actual booking dates
+        $arrival_date = isset($booking['booking_arrival']) ? substr($booking['booking_arrival'], 0, 10) : '';
+        $departure_date = isset($booking['booking_departure']) ? substr($booking['booking_departure'], 0, 10) : '';
+
+        $is_arriving = ($arrival_date === $date);
+        $is_departing = ($departure_date === $date);
+        $is_stopover = ($arrival_date < $date && $departure_date > $date);
 
         // Check for twin bed type
         $has_twin = false;
@@ -175,7 +180,7 @@ if ($total_children > 0 || $total_infants > 0) {
              data-next-vacant="<?php echo $next_vacant ? 'true' : 'false'; ?>"
              data-is-arriving="<?php echo $is_arriving ? 'true' : 'false'; ?>"
              data-is-departing="<?php echo $is_departing ? 'true' : 'false'; ?>"
-             data-is-staying="<?php echo $is_staying_filter ? 'true' : 'false'; ?>"
+             data-is-stopover="<?php echo $is_stopover ? 'true' : 'false'; ?>"
              data-has-twin="<?php echo $has_twin ? 'true' : 'false'; ?>"
              <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
 
@@ -453,6 +458,11 @@ if ($total_children > 0 || $total_infants > 0) {
 .stat-item .material-symbols-outlined {
     font-size: 18px;
     color: #64748b;
+}
+
+.twin-beds-icon {
+    display: flex;
+    gap: 3px;
 }
 
 .stat-value {
