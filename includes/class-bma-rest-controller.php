@@ -1166,6 +1166,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'resos_matches' => $matches,
             'critical_count' => $critical_count,
             'warning_count' => $warning_count,
+            'custom_fields' => $booking['custom_fields'] ?? array(),
             // Timeline indicators for Gantt-style visualization
             'previous_night_status' => $timeline_data['previous_night_status'] ?? null,
             'next_night_status' => $timeline_data['next_night_status'] ?? null,

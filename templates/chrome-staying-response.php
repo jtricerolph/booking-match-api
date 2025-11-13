@@ -31,9 +31,9 @@ foreach ($bookings as $booking) {
         continue;
     }
 
-    // Parse booking dates (extract date portion only, ignore time)
-    $arrival_date = isset($booking['booking_arrival']) ? substr($booking['booking_arrival'], 0, 10) : '';
-    $departure_date = isset($booking['booking_departure']) ? substr($booking['booking_departure'], 0, 10) : '';
+    // Get booking dates (already in YYYY-MM-DD format from processed booking)
+    $arrival_date = $booking['arrival_date'] ?? '';
+    $departure_date = $booking['departure_date'] ?? '';
 
     // Calculate day after $date for departure comparisons
     // Departure date is checkout date (day after last night)
@@ -54,10 +54,11 @@ foreach ($bookings as $booking) {
         $arrivals_count++;
     }
 
-    // Occupancy totals
-    $total_adults += intval($booking['booking_adults'] ?? 0);
-    $total_children += intval($booking['booking_children'] ?? 0);
-    $total_infants += intval($booking['booking_infants'] ?? 0);
+    // Occupancy totals from occupants array
+    $occupants = $booking['occupants'] ?? [];
+    $total_adults += intval($occupants['adults'] ?? 0);
+    $total_children += intval($occupants['children'] ?? 0);
+    $total_infants += intval($occupants['infants'] ?? 0);
 
     // Twins count - check custom fields for bed type
     $custom_fields = $booking['custom_fields'] ?? [];
@@ -100,7 +101,7 @@ if ($total_children > 0 || $total_infants > 0) {
         <span class="stat-label">Arrives</span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item">
+    <div class="stat-item stat-filter" data-filter="occupancy" title="Click to show only booked rooms (hide vacant)">
         <span class="material-symbols-outlined">group</span>
         <span class="stat-value"><?php echo $occupancy_str; ?></span>
         <span class="stat-label">Occupancy</span>
@@ -159,9 +160,9 @@ if ($total_children > 0 || $total_infants > 0) {
         $previous_vacant = $booking['previous_vacant'] ?? false;
         $next_vacant = $booking['next_vacant'] ?? false;
 
-        // Calculate filter attributes based on actual booking dates
-        $arrival_date = isset($booking['booking_arrival']) ? substr($booking['booking_arrival'], 0, 10) : '';
-        $departure_date = isset($booking['booking_departure']) ? substr($booking['booking_departure'], 0, 10) : '';
+        // Calculate filter attributes based on actual booking dates (already in YYYY-MM-DD format)
+        $arrival_date = $booking['arrival_date'] ?? '';
+        $departure_date = $booking['departure_date'] ?? '';
         $day_after = date('Y-m-d', strtotime($date . ' +1 day'));
 
         $is_arriving = ($arrival_date === $date);
@@ -475,7 +476,7 @@ if ($total_children > 0 || $total_infants > 0) {
 
 .twin-beds-icon {
     display: flex;
-    gap: 2px;
+    gap: 0.5px;
 }
 
 .twin-beds-icon .material-symbols-outlined {
