@@ -34,19 +34,18 @@ foreach ($bookings as $booking) {
     // Get booking dates (already in YYYY-MM-DD format from processed booking)
     $arrival_date = $booking['arrival_date'] ?? '';
     $departure_date = $booking['departure_date'] ?? '';
-    $day_after = date('Y-m-d', strtotime($date . ' +1 day'));
 
-    // Departing: last night is the set date, checkout is tomorrow
-    if ($departure_date === $day_after) {
+    // Departing: checkout date is the set date
+    if ($departure_date === $date) {
         $departs_count++;
     }
 
-    // Stopovers: arrived before set date AND checkout is after tomorrow (not arriving or departing today)
-    if ($arrival_date < $date && $departure_date > $day_after) {
+    // Stopovers: arrived before set date AND departing after set date
+    if ($arrival_date < $date && $departure_date > $date) {
         $stopovers_count++;
     }
 
-    // Arrivals: checkin date is the date set (first night is the date set)
+    // Arrivals: checkin date is the date set
     if ($arrival_date === $date) {
         $arrivals_count++;
     }
@@ -160,11 +159,10 @@ if ($total_children > 0 || $total_infants > 0) {
         // Calculate filter attributes based on actual booking dates (already in YYYY-MM-DD format)
         $arrival_date = $booking['arrival_date'] ?? '';
         $departure_date = $booking['departure_date'] ?? '';
-        $day_after = date('Y-m-d', strtotime($date . ' +1 day'));
 
         $is_arriving = ($arrival_date === $date);
-        $is_departing = ($departure_date === $day_after); // Last night is set date, checkout tomorrow
-        $is_stopover = ($arrival_date < $date && $departure_date > $day_after); // Arrived before, checkout after tomorrow
+        $is_departing = ($departure_date === $date); // Checkout date is set date
+        $is_stopover = ($arrival_date < $date && $departure_date > $date); // Arrived before, departing after
 
         // Check for twin bed type
         $has_twin = false;
