@@ -2139,6 +2139,12 @@ if (!defined('ABSPATH')) {
   display: none;
 }
 
+.group-modal-loading.hidden,
+.group-modal-error.hidden,
+.group-link-toggle.hidden {
+  display: none;
+}
+
 .group-modal-overlay {
   position: absolute;
   top: 0;
