@@ -260,7 +260,7 @@ class BMA_Matcher {
 
         // Priority 2: Check for group/individual match in GROUP/EXCLUDE field (secondary group member match)
         // This must come BEFORE the "matched elsewhere" check, so group members match correctly
-        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data);
+        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data, $resos_booking, $all_hotel_bookings);
         if ($group_match !== false) {
             return $group_match;
         }
@@ -1045,11 +1045,35 @@ class BMA_Matcher {
      *
      * @param array $hotel_booking Hotel booking data
      * @param array $group_exclude_data Parsed GROUP/EXCLUDE data
+     * @param array $resos_booking Resos booking data (for extracting lead booking ID)
+     * @param array $all_hotel_bookings All hotel bookings for this date (for lead booking lookup)
      * @return array|false Match result or false if no match
      */
-    private function check_group_exclude_match($hotel_booking, $group_exclude_data) {
+    private function check_group_exclude_match($hotel_booking, $group_exclude_data, $resos_booking = array(), $all_hotel_bookings = array()) {
         $booking_id = strval($hotel_booking['booking_id'] ?? '');
         $bookings_group_id = strval($hotel_booking['bookings_group_id'] ?? '');
+
+        // Get lead booking ID from ResOS "Booking #" field
+        $lead_booking_id = '';
+        $lead_booking_room = '';
+        if (!empty($resos_booking['customFields'])) {
+            foreach ($resos_booking['customFields'] as $field) {
+                if (($field['name'] ?? '') === 'Booking #') {
+                    $lead_booking_id = $field['value'] ?? '';
+                    break;
+                }
+            }
+        }
+
+        // Find lead booking's room number
+        if (!empty($lead_booking_id) && !empty($all_hotel_bookings)) {
+            foreach ($all_hotel_bookings as $hb) {
+                if (($hb['booking_id'] ?? '') == $lead_booking_id) {
+                    $lead_booking_room = $hb['site_name'] ?? '';
+                    break;
+                }
+            }
+        }
 
         // Check if booking is in a group that's linked (G#5678)
         if (!empty($bookings_group_id) && !empty($group_exclude_data['groups'])) {
@@ -1061,7 +1085,8 @@ class BMA_Matcher {
                     'is_primary' => true,
                     'is_group_member' => true,
                     'matched_via_group_id' => $bookings_group_id,
-                    'match_label' => 'Group Member (G#' . $bookings_group_id . ')'
+                    'match_label' => 'Group Member (G#' . $bookings_group_id . ')',
+                    'lead_booking_room' => $lead_booking_room
                 );
             }
         }
@@ -1076,7 +1101,8 @@ class BMA_Matcher {
                     'is_primary' => true,
                     'is_group_member' => true,
                     'matched_via_individual_id' => $booking_id,
-                    'match_label' => 'Individual Link (#' . $booking_id . ')'
+                    'match_label' => 'Individual Link (#' . $booking_id . ')',
+                    'lead_booking_room' => $lead_booking_room
                 );
             }
         }

@@ -296,13 +296,13 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                             $pax = $match['people'] ?? 0;
                             $has_suggestions = $match['has_suggestions'] ?? false;
                             $is_group_member = $match['match_info']['is_group_member'] ?? false;
+                            $lead_room = $match['match_info']['lead_booking_room'] ?? 'N/A';
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
                             <?php if ($is_group_member): ?>
                                 <span class="restaurant-status has-booking">
-                                    <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
+                                    <?php echo esc_html($time); ?> with <?php echo esc_html($lead_room); ?>
                                     <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
-                                    <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                 </span>
                             <?php elseif ($has_suggestions): ?>
                                 <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
