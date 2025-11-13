@@ -81,21 +81,25 @@ if ($total_children > 0 || $total_infants > 0) {
     <div class="stat-item stat-filter" data-filter="departs" title="Click to filter departing bookings">
         <span class="material-symbols-outlined">flight_takeoff</span>
         <span class="stat-value"><?php echo $departs_count; ?></span>
+        <span class="stat-label">Departs</span>
     </div>
     <div class="stat-divider">|</div>
     <div class="stat-item stat-filter" data-filter="stopovers" title="Click to filter stopover bookings (arrived before, departing after)">
         <span class="material-symbols-outlined">step_over</span>
         <span class="stat-value"><?php echo $stopovers_count; ?></span>
+        <span class="stat-label">Stays</span>
     </div>
     <div class="stat-divider">|</div>
     <div class="stat-item stat-filter" data-filter="arrivals" title="Click to filter arriving bookings">
         <span class="material-symbols-outlined">flight_land</span>
         <span class="stat-value"><?php echo $arrivals_count; ?></span>
+        <span class="stat-label">Arrives</span>
     </div>
     <div class="stat-divider">|</div>
     <div class="stat-item">
         <span class="material-symbols-outlined">group</span>
         <span class="stat-value"><?php echo $occupancy_str; ?></span>
+        <span class="stat-label">Occupancy</span>
     </div>
     <div class="stat-divider">|</div>
     <div class="stat-item stat-filter" data-filter="twins" title="Click to filter twin bed bookings">
@@ -103,6 +107,7 @@ if ($total_children > 0 || $total_infants > 0) {
             <span class="material-symbols-outlined">single_bed</span><span class="material-symbols-outlined">single_bed</span>
         </span>
         <span class="stat-value"><?php echo $twins_count; ?></span>
+        <span class="stat-label">Twins</span>
     </div>
 </div>
 
@@ -415,7 +420,7 @@ if ($total_children > 0 || $total_infants > 0) {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 16px;
     padding: 12px 16px;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border-bottom: 1px solid #e2e8f0;
@@ -427,14 +432,16 @@ if ($total_children > 0 || $total_infants > 0) {
 
 .stat-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    min-width: 60px;
 }
 
 .stat-filter {
     cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
@@ -455,8 +462,12 @@ if ($total_children > 0 || $total_infants > 0) {
     color: white !important;
 }
 
+.stat-filter.active .stat-label {
+    color: white !important;
+}
+
 .stat-item .material-symbols-outlined {
-    font-size: 18px;
+    font-size: 28px;
     color: #64748b;
 }
 
@@ -466,13 +477,26 @@ if ($total_children > 0 || $total_infants > 0) {
 }
 
 .stat-value {
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 16px;
     color: #1e293b;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .stat-divider {
     color: #cbd5e1;
     font-weight: 300;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
 }
 
 .staying-empty {
