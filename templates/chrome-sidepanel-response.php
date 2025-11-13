@@ -2192,14 +2192,6 @@ if (!defined('ABSPATH')) {
   flex: 1;
 }
 
-.group-modal-date {
-  margin-bottom: 16px;
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
 .group-modal-resos-info {
   margin-bottom: 16px;
   padding: 10px 12px;
@@ -2421,10 +2413,6 @@ if (!defined('ABSPATH')) {
       </button>
     </div>
     <div class="group-modal-body">
-      <div class="group-modal-date">
-        <strong>Date:</strong> <span id="group-modal-date-value"></span>
-      </div>
-
       <div class="group-modal-resos-info" id="group-modal-resos-info"></div>
 
       <div class="group-bookings-container"></div>
@@ -2802,7 +2790,6 @@ function parseGroupExcludeField(fieldValue) {
 // Open group management modal
 async function openGroupManagementModal(resosBookingId, hotelBookingId, date, resosTime = '', resosGuest = '', resosPeople = '0', resosBookingRef = '', groupExcludeField = '') {
   const modal = document.getElementById('group-management-modal');
-  const dateValue = document.getElementById('group-modal-date-value');
   const resosInfo = document.getElementById('group-modal-resos-info');
   const loading = modal.querySelector('.group-modal-loading');
   const error = modal.querySelector('.group-modal-error');
@@ -2821,11 +2808,10 @@ async function openGroupManagementModal(resosBookingId, hotelBookingId, date, re
 
   // Show modal
   modal.classList.remove('hidden');
-  dateValue.textContent = date;
 
   // Show ResOS booking info
-  const time = resosTime || 'N/A';
-  const guestName = resosGuest || 'Unknown';
+  const time = (resosTime && resosTime.trim()) || 'N/A';
+  const guestName = (resosGuest && resosGuest.trim()) || 'Unknown';
   const people = resosPeople || '0';
   resosInfo.innerHTML = `<strong>ResOS Booking:</strong> ${time} - ${guestName} (${people} pax)`;
 
