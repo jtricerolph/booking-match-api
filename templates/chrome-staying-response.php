@@ -62,12 +62,12 @@ foreach ($bookings as $booking) {
         }
     }
 
-    // Restaurant matches: check if booking has confirmed or primary matches
+    // Restaurant matches: check if booking has primary match (with or without suggestions)
     $resos_matches = $booking['resos_matches'] ?? [];
     $has_match = false;
     foreach ($resos_matches as $match) {
-        $match_type = strtolower($match['match_type'] ?? '');
-        if ($match_type === 'confirmed' || $match_type === 'primary') {
+        // Check if this match is a primary match
+        if (isset($match['match_info']['is_primary']) && $match['match_info']['is_primary'] === true) {
             $has_match = true;
             break;
         }
@@ -237,11 +237,11 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
             }
         }
 
-        // Check for restaurant match (confirmed or primary)
+        // Check for restaurant match (primary match with or without suggestions)
         $has_restaurant_match = false;
         foreach ($matches as $match) {
-            $match_type = strtolower($match['match_type'] ?? '');
-            if ($match_type === 'confirmed' || $match_type === 'primary') {
+            // Check if this match is a primary match
+            if (isset($match['match_info']['is_primary']) && $match['match_info']['is_primary'] === true) {
                 $has_restaurant_match = true;
                 break;
             }
@@ -494,8 +494,8 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 6px 8px;
+    gap: 3px;
+    padding: 4px 4px;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border-bottom: 1px solid #e2e8f0;
     margin-bottom: 5px;
@@ -505,13 +505,13 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    min-width: 50px;
+    gap: 1px;
+    min-width: 40px;
 }
 
 .stat-filter {
     cursor: pointer;
-    padding: 4px 6px;
+    padding: 3px 4px;
     border-radius: 6px;
     transition: all 0.2s ease;
     position: relative;
@@ -580,7 +580,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
 }
 
 .stat-item .material-symbols-outlined {
-    font-size: 20px;
+    font-size: 18px;
     color: #64748b;
 }
 
@@ -590,12 +590,12 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
 }
 
 .twin-beds-icon .material-symbols-outlined {
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .stat-value {
     font-weight: 700;
-    font-size: 13px;
+    font-size: 11px;
     color: #1e293b;
     line-height: 1;
 }
@@ -606,7 +606,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
     align-self: stretch;
     display: flex;
     align-items: center;
-    font-size: 12px;
+    font-size: 10px;
 }
 
 .staying-empty {
