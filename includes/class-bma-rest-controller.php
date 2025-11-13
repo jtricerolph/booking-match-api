@@ -918,29 +918,29 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 }
             }
 
-            // Process bookings staying on target date AND bookings departing on target date
+            // Process bookings staying on target date
             $processed_bookings = array();
+            $departing_bookings = array(); // Separate array for bookings departing on target date
             $total_critical_count = 0;
             $total_warning_count = 0;
 
             foreach ($bookings_by_room as $room => $dates) {
                 // Check if room has a booking staying on target date
                 $current_booking = $dates['current'] ?? null;
-                $is_departing_booking = false;
 
                 // Also check if there's a booking departing on target date (in previous slot)
+                // These are tracked separately for stats only, not displayed as cards
                 $previous_booking_slot = $dates['previous'] ?? null;
-                if (!$current_booking && $previous_booking_slot) {
+                if ($previous_booking_slot) {
                     $prev_departure = substr($previous_booking_slot['booking_departure'] ?? '', 0, 10);
                     if ($prev_departure === $date) {
-                        // This booking is departing today (last night was yesterday)
-                        $current_booking = $previous_booking_slot;
-                        $is_departing_booking = true;
+                        // This booking is departing today - add to departing array for stats
+                        $departing_bookings[] = $previous_booking_slot;
                     }
                 }
 
                 if (!$current_booking) {
-                    continue; // Not staying or departing on target date
+                    continue; // Not staying on target date
                 }
 
                 // Determine timeline indicators
@@ -953,56 +953,36 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     'next_vacant' => false,
                 );
 
-                if ($is_departing_booking) {
-                    // For departing bookings, check if it spans from day before yesterday
-                    $day_before_yesterday = date('Y-m-d', strtotime($date . ' -2 days'));
-                    $arrival = substr($current_booking['booking_arrival'] ?? '', 0, 10);
+                // All bookings in main loop are staying bookings
+                $previous_booking = $dates['previous'] ?? null;
+                $next_booking = $dates['next'] ?? null;
 
-                    if ($arrival <= $day_before_yesterday) {
+                // Check previous night
+                if ($previous_booking) {
+                    if ($previous_booking['booking_id'] === $current_booking['booking_id']) {
+                        // Same booking continuing
                         $timeline_data['spans_from_previous'] = true;
                     } else {
-                        $timeline_data['previous_vacant'] = true;
-                    }
-
-                    // Next night shows what's in room today (in current slot)
-                    $next_booking = $dates['current'] ?? null;
-                    if ($next_booking) {
-                        $timeline_data['next_night_status'] = strtolower($next_booking['booking_status'] ?? 'confirmed');
-                    } else {
-                        $timeline_data['next_vacant'] = true;
+                        // Different booking
+                        $timeline_data['previous_night_status'] = strtolower($previous_booking['booking_status'] ?? 'confirmed');
                     }
                 } else {
-                    // For staying bookings, use normal timeline logic
-                    $previous_booking = $dates['previous'] ?? null;
-                    $next_booking = $dates['next'] ?? null;
+                    // Room was vacant on previous night
+                    $timeline_data['previous_vacant'] = true;
+                }
 
-                    // Check previous night
-                    if ($previous_booking) {
-                        if ($previous_booking['booking_id'] === $current_booking['booking_id']) {
-                            // Same booking continuing
-                            $timeline_data['spans_from_previous'] = true;
-                        } else {
-                            // Different booking
-                            $timeline_data['previous_night_status'] = strtolower($previous_booking['booking_status'] ?? 'confirmed');
-                        }
+                // Check next night
+                if ($next_booking) {
+                    if ($next_booking['booking_id'] === $current_booking['booking_id']) {
+                        // Same booking continuing
+                        $timeline_data['spans_to_next'] = true;
                     } else {
-                        // Room was vacant on previous night
-                        $timeline_data['previous_vacant'] = true;
+                        // Different booking
+                        $timeline_data['next_night_status'] = strtolower($next_booking['booking_status'] ?? 'confirmed');
                     }
-
-                    // Check next night
-                    if ($next_booking) {
-                        if ($next_booking['booking_id'] === $current_booking['booking_id']) {
-                            // Same booking continuing
-                            $timeline_data['spans_to_next'] = true;
-                        } else {
-                            // Different booking
-                            $timeline_data['next_night_status'] = strtolower($next_booking['booking_status'] ?? 'confirmed');
-                        }
-                    } else {
-                        // Room will be vacant on next night
-                        $timeline_data['next_vacant'] = true;
-                    }
+                } else {
+                    // Room will be vacant on next night
+                    $timeline_data['next_vacant'] = true;
                 }
 
                 $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data);
@@ -1097,7 +1077,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $formatter = new BMA_Response_Formatter();
             return array(
                 'success' => true,
-                'html' => $formatter->format_staying_response($processed_bookings, $date),
+                'html' => $formatter->format_staying_response($processed_bookings, $date, $departing_bookings),
                 'date' => $date,
                 'booking_count' => count($processed_bookings),
                 'critical_count' => $total_critical_count,

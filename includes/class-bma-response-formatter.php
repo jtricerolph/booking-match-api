@@ -312,11 +312,12 @@ class BMA_Response_Formatter {
     /**
      * Format staying bookings response for Chrome extension
      *
-     * @param array $bookings Staying bookings with matches
+     * @param array $bookings Staying bookings with matches (to display as cards)
      * @param string $date Target date (YYYY-MM-DD)
+     * @param array $departing_bookings Bookings departing on target date (for stats only)
      * @return string HTML content
      */
-    public function format_staying_response($bookings, $date) {
+    public function format_staying_response($bookings, $date, $departing_bookings = array()) {
         ob_start();
         $template_file = BMA_PLUGIN_DIR . 'templates/chrome-staying-response.php';
 

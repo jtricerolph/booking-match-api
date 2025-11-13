@@ -4,7 +4,8 @@
  * Displays bookings staying on a specific date
  *
  * Variables available:
- * - $bookings: Array of staying bookings
+ * - $bookings: Array of bookings staying on this night (to display as cards)
+ * - $departing_bookings: Array of bookings departing on this date (for stats only)
  * - $date: Target date (YYYY-MM-DD)
  */
 
@@ -16,8 +17,7 @@ if (empty($bookings)) {
     return;
 }
 
-// Calculate stats
-$departs_count = 0;
+// Calculate stats from staying bookings
 $stopovers_count = 0;
 $arrivals_count = 0;
 $total_adults = 0;
@@ -34,11 +34,6 @@ foreach ($bookings as $booking) {
     // Get booking dates (already in YYYY-MM-DD format from processed booking)
     $arrival_date = $booking['arrival_date'] ?? '';
     $departure_date = $booking['departure_date'] ?? '';
-
-    // Departing: checkout date is the set date
-    if ($departure_date === $date) {
-        $departs_count++;
-    }
 
     // Stopovers: arrived before set date AND departing after set date
     if ($arrival_date < $date && $departure_date > $date) {
@@ -67,6 +62,18 @@ foreach ($bookings as $booking) {
     }
 }
 
+// Calculate departs from separate departing bookings array
+$departs_count = 0;
+if (isset($departing_bookings) && is_array($departing_bookings)) {
+    foreach ($departing_bookings as $booking) {
+        // Verify this is actually a departing booking
+        $departure_date = substr($booking['booking_departure'] ?? '', 0, 10);
+        if ($departure_date === $date) {
+            $departs_count++;
+        }
+    }
+}
+
 // Format occupancy string as x+y+z
 $occupancy_str = (string)$total_adults;
 if ($total_children > 0 || $total_infants > 0) {
@@ -79,36 +86,31 @@ if ($total_children > 0 || $total_infants > 0) {
 
 <!-- Stats Row -->
 <div class="staying-stats-row">
-    <div class="stat-item stat-filter" data-filter="departs" title="Click to filter departing bookings">
+    <div class="stat-item stat-filter" data-filter="departs" title="Departing bookings">
         <span class="material-symbols-outlined">flight_takeoff</span>
         <span class="stat-value"><?php echo $departs_count; ?></span>
-        <span class="stat-label">Departs</span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item stat-filter" data-filter="stopovers" title="Click to filter stopover bookings (arrived before, departing after)">
+    <div class="stat-item stat-filter" data-filter="stopovers" title="Stopover bookings (arrived before, departing after)">
         <span class="material-symbols-outlined">step_over</span>
         <span class="stat-value"><?php echo $stopovers_count; ?></span>
-        <span class="stat-label">Stays</span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item stat-filter" data-filter="arrivals" title="Click to filter arriving bookings">
+    <div class="stat-item stat-filter" data-filter="arrivals" title="Arriving bookings">
         <span class="material-symbols-outlined">flight_land</span>
         <span class="stat-value"><?php echo $arrivals_count; ?></span>
-        <span class="stat-label">Arrives</span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item stat-filter" data-filter="occupancy" title="Click to show only booked rooms (hide vacant)">
+    <div class="stat-item stat-filter" data-filter="occupancy" title="Total occupancy (hide vacant)">
         <span class="material-symbols-outlined">group</span>
         <span class="stat-value"><?php echo $occupancy_str; ?></span>
-        <span class="stat-label">Occupancy</span>
     </div>
     <div class="stat-divider">|</div>
-    <div class="stat-item stat-filter" data-filter="twins" title="Click to filter twin bed bookings">
+    <div class="stat-item stat-filter" data-filter="twins" title="Twin bed bookings">
         <span class="twin-beds-icon">
             <span class="material-symbols-outlined">single_bed</span><span class="material-symbols-outlined">single_bed</span>
         </span>
         <span class="stat-value"><?php echo $twins_count; ?></span>
-        <span class="stat-label">Twins</span>
     </div>
 </div>
 
@@ -430,15 +432,13 @@ if ($total_children > 0 || $total_infants > 0) {
 
 .stat-item {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2px;
-    min-width: 50px;
+    gap: 4px;
 }
 
 .stat-filter {
     cursor: pointer;
-    padding: 4px 6px;
+    padding: 4px 8px;
     border-radius: 6px;
     transition: all 0.2s ease;
 }
@@ -460,12 +460,8 @@ if ($total_children > 0 || $total_infants > 0) {
     color: white !important;
 }
 
-.stat-filter.active .stat-label {
-    color: white !important;
-}
-
 .stat-item .material-symbols-outlined {
-    font-size: 20px;
+    font-size: 18px;
     color: #64748b;
 }
 
@@ -475,22 +471,13 @@ if ($total_children > 0 || $total_infants > 0) {
 }
 
 .twin-beds-icon .material-symbols-outlined {
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .stat-value {
     font-weight: 700;
-    font-size: 13px;
+    font-size: 12px;
     color: #1e293b;
-    line-height: 1;
-}
-
-.stat-label {
-    font-size: 9px;
-    font-weight: 500;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
     line-height: 1;
 }
 
