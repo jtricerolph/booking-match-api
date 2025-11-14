@@ -1081,6 +1081,7 @@ class BMA_Matcher {
             foreach ($resos_booking['customFields'] as $field) {
                 if (($field['name'] ?? '') === 'Booking #') {
                     $lead_booking_id = $field['value'] ?? '';
+                    bma_log('BMA_Matcher: Found lead booking ID in ResOS: ' . $lead_booking_id, 'debug');
                     break;
                 }
             }
@@ -1088,12 +1089,19 @@ class BMA_Matcher {
 
         // Find lead booking's room number
         if (!empty($lead_booking_id) && !empty($all_hotel_bookings)) {
+            bma_log('BMA_Matcher: Searching for lead booking ID ' . $lead_booking_id . ' in ' . count($all_hotel_bookings) . ' hotel bookings', 'debug');
             foreach ($all_hotel_bookings as $hb) {
                 if (($hb['booking_id'] ?? '') == $lead_booking_id) {
                     $lead_booking_room = $hb['site_name'] ?? '';
+                    bma_log('BMA_Matcher: Found lead booking - room: ' . $lead_booking_room . ' (site_name: ' . ($hb['site_name'] ?? 'MISSING') . ')', 'debug');
                     break;
                 }
             }
+            if (empty($lead_booking_room)) {
+                bma_log('BMA_Matcher: Lead booking ID ' . $lead_booking_id . ' not found in hotel bookings list', 'error');
+            }
+        } else {
+            bma_log('BMA_Matcher: Cannot find lead room - lead_booking_id: ' . ($lead_booking_id ?: 'EMPTY') . ', all_hotel_bookings count: ' . count($all_hotel_bookings), 'error');
         }
 
         // Check if booking is in a group that's linked (G#5678)
