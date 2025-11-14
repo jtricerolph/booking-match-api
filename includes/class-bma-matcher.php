@@ -16,12 +16,6 @@ if (!defined('ABSPATH')) {
 class BMA_Matcher {
 
     /**
-     * Cache for hotel bookings by date to prevent duplicate API calls
-     * STATIC to share cache across all matcher instances (summary, staying, restaurant tabs)
-     */
-    private static $hotel_bookings_cache = array();
-
-    /**
      * Track dates that are using stale cache (fallback due to API failures)
      */
     private $stale_cache_dates = array();
@@ -94,7 +88,8 @@ class BMA_Matcher {
         $resos_bookings = $this->fetch_resos_bookings($date, $force_refresh);
 
         // Fetch ALL hotel bookings for this date (for "matched elsewhere" checking)
-        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date, $force_refresh);
+        // Note: Caching is now handled in call_api(), not at matcher level
+        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date);
 
         // Build array of all hotel booking IDs for this date (excluding current booking)
         $current_booking_id = $booking['booking_id'] ?? '';
@@ -748,45 +743,16 @@ class BMA_Matcher {
      * @param string $date Date in Y-m-d format
      * @param bool $force_refresh If true, bypass cache and fetch fresh data (for detail views)
      */
-    private function fetch_hotel_bookings_for_date($date, $force_refresh = false) {
-        $transient_key = 'bma_hotel_bookings_' . $date;
-
-        // If force refresh, skip cache entirely
-        if (!$force_refresh) {
-            // Check static cache first (fastest - within this request only)
-            if (isset(self::$hotel_bookings_cache[$date])) {
-                bma_log('BMA_Matcher: Using STATIC cached hotel bookings for date ' . $date, 'debug');
-                return self::$hotel_bookings_cache[$date];
-            }
-
-            // Check WordPress transient cache (persists across HTTP requests)
-            $cached_data = get_transient($transient_key);
-
-            if ($cached_data !== false) {
-                bma_log('BMA_Matcher: Using TRANSIENT cached hotel bookings for date ' . $date, 'debug');
-                // Store in static cache too for subsequent calls in this request
-                self::$hotel_bookings_cache[$date] = $cached_data;
-                return $cached_data;
-            }
-        } else {
-            bma_log('BMA_Matcher: Force refresh requested - bypassing cache for date ' . $date, 'debug');
-        }
-
-        // Log the call with caller info
-        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-        $caller = isset($backtrace[1]) ? $backtrace[1]['function'] : 'unknown';
-        bma_log('BMA_Matcher: CACHE MISS - Fetching hotel bookings for date ' . $date . ' (called from: ' . $caller . ')', 'error');
-
-        // Use the working BMA_NewBook_Search method
+    /**
+     * Fetch hotel bookings for a specific date
+     * All caching is now handled in BMA_NewBook_Search::call_api()
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @return array Array of hotel bookings for the date
+     */
+    private function fetch_hotel_bookings_for_date($date) {
         $searcher = new BMA_NewBook_Search();
-        $data = $searcher->fetch_hotel_bookings_for_date($date);
-
-        // Cache the result in both transient (60s, cross-request) and static cache (this request only)
-        set_transient($transient_key, $data, 60);
-        self::$hotel_bookings_cache[$date] = $data;
-        bma_log('BMA_Matcher: Cached ' . count($data) . ' hotel bookings in TRANSIENT and STATIC cache for date ' . $date, 'debug');
-
-        return $data;
+        return $searcher->fetch_hotel_bookings_for_date($date);
     }
 
     /**

@@ -391,7 +391,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             // Search for booking(s)
             if ($booking_id) {
                 // Direct booking ID lookup
-                $bookings = $searcher->get_booking_by_id($booking_id);
+                $bookings = $searcher->get_booking_by_id($booking_id, $force_refresh);
                 if (!$bookings) {
                     return new WP_Error(
                         'booking_not_found',
@@ -554,7 +554,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Fetch recently placed bookings from NewBook
             $searcher = new BMA_NewBook_Search();
-            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit);
+            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit, 72, $force_refresh);
 
             if (empty($recent_bookings)) {
                 // Return empty success response
@@ -794,7 +794,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Fetch booking details from NewBook
             $searcher = new BMA_NewBook_Search();
-            $nb_booking = $searcher->get_booking_by_id($booking_id);
+            $nb_booking = $searcher->get_booking_by_id($booking_id, $force_refresh);
 
             if (!$nb_booking) {
                 return new WP_Error(
@@ -875,9 +875,29 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             bma_log("BMA Staying: Fetching bookings for date = {$date}", 'debug');
 
-            // Fetch staying bookings from NewBook (3-day window for timeline indicators)
+            // Calculate adjacent dates
+            $previous_date = date('Y-m-d', strtotime($date . ' -1 day'));
+            $next_date = date('Y-m-d', strtotime($date . ' +1 day'));
+
+            // Fetch each date individually for per-date cache reuse
             $searcher = new BMA_NewBook_Search();
-            $all_bookings = $searcher->fetch_staying_bookings($date);
+            $previous_bookings = $searcher->fetch_hotel_bookings_for_date($previous_date, $force_refresh);
+            $current_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
+            $next_bookings = $searcher->fetch_hotel_bookings_for_date($next_date, $force_refresh);
+
+            // Merge and deduplicate by booking_id
+            $all_bookings = array();
+            $booking_ids_seen = array();
+
+            foreach (array_merge($previous_bookings, $current_bookings, $next_bookings) as $booking) {
+                $booking_id = $booking['booking_id'] ?? null;
+                if ($booking_id && !isset($booking_ids_seen[$booking_id])) {
+                    $all_bookings[] = $booking;
+                    $booking_ids_seen[$booking_id] = true;
+                }
+            }
+
+            bma_log('BMA Staying: Fetched ' . count($all_bookings) . ' unique bookings across 3 dates (prev: ' . count($previous_bookings) . ', curr: ' . count($current_bookings) . ', next: ' . count($next_bookings) . ')', 'debug');
 
             if (empty($all_bookings)) {
                 // Return empty success response
@@ -891,10 +911,6 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     'warning_count' => 0
                 );
             }
-
-            // Calculate adjacent dates
-            $previous_date = date('Y-m-d', strtotime($date . ' -1 day'));
-            $next_date = date('Y-m-d', strtotime($date . ' +1 day'));
 
             // Group bookings by room and date
             $bookings_by_room = array();
@@ -1218,7 +1234,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Fetch hotel booking
             $searcher = new BMA_NewBook_Search();
-            $hotel_booking = $searcher->get_booking_by_id($booking_id);
+            $hotel_booking = $searcher->get_booking_by_id($booking_id, $force_refresh);
 
             if (!$hotel_booking) {
                 return new WP_Error(
