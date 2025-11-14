@@ -52,8 +52,10 @@ if (empty($bookings)) {
 
                 <span class="expand-icon">▼</span>
 
-                <!-- Time Since Placed -->
-                <?php if (!empty($booking['booking_placed'])): ?>
+                <!-- Time Since Placed/Cancelled -->
+                <?php if ($is_cancelled && !empty($booking['booking_cancelled'])): ?>
+                    <div class="time-since-placed" data-placed-time="<?php echo esc_attr($booking['booking_cancelled']); ?>"></div>
+                <?php elseif (!empty($booking['booking_placed'])): ?>
                     <div class="time-since-placed" data-placed-time="<?php echo esc_attr($booking['booking_placed']); ?>"></div>
                 <?php endif; ?>
             </div>
