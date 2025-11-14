@@ -436,13 +436,13 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                 $restaurant_id = $match['restaurant_id'] ?? '';
                                 $has_suggestions = $match['has_suggestions'] ?? false;
                             ?>
-                                <div class="night-row <?php echo ($is_primary && !$has_suggestions) || $is_group_member ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                <div class="night-row <?php echo $is_group_member ? 'resos-deep-link' : 'clickable-issue'; ?>"
                                      data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                      data-date="<?php echo esc_attr($night_date); ?>"
-                                     <?php if (($is_primary && !$has_suggestions) || $is_group_member): ?>
+                                     <?php if ($is_group_member): ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                         title="<?php echo $is_group_member ? 'Group booking - click to view in ResOS' : 'Click to view in ResOS'; ?>"
+                                         title="Group booking - click to view in ResOS"
                                      <?php else: ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
