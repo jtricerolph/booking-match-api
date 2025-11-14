@@ -109,7 +109,7 @@ if (empty($bookings)) {
                                 <!-- No booking -->
                                 <div class="night-row clickable-issue create-booking-link" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($night_date); ?>" title="Click to create booking in Restaurant tab">
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-status">No booking</span>
+                                    <span class="night-status" style="color: #6b7280;">No booking</span>
                                     <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
                                         <?php if ($is_stale): ?>
                                             <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
@@ -149,7 +149,7 @@ if (empty($bookings)) {
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-time">
+                                    <span class="night-time" style="color: <?php echo $is_group_member ? '#10b981' : ($has_suggestions ? '#3b82f6' : ($is_primary ? '#10b981' : '#f59e0b')); ?>;">
                                         <?php if ($is_group_member): ?>
                                             <?php echo esc_html($time); ?> with <?php echo esc_html($lead_room); ?>
                                         <?php else: ?>
@@ -190,7 +190,7 @@ if (empty($bookings)) {
                                          data-date="<?php echo esc_attr($night_date); ?>"
                                          title="Click to view in Restaurant tab">
                                         <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                        <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
+                                        <span class="night-time" style="color: <?php echo $is_primary ? '#10b981' : '#f59e0b'; ?>;"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                         <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
                                             <?php if ($is_stale): ?>
                                                 <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>

@@ -410,7 +410,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                  data-date="<?php echo esc_attr($night_date); ?>"
                                  title="Click to create booking in Restaurant tab">
                                 <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                <span class="night-status">No booking</span>
+                                <span class="night-status" style="color: #6b7280;">No booking</span>
                                 <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
                                     <?php if ($is_stale): ?>
                                         <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
@@ -448,7 +448,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-time">
+                                    <span class="night-time" style="color: <?php echo $is_group_member ? '#10b981' : ($has_suggestions ? '#3b82f6' : ($is_primary ? '#10b981' : '#f59e0b')); ?>;">
                                         <?php if ($is_group_member): ?>
                                             with <?php echo esc_html($lead_room); ?>
                                             <span class="material-symbols-outlined" style="color: #10b981; font-size: 16px; vertical-align: middle;">groups</span>
