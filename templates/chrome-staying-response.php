@@ -300,18 +300,18 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
                             <?php if ($is_group_member): ?>
-                                <span class="restaurant-status has-booking group-member-status" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Group booking">
+                                <span class="restaurant-status has-booking group-member-status" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Group booking" style="color: #10b981;">
                                     with <?php echo esc_html($lead_room); ?>
                                     <span class="material-symbols-outlined" style="color: #10b981; font-size: 16px; vertical-align: middle;">groups</span>
                                 </span>
                             <?php elseif ($has_suggestions): ?>
-                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
+                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review" style="color: #3b82f6;">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
                                     <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                 </a>
                             <?php else: ?>
-                                <a href="#" class="restaurant-status has-booking clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Click to view in Restaurant tab">
+                                <a href="#" class="restaurant-status has-booking clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Click to view in Restaurant tab" style="color: #10b981;">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <?php if ($is_stale): ?>
                                         <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
@@ -327,12 +327,12 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                             $pax = $match['people'] ?? 0;
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
-                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review">
+                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review" style="color: #f59e0b;">
                                 <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                 <?php if ($is_stale): ?>
                                     <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
                                 <?php else: ?>
-                                    <span class="material-symbols-outlined">search</span>
+                                    <span class="material-symbols-outlined" style="color: #f59e0b;">search</span>
                                 <?php endif; ?>
                             </a>
                         <?php endif; ?>
