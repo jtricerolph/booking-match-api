@@ -324,6 +324,55 @@ class BMA_NewBook_Search {
     }
 
     /**
+     * Fetch recently cancelled bookings
+     *
+     * @param int $days_back Number of days to search back (default 5)
+     * @param bool $force_refresh Whether to bypass cache
+     * @return array Array of cancelled bookings
+     */
+    public function fetch_recent_cancelled_bookings($days_back = 5, $force_refresh = false) {
+        $to_date = date('Y-m-d\TH:i:s');
+        $from_date = date('Y-m-d\TH:i:s', strtotime("-{$days_back} days"));
+
+        $data = array(
+            'period_from' => $from_date,
+            'period_to' => $to_date,
+            'list_type' => 'cancelled'  // Use 'cancelled' to get cancelled bookings
+        );
+
+        $response = $this->call_api('bookings_list', $data, $force_refresh);
+
+        if (!$response || !isset($response['data'])) {
+            bma_log('BMA: Error fetching recent cancelled bookings - no data returned', 'error');
+            return array();
+        }
+
+        $bookings = $response['data'];
+
+        // Filter to only cancelled status (in case API returns other statuses)
+        $cancelled = array_filter($bookings, function($booking) {
+            $status = strtolower($booking['booking_status'] ?? '');
+            return in_array($status, array('cancelled', 'canceled'));
+        });
+
+        // Sort by booking_modified or booking_id descending (most recent first)
+        usort($cancelled, function($a, $b) {
+            // Try to sort by modification date if available
+            $a_modified = $a['booking_modified'] ?? $a['booking_id'] ?? 0;
+            $b_modified = $b['booking_modified'] ?? $b['booking_id'] ?? 0;
+
+            if (is_string($a_modified) && is_string($b_modified)) {
+                return strtotime($b_modified) - strtotime($a_modified);
+            }
+            return ($b_modified ?? 0) - ($a_modified ?? 0);
+        });
+
+        bma_log("BMA NewBook Search: Fetched " . count($cancelled) . " cancelled bookings from last {$days_back} days", 'debug');
+
+        return $cancelled;
+    }
+
+    /**
      * Fetch all hotel bookings for a specific date
      * Used for GROUP modal to show all bookings on a particular date
      *

@@ -18,13 +18,14 @@ if (empty($bookings)) {
 <div class="bma-summary">
     <?php foreach ($bookings as $booking):
         $group_id = $booking['group_id'] ?? null;
+        $is_cancelled = $booking['is_cancelled'] ?? false;
     ?>
-        <div class="booking-card" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
+        <div class="booking-card <?php echo $is_cancelled ? 'cancelled-booking' : ''; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
             <!-- Collapsed Summary -->
             <div class="booking-header">
                 <div class="booking-main-info">
                     <div class="booking-guest">
-                        <strong><?php echo esc_html($booking['guest_name']); ?></strong>
+                        <strong class="<?php echo $is_cancelled ? 'guest-name-cancelled' : ''; ?>"><?php echo esc_html($booking['guest_name']); ?></strong>
                     </div>
                     <div class="booking-dates-compact">
                         <span><?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival_date']))); ?></span>
@@ -131,6 +132,7 @@ if (empty($bookings)) {
                                 $is_primary = $match['match_info']['is_primary'] ?? false;
                                 $is_group_member = $match['match_info']['is_group_member'] ?? false;
                                 $has_suggestions = $match['has_suggestions'] ?? false;
+                                $is_orphaned = $match['is_orphaned'] ?? false;
                                 $time = date('H:i', strtotime($match['time']));
                                 $pax = $match['people'] ?? 0;
                                 $lead_room = $match['match_info']['lead_booking_room'] ?? 'N/A';
@@ -169,7 +171,12 @@ if (empty($bookings)) {
                                         <?php endif; ?>
                                     </span>
                                 </div>
-                                <?php if (!$is_primary): ?>
+                                <?php if ($is_orphaned): ?>
+                                    <div class="night-alert critical-alert">
+                                        <span class="material-symbols-outlined">flag</span>
+                                        ORPHANED ResOS booking - needs cancellation
+                                    </div>
+                                <?php elseif (!$is_primary): ?>
                                     <div class="night-alert warning-alert">
                                         <span class="material-symbols-outlined">warning</span>
                                         Suggested match - low confidence
@@ -177,8 +184,12 @@ if (empty($bookings)) {
                                 <?php endif; ?>
                             <?php else: ?>
                                 <!-- Multiple matches -->
-                                <?php foreach ($matches as $match):
+                                <?php
+                                $has_orphaned = false;
+                                foreach ($matches as $match):
                                     $is_primary = $match['match_info']['is_primary'] ?? false;
+                                    $is_orphaned = $match['is_orphaned'] ?? false;
+                                    if ($is_orphaned) $has_orphaned = true;
                                     $time = date('H:i', strtotime($match['time']));
                                     $pax = $match['people'] ?? 0;
                                     $resos_id = $match['resos_booking_id'] ?? '';
@@ -200,6 +211,12 @@ if (empty($bookings)) {
                                         </span>
                                     </div>
                                 <?php endforeach; ?>
+                                <?php if ($has_orphaned): ?>
+                                    <div class="night-alert critical-alert">
+                                        <span class="material-symbols-outlined">flag</span>
+                                        ORPHANED ResOS bookings - need cancellation
+                                    </div>
+                                <?php endif; ?>
                                 <div class="night-alert warning-alert">
                                     <span class="material-symbols-outlined">warning</span>
                                     Multiple matches - needs review
@@ -274,6 +291,20 @@ if (empty($bookings)) {
 
 .booking-card.expanded {
     border-color: #3182ce;
+}
+
+.booking-card.cancelled-booking {
+    border: 2px solid #ef4444 !important;
+    opacity: 0.85;
+}
+
+.booking-card.cancelled-booking .booking-header {
+    background: #fef2f2;
+}
+
+.guest-name-cancelled {
+    text-decoration: line-through;
+    color: #991b1b !important;
 }
 
 .booking-card.new-booking {

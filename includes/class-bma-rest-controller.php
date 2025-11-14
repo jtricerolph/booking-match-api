@@ -514,6 +514,19 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'required' => false,
                 'default' => false,
             ),
+            'cancelled_hours' => array(
+                'description' => __('Show cancelled bookings from last X hours (24/48/72)', 'booking-match-api'),
+                'type' => 'integer',
+                'required' => false,
+                'default' => 24,
+                'sanitize_callback' => 'absint',
+            ),
+            'include_flagged_cancelled' => array(
+                'description' => __('Include older cancelled bookings (within 5 days) that have flags/issues', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => true,
+            ),
         );
     }
 
@@ -555,39 +568,24 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $context = $request->get_param('context') ?: 'json';
             $limit = $request->get_param('limit') ?: 5;
 
+            // Cancelled bookings parameters
+            $cancelled_hours = $request->get_param('cancelled_hours') ?: 24;
+            $include_flagged_cancelled = $request->get_param('include_flagged_cancelled') !== false ? $request->get_param('include_flagged_cancelled') : true;
+
             // Separate force refresh controls
             $force_refresh_bookings = $request->get_param('force_refresh') ?: false;
             $force_refresh_matches = $request->get_param('force_refresh_matches') ?: false;
 
-            bma_log("BMA Summary: Requested limit = {$limit}, context = {$context}, force_refresh_bookings = " . ($force_refresh_bookings ? 'true' : 'false') . ", force_refresh_matches = " . ($force_refresh_matches ? 'true' : 'false'), 'debug');
+            bma_log("BMA Summary: Requested limit = {$limit}, cancelled_hours = {$cancelled_hours}, context = {$context}, force_refresh_bookings = " . ($force_refresh_bookings ? 'true' : 'false') . ", force_refresh_matches = " . ($force_refresh_matches ? 'true' : 'false'), 'debug');
 
             // Fetch recently placed bookings from NewBook (use force_refresh_bookings for THIS call only)
             $searcher = new BMA_NewBook_Search();
             $recent_bookings = $searcher->fetch_recent_placed_bookings($limit, 72, $force_refresh_bookings);
 
-            if (empty($recent_bookings)) {
-                // Return empty success response
-                if ($context === 'chrome-summary') {
-                    $formatter = new BMA_Response_Formatter();
-                    return array(
-                        'success' => true,
-                        'html' => $formatter->format_summary_html(array()),
-                        'critical_count' => 0,
-                        'warning_count' => 0,
-                        'bookings_count' => 0
-                    );
-                }
+            // Fetch recently cancelled bookings (last 5 days)
+            $cancelled_bookings = $searcher->fetch_recent_cancelled_bookings(5, $force_refresh_bookings);
 
-                return array(
-                    'success' => true,
-                    'bookings' => array(),
-                    'critical_count' => 0,
-                    'warning_count' => 0,
-                    'bookings_count' => 0
-                );
-            }
-
-            // Process each booking
+            // Process placed bookings
             $summary_bookings = array();
             $total_critical_count = 0;
             $total_warning_count = 0;
@@ -597,31 +595,74 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             foreach ($recent_bookings as $nb_booking) {
                 // Pass force_refresh_matches to matching operations (NOT force_refresh_bookings)
-                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh_matches, $matcher);
+                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh_matches, $matcher, false);
                 $summary_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
             }
+
+            // Process cancelled bookings
+            $summary_cancelled = array();
+            $cancelled_critical_count = 0;
+            $cancelled_warning_count = 0;
+
+            // Calculate cutoff time for cancelled bookings filter
+            $cancelled_cutoff = date('Y-m-d H:i:s', strtotime("-{$cancelled_hours} hours"));
+
+            foreach ($cancelled_bookings as $nb_booking) {
+                // Process cancelled booking (orphaned ResOS bookings = CRITICAL)
+                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh_matches, $matcher, true);
+
+                // Get cancellation time (use booking_modified if available, else booking_id as proxy)
+                $cancelled_time = $nb_booking['booking_modified'] ?? null;
+
+                // Determine if booking should be included
+                $include_booking = false;
+
+                // Include if within time window
+                if ($cancelled_time && $cancelled_time >= $cancelled_cutoff) {
+                    $include_booking = true;
+                }
+
+                // Include if has flags (orphaned ResOS bookings) and include_flagged option is true
+                if ($include_flagged_cancelled && ($processed['critical_count'] > 0 || $processed['warning_count'] > 0)) {
+                    $include_booking = true;
+                }
+
+                if ($include_booking) {
+                    $summary_cancelled[] = $processed;
+                    $cancelled_critical_count += $processed['critical_count'];
+                    $cancelled_warning_count += $processed['warning_count'];
+                }
+            }
+
+            // Total counts (placed + cancelled)
+            $total_all_critical = $total_critical_count + $cancelled_critical_count;
+            $total_all_warning = $total_warning_count + $cancelled_warning_count;
 
             // Format response based on context
             if ($context === 'chrome-summary') {
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
-                    'html' => $formatter->format_summary_html($summary_bookings),
-                    'critical_count' => $total_critical_count,
-                    'warning_count' => $total_warning_count,
-                    'bookings_count' => count($summary_bookings)
+                    'html_placed' => $formatter->format_summary_html($summary_bookings),
+                    'html_cancelled' => $formatter->format_summary_html($summary_cancelled),
+                    'placed_count' => count($summary_bookings),
+                    'cancelled_count' => count($summary_cancelled),
+                    'critical_count' => $total_all_critical,
+                    'warning_count' => $total_all_warning,
                 );
             }
 
             // Default JSON response
             return array(
                 'success' => true,
-                'bookings' => $summary_bookings,
-                'critical_count' => $total_critical_count,
-                'warning_count' => $total_warning_count,
-                'bookings_count' => count($summary_bookings)
+                'placed_bookings' => $summary_bookings,
+                'cancelled_bookings' => $summary_cancelled,
+                'placed_count' => count($summary_bookings),
+                'cancelled_count' => count($summary_cancelled),
+                'critical_count' => $total_all_critical,
+                'warning_count' => $total_all_warning,
             );
 
         } catch (Exception $e) {
@@ -637,7 +678,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for summary display
      */
-    private function process_booking_for_summary($booking, $force_refresh = false, $matcher = null) {
+    private function process_booking_for_summary($booking, $force_refresh = false, $matcher = null, $is_cancelled = false) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -674,35 +715,47 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
         // Analyze for actions required with severity levels
         $actions_required = array();
-        $critical_count = 0;  // Red flags: Package bookings without restaurant
+        $critical_count = 0;  // Red flags: Package bookings without restaurant, orphaned ResOS bookings for cancelled
         $warning_count = 0;   // Amber flags: Multiple matches, non-primary matches
         $check_issues = count($issues);
 
-        foreach ($match_result['nights'] as $night) {
+        foreach ($match_result['nights'] as &$night) {
             $has_matches = !empty($night['resos_matches']);
             $match_count = count($night['resos_matches']);
             $has_package = $night['has_package'] ?? false;
 
-            // CRITICAL: Package booking without restaurant reservation
-            if ($has_package && !$has_matches) {
-                $actions_required[] = 'package_alert';
-                $critical_count++;
-            }
-            // WARNING: Multiple matches requiring manual selection
-            elseif ($match_count > 1) {
-                $actions_required[] = 'multiple_matches';
-                $warning_count++;
-            }
-            // WARNING: Single non-primary (suggested) match
-            elseif ($match_count === 1) {
-                $is_primary = $night['resos_matches'][0]['match_info']['is_primary'] ?? false;
-                if (!$is_primary) {
-                    $actions_required[] = 'non_primary_match';
-                    $warning_count++;
+            // For CANCELLED bookings: Any ResOS match = CRITICAL (orphaned booking)
+            if ($is_cancelled && $has_matches) {
+                $actions_required[] = 'orphaned_resos';
+                $critical_count += $match_count;
+                // Flag each match as orphaned
+                foreach ($night['resos_matches'] as &$match) {
+                    $match['is_orphaned'] = true;
                 }
             }
-            // NO ISSUE: Missing restaurant booking when no package
-            // (Not flagged as this is normal)
+            // For PLACED bookings: Normal logic
+            elseif (!$is_cancelled) {
+                // CRITICAL: Package booking without restaurant reservation
+                if ($has_package && !$has_matches) {
+                    $actions_required[] = 'package_alert';
+                    $critical_count++;
+                }
+                // WARNING: Multiple matches requiring manual selection
+                elseif ($match_count > 1) {
+                    $actions_required[] = 'multiple_matches';
+                    $warning_count++;
+                }
+                // WARNING: Single non-primary (suggested) match
+                elseif ($match_count === 1) {
+                    $is_primary = $night['resos_matches'][0]['match_info']['is_primary'] ?? false;
+                    if (!$is_primary) {
+                        $actions_required[] = 'non_primary_match';
+                        $warning_count++;
+                    }
+                }
+                // NO ISSUE: Missing restaurant booking when no package
+                // (Not flagged as this is normal)
+            }
         }
 
         // Add check issues if any (warnings)
@@ -730,7 +783,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'critical_count' => $critical_count,
             'warning_count' => $warning_count,
             'check_issues' => $check_issues,
-            'match_details' => $match_result
+            'match_details' => $match_result,
+            'is_cancelled' => $is_cancelled
         );
     }
 
