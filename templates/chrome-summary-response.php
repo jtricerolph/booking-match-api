@@ -129,33 +129,43 @@ if (empty($bookings)) {
                                 <?php
                                 $match = $matches[0];
                                 $is_primary = $match['match_info']['is_primary'] ?? false;
+                                $is_group_member = $match['match_info']['is_group_member'] ?? false;
                                 $has_suggestions = $match['has_suggestions'] ?? false;
                                 $time = date('H:i', strtotime($match['time']));
                                 $pax = $match['people'] ?? 0;
+                                $lead_room = $match['match_info']['lead_booking_room'] ?? 'N/A';
                                 $resos_id = $match['resos_booking_id'] ?? '';
                                 $restaurant_id = $match['restaurant_id'] ?? '';
                                 ?>
-                                <div class="night-row <?php echo ($is_primary && !$has_suggestions) ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                <div class="night-row <?php echo $is_group_member ? 'resos-deep-link' : 'clickable-issue'; ?>"
                                      data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                      data-date="<?php echo esc_attr($night_date); ?>"
-                                     <?php if ($is_primary && !$has_suggestions): ?>
+                                     <?php if ($is_group_member): ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                         title="Click to view in ResOS"
+                                         title="Group booking - click to view in ResOS"
                                      <?php else: ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
-                                    <span class="status-icon <?php echo ($is_primary && !$has_suggestions) ? 'ok' : ($has_suggestions ? 'updates' : 'warning'); ?>">
+                                    <span class="night-time">
+                                        <?php if ($is_group_member): ?>
+                                            <?php echo esc_html($time); ?> with <?php echo esc_html($lead_room); ?>
+                                        <?php else: ?>
+                                            <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
+                                        <?php endif; ?>
+                                    </span>
+                                    <span class="status-icon <?php echo (($is_primary && !$has_suggestions) || $is_group_member) ? 'ok' : ($has_suggestions ? 'updates' : 'warning'); ?>">
                                         <?php if ($is_stale): ?>
                                             <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                        <?php elseif ($is_group_member): ?>
+                                            <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
                                         <?php elseif ($has_suggestions): ?>
                                             <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
                                             <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                         <?php else: ?>
-                                            <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                            <span class="material-symbols-outlined" style="color: <?php echo $is_primary ? '#10b981' : '#f59e0b'; ?>;"><?php echo $is_primary ? 'check' : 'search'; ?></span>
                                         <?php endif; ?>
                                     </span>
                                 </div>
@@ -174,16 +184,11 @@ if (empty($bookings)) {
                                     $resos_id = $match['resos_booking_id'] ?? '';
                                     $restaurant_id = $match['restaurant_id'] ?? '';
                                 ?>
-                                    <div class="night-row <?php echo $is_primary ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                    <div class="night-row clickable-issue"
                                          data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
-                                         <?php if ($is_primary): ?>
-                                             data-resos-id="<?php echo esc_attr($resos_id); ?>"
-                                             data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                             data-date="<?php echo esc_attr($night_date); ?>"
-                                             title="Click to view in ResOS"
-                                         <?php else: ?>
-                                             title="Click to view in Restaurant tab"
-                                         <?php endif; ?>>
+                                         data-resos-id="<?php echo esc_attr($resos_id); ?>"
+                                         data-date="<?php echo esc_attr($night_date); ?>"
+                                         title="Click to view in Restaurant tab">
                                         <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
                                         <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                         <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
@@ -705,17 +710,11 @@ if (empty($bookings)) {
     color: #312e81;
 }
 
-/* Highlighted state for grouped bookings - only affect header */
+/* Highlighted state for grouped bookings - only affect header background */
 .booking-header.highlighted {
     background-color: #eef2ff !important;
-    border-left: 3px solid #6366f1 !important;
-    margin-left: -1px;
-    border-radius: 7px 0 0 0;
-}
-
-.booking-header.highlighted .group-id-badge {
-    background-color: #6366f1 !important;
-    color: white !important;
+    /* Keep existing borders and radius - just change background */
+    /* Badge highlighting is separate - only on direct hover or when filtering */
 }
 </style>
 

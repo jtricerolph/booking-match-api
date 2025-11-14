@@ -4,7 +4,8 @@
  * Displays bookings staying on a specific date
  *
  * Variables available:
- * - $bookings: Array of staying bookings
+ * - $bookings: Array of bookings staying on this night (to display as cards)
+ * - $departing_bookings: Array of bookings departing on this date (for stats only)
  * - $date: Target date (YYYY-MM-DD)
  */
 
@@ -15,7 +16,161 @@ if (empty($bookings)) {
     echo '</div>';
     return;
 }
+
+// Calculate stats from staying bookings
+$stopovers_count = 0;
+$arrivals_count = 0;
+$arrivals_arrived_count = 0; // How many arriving bookings have status "arrived"
+$total_adults = 0;
+$total_children = 0;
+$total_infants = 0;
+$twins_count = 0;
+$in_house_count = 0; // Total bookings staying (not vacant)
+$restaurant_match_count = 0; // Bookings with confirmed/primary matches
+$total_staying_count = 0; // Total for restaurant stat denominator
+
+// Check if selected date is today
+$today = date('Y-m-d');
+$is_today = ($date === $today);
+
+foreach ($bookings as $booking) {
+    // Skip vacant rooms
+    if (isset($booking['is_vacant']) && $booking['is_vacant'] === true) {
+        continue;
+    }
+
+    // Count in-house bookings (all non-vacant)
+    $in_house_count++;
+    $total_staying_count++;
+
+    // Get booking dates (already in YYYY-MM-DD format from processed booking)
+    $arrival_date = $booking['arrival_date'] ?? '';
+    $departure_date = $booking['departure_date'] ?? '';
+    $status = strtolower($booking['status'] ?? '');
+
+    // Stopovers: arrived before set date AND departing after set date
+    if ($arrival_date < $date && $departure_date > $date) {
+        $stopovers_count++;
+    }
+
+    // Arrivals: checkin date is the date set
+    if ($arrival_date === $date) {
+        $arrivals_count++;
+        // If today, check if status is "arrived"
+        if ($is_today && ($status === 'arrived' || $status === 'checked in' || $status === 'checked-in' || $status === 'checked_in')) {
+            $arrivals_arrived_count++;
+        }
+    }
+
+    // Restaurant matches: check if booking has primary match (with or without suggestions)
+    $resos_matches = $booking['resos_matches'] ?? [];
+    $has_match = false;
+    foreach ($resos_matches as $match) {
+        // Check if this match is a primary match
+        if (isset($match['match_info']['is_primary']) && $match['match_info']['is_primary'] === true) {
+            $has_match = true;
+            break;
+        }
+    }
+    if ($has_match) {
+        $restaurant_match_count++;
+    }
+
+    // Occupancy totals from occupants array
+    $occupants = $booking['occupants'] ?? [];
+    $total_adults += intval($occupants['adults'] ?? 0);
+    $total_children += intval($occupants['children'] ?? 0);
+    $total_infants += intval($occupants['infants'] ?? 0);
+
+    // Twins count - check custom fields for bed type
+    $custom_fields = $booking['custom_fields'] ?? [];
+    foreach ($custom_fields as $field) {
+        if (($field['label'] ?? '') === 'Bed Type' &&
+            stripos($field['value'] ?? '', 'Twin') !== false) {
+            $twins_count++;
+            break;
+        }
+    }
+}
+
+// Calculate departs from separate departing bookings array
+$departs_count = 0;
+$departs_departed_count = 0; // How many departing bookings have status "departed"
+if (isset($departing_bookings) && is_array($departing_bookings)) {
+    foreach ($departing_bookings as $booking) {
+        // Verify this is actually a departing booking
+        $departure_date = substr($booking['booking_departure'] ?? '', 0, 10);
+        if ($departure_date === $date) {
+            $departs_count++;
+            // If today, check if status is "departed"
+            if ($is_today) {
+                $status = strtolower($booking['booking_status'] ?? '');
+                if ($status === 'departed' || $status === 'checked out' || $status === 'checked-out' || $status === 'checked_out') {
+                    $departs_departed_count++;
+                }
+            }
+        }
+    }
+}
+
+// Format occupancy string as x+y (adults + combined children/infants)
+$occupancy_str = (string)$total_adults;
+$total_minors = $total_children + $total_infants;
+if ($total_minors > 0) {
+    $occupancy_str .= '+' . $total_minors;
+}
+
+// Format departs stat value (x/y if today, otherwise just count)
+$departs_value = $is_today ? "{$departs_departed_count}/{$departs_count}" : (string)$departs_count;
+$departs_title = $is_today ? "Departing bookings (departed/total)" : "Departing bookings";
+
+// Format arrives stat value (x/y if today, otherwise just count)
+$arrives_value = $is_today ? "{$arrivals_arrived_count}/{$arrivals_count}" : (string)$arrivals_count;
+$arrives_title = $is_today ? "Arriving bookings (arrived/total)" : "Arriving bookings";
+
+// Format restaurant stat value (x/y)
+$restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
 ?>
+
+<!-- Stats Row -->
+<div class="staying-stats-row">
+    <div class="stat-item stat-filter" data-filter="departs" title="<?php echo $departs_title; ?>">
+        <span class="material-symbols-outlined">flight_takeoff</span>
+        <span class="stat-value"><?php echo $departs_value; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item stat-filter" data-filter="stopovers" title="Stopover bookings (arrived before, departing after)">
+        <span class="material-symbols-outlined">step_over</span>
+        <span class="stat-value"><?php echo $stopovers_count; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item stat-filter" data-filter="arrivals" title="<?php echo $arrives_title; ?>">
+        <span class="material-symbols-outlined">flight_land</span>
+        <span class="stat-value"><?php echo $arrives_value; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item stat-filter" data-filter="in-house" title="In-house bookings">
+        <span class="material-symbols-outlined">night_shelter</span>
+        <span class="stat-value"><?php echo $in_house_count; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item stat-filter" data-filter="occupancy" title="Total occupancy (hide vacant)">
+        <span class="material-symbols-outlined">group</span>
+        <span class="stat-value"><?php echo $occupancy_str; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item stat-filter" data-filter="twins" title="Twin bed bookings">
+        <span class="twin-beds-icon">
+            <span class="material-symbols-outlined">single_bed</span><span class="material-symbols-outlined">single_bed</span>
+        </span>
+        <span class="stat-value"><?php echo $twins_count; ?></span>
+    </div>
+    <div class="stat-divider">|</div>
+    <div class="stat-item stat-filter" data-filter="restaurant" title="Restaurant bookings (matched/total)">
+        <span class="material-symbols-outlined">restaurant</span>
+        <span class="stat-value"><?php echo $restaurant_value; ?></span>
+    </div>
+</div>
 
 <div class="staying-list">
     <?php foreach ($bookings as $booking):
@@ -60,6 +215,35 @@ if (empty($bookings)) {
         $spans_next = $booking['spans_to_next'] ?? false;
         $previous_vacant = $booking['previous_vacant'] ?? false;
         $next_vacant = $booking['next_vacant'] ?? false;
+
+        // Calculate filter attributes based on actual booking dates (already in YYYY-MM-DD format)
+        $arrival_date = $booking['arrival_date'] ?? '';
+        $departure_date = $booking['departure_date'] ?? '';
+
+        $is_arriving = ($arrival_date === $date);
+        $is_departing = ($departure_date === $date); // Checkout date is set date
+        $is_stopover = ($arrival_date < $date && $departure_date > $date); // Arrived before, departing after
+
+        // Check for twin bed type
+        $has_twin = false;
+        $custom_fields = $booking['custom_fields'] ?? [];
+        foreach ($custom_fields as $field) {
+            if (($field['label'] ?? '') === 'Bed Type' &&
+                stripos($field['value'] ?? '', 'Twin') !== false) {
+                $has_twin = true;
+                break;
+            }
+        }
+
+        // Check for restaurant match (primary match with or without suggestions)
+        $has_restaurant_match = false;
+        foreach ($matches as $match) {
+            // Check if this match is a primary match
+            if (isset($match['match_info']['is_primary']) && $match['match_info']['is_primary'] === true) {
+                $has_restaurant_match = true;
+                break;
+            }
+        }
     ?>
         <div class="staying-card"
              data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
@@ -70,6 +254,11 @@ if (empty($bookings)) {
              data-spans-next="<?php echo $spans_next ? 'true' : 'false'; ?>"
              data-previous-vacant="<?php echo $previous_vacant ? 'true' : 'false'; ?>"
              data-next-vacant="<?php echo $next_vacant ? 'true' : 'false'; ?>"
+             data-is-arriving="<?php echo $is_arriving ? 'true' : 'false'; ?>"
+             data-is-departing="<?php echo $is_departing ? 'true' : 'false'; ?>"
+             data-is-stopover="<?php echo $is_stopover ? 'true' : 'false'; ?>"
+             data-has-twin="<?php echo $has_twin ? 'true' : 'false'; ?>"
+             data-has-restaurant-match="<?php echo $has_restaurant_match ? 'true' : 'false'; ?>"
              <?php if ($group_id): ?>data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
 
             <!-- Card Header (Collapsed View) -->
@@ -106,23 +295,30 @@ if (empty($bookings)) {
                             $time = date('H:i', strtotime($match['time']));
                             $pax = $match['people'] ?? 0;
                             $has_suggestions = $match['has_suggestions'] ?? false;
+                            $is_group_member = $match['match_info']['is_group_member'] ?? false;
+                            $lead_room = $match['match_info']['lead_booking_room'] ?? 'N/A';
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
-                            <?php if ($has_suggestions): ?>
-                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
+                            <?php if ($is_group_member): ?>
+                                <span class="restaurant-status has-booking group-member-status" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Group booking">
+                                    with <?php echo esc_html($lead_room); ?>
+                                    <span class="material-symbols-outlined" style="color: #10b981; font-size: 16px; vertical-align: middle;">groups</span>
+                                </span>
+                            <?php elseif ($has_suggestions): ?>
+                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
                                     <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                 </a>
                             <?php else: ?>
-                                <span class="restaurant-status has-booking">
+                                <a href="#" class="restaurant-status has-booking clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Click to view in Restaurant tab">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <?php if ($is_stale): ?>
                                         <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
                                     <?php else: ?>
-                                        <span class="material-symbols-outlined">check</span>
+                                        <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                     <?php endif; ?>
-                                </span>
+                                </a>
                             <?php endif; ?>
                         <?php else: ?>
                             <?php
@@ -131,7 +327,7 @@ if (empty($bookings)) {
                             $pax = $match['people'] ?? 0;
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
-                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-date="<?php echo esc_attr($night['date']); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review">
+                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review">
                                 <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                 <?php if ($is_stale): ?>
                                     <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
@@ -232,33 +428,44 @@ if (empty($bookings)) {
                         <?php else: ?>
                             <?php foreach ($matches as $match):
                                 $is_primary = $match['match_info']['is_primary'] ?? false;
+                                $is_group_member = $match['match_info']['is_group_member'] ?? false;
                                 $time = date('H:i', strtotime($match['time']));
                                 $pax = $match['people'] ?? 0;
+                                $lead_room = $match['match_info']['lead_booking_room'] ?? 'N/A';
                                 $resos_id = $match['resos_booking_id'] ?? '';
                                 $restaurant_id = $match['restaurant_id'] ?? '';
                                 $has_suggestions = $match['has_suggestions'] ?? false;
                             ?>
-                                <div class="night-row <?php echo ($is_primary && !$has_suggestions) ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                <div class="night-row <?php echo $is_group_member ? 'resos-deep-link' : 'clickable-issue'; ?>"
                                      data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                      data-date="<?php echo esc_attr($night_date); ?>"
-                                     <?php if ($is_primary && !$has_suggestions): ?>
+                                     <?php if ($is_group_member): ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                         title="Click to view in ResOS"
+                                         title="Group booking - click to view in ResOS"
                                      <?php else: ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
-                                    <span class="status-icon <?php echo ($is_primary && !$has_suggestions) ? 'ok' : (($is_primary && $has_suggestions) ? 'updates' : 'warning'); ?>">
+                                    <span class="night-time">
+                                        <?php if ($is_group_member): ?>
+                                            with <?php echo esc_html($lead_room); ?>
+                                            <span class="material-symbols-outlined" style="color: #10b981; font-size: 16px; vertical-align: middle;">groups</span>
+                                        <?php else: ?>
+                                            <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
+                                        <?php endif; ?>
+                                    </span>
+                                    <span class="status-icon <?php echo (($is_primary && !$has_suggestions) || $is_group_member) ? 'ok' : (($is_primary && $has_suggestions) ? 'updates' : 'warning'); ?>">
                                         <?php if ($is_stale): ?>
                                             <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
+                                        <?php elseif ($is_group_member): ?>
+                                            <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                         <?php elseif ($is_primary && $has_suggestions): ?>
                                             <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
                                             <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                         <?php else: ?>
-                                            <span class="material-symbols-outlined"><?php echo $is_primary ? 'check' : 'search'; ?></span>
+                                            <span class="material-symbols-outlined" style="color: <?php echo $is_primary ? '#10b981' : '#f59e0b'; ?>;"><?php echo $is_primary ? 'check' : 'search'; ?></span>
                                         <?php endif; ?>
                                     </span>
                                 </div>
@@ -298,6 +505,126 @@ if (empty($bookings)) {
 </div>
 
 <style>
+/* Stats Row */
+.staying-stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 4px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 5px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    min-width: 40px;
+}
+
+.stat-filter {
+    cursor: pointer;
+    padding: 3px 4px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.stat-filter:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
+.stat-filter.active {
+    background-color: #6366f1;
+    color: white;
+}
+
+.stat-filter.active .material-symbols-outlined {
+    color: white !important;
+}
+
+.stat-filter.active .stat-value {
+    color: white !important;
+}
+
+/* Restaurant filter - has match (green with tick) */
+.stat-filter.restaurant-has-match {
+    background-color: #10b981;
+    color: white;
+}
+
+.stat-filter.restaurant-has-match .material-symbols-outlined {
+    color: white !important;
+}
+
+.stat-filter.restaurant-has-match .stat-value {
+    color: white !important;
+}
+
+/* Restaurant filter - no match (red with plus) */
+.stat-filter.restaurant-no-match {
+    background-color: #ef4444;
+    color: white;
+}
+
+.stat-filter.restaurant-no-match .material-symbols-outlined {
+    color: white !important;
+}
+
+.stat-filter.restaurant-no-match .stat-value {
+    color: white !important;
+}
+
+/* Corner icon for restaurant filter */
+.filter-corner-icon {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 12px !important;
+    color: white !important;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+}
+
+.stat-item .material-symbols-outlined {
+    font-size: 18px;
+    color: #64748b;
+}
+
+.twin-beds-icon {
+    display: flex;
+    gap: 0.5px;
+}
+
+.twin-beds-icon .material-symbols-outlined {
+    font-size: 14px;
+}
+
+.stat-value {
+    font-weight: 700;
+    font-size: 11px;
+    color: #1e293b;
+    line-height: 1;
+}
+
+.stat-divider {
+    color: #cbd5e1;
+    font-weight: 300;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    font-size: 10px;
+}
+
 .staying-empty {
     text-align: center;
     padding: 60px 20px;
@@ -467,6 +794,27 @@ if (empty($bookings)) {
     background-color: rgba(251, 191, 36, 0.1);
 }
 
+/* Group member status styling */
+.restaurant-status.group-member-status {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    background-color: rgba(16, 185, 129, 0.08);
+}
+
+.restaurant-status.group-member-status:hover {
+    background-color: rgba(16, 185, 129, 0.15);
+}
+
+/* Highlight all related group bookings on hover */
+.restaurant-status.group-highlight {
+    background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
 .status-icon {
     display: inline-flex;
     align-items: center;
@@ -532,9 +880,9 @@ if (empty($bookings)) {
     font-size: 14px !important;
 }
 
-/* Vacant room numbers get grey badge styling */
+/* Vacant room numbers get grey badge styling - match staying room padding for alignment */
 .vacant-room-line .room-number {
-    padding: 2px 6px !important;
+    padding: 4px 8px !important; /* Match staying-card room number padding for perfect alignment */
     border-radius: 4px !important;
     background-color: #e5e7eb !important; /* Light grey badge */
     color: #6b7280 !important; /* Medium grey text */
@@ -603,15 +951,11 @@ if (empty($bookings)) {
     color: #312e81;
 }
 
-/* Highlighted state for grouped bookings - only affect header */
+/* Highlighted state for grouped bookings - only affect header background */
 .staying-header.highlighted {
     background-color: #eef2ff !important;
     /* Keep existing borders and radius - just change background */
-}
-
-.staying-header.highlighted .group-id-badge {
-    background-color: #6366f1 !important;
-    color: white !important;
+    /* Badge highlighting is separate - only on direct hover or when filtering */
 }
 
 /* ============================================
@@ -800,7 +1144,10 @@ if (empty($bookings)) {
 
 .vacant-room-line[data-spans-previous="true"] {
     margin-left: -50px;
-    /* No padding - let text stay in place */
+}
+
+.vacant-room-line[data-spans-previous="true"] .vacant-room-content {
+    padding-left: 50px; /* Compensate for parent's -50px margin */
 }
 
 /* RIGHT SIDE: Next night indicators */
@@ -979,12 +1326,6 @@ if (empty($bookings)) {
 
 .vacant-room-line[data-spans-next="true"] {
     margin-right: -50px;
-    /* No padding - let text stay in place */
-}
-
-/* Padding compensation for vacant room content - keeps text visible when box extends off-screen */
-.vacant-room-line[data-spans-previous="true"] .vacant-room-content {
-    padding-left: 50px; /* Compensate for parent's -50px margin */
 }
 
 .vacant-room-line[data-spans-next="true"] .vacant-room-content {
@@ -1004,4 +1345,195 @@ if (empty($bookings)) {
     pointer-events: none;
     z-index: -1;
 }
+
+/* ============================================
+   EXTENSION CSS (Centralized from sidepanel.css)
+   ============================================ */
+
+/* Override/enhance staying card layout with complete styling */
+.staying-card {
+    background: #fff !important;
+    border-radius: 8px !important;
+    margin: 0 23px 5px 23px !important; /* Horizontal margin for timeline indicator space (15px indicator + 8px gap) */
+    transition: all 0.2s !important;
+    position: relative !important;
+    border: none !important; /* No border on card - border is on header only */
+}
+
+.staying-card:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
+
+.staying-card.expanded {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Group highlighting */
+.staying-card.group-highlight {
+    background: #fef3c7 !important; /* Light amber background */
+}
+
+/* Staying Card Header - enhanced */
+.staying-header {
+    padding: 4px 8px !important; /* Reduced vertical padding: 4px top/bottom, 8px left/right */
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    position: relative !important;
+    border-radius: 8px !important; /* Default: fully rounded */
+    background: white !important;
+    overflow: visible !important; /* Allow timeline extensions to show beyond card bounds */
+    box-sizing: border-box !important; /* Include padding and border in width calculations */
+}
+
+/* Header borders matching status colors - fully wrapped */
+.staying-card[data-status="arrived"] .staying-header {
+    border: 2px solid #3b82f6 !important; /* Blue */
+}
+
+.staying-card[data-status="confirmed"] .staying-header {
+    border: 2px solid #10b981 !important; /* Green */
+}
+
+.staying-card[data-status="unconfirmed"] .staying-header {
+    border: 2px solid #f59e0b !important; /* Amber */
+}
+
+.staying-card[data-status="departed"] .staying-header {
+    border: 2px solid #a855f7 !important; /* Purple */
+}
+
+/* Remove borders on extending sides and apply padding compensation */
+.staying-card[data-spans-previous="true"] .staying-header {
+    border-left: none !important;
+    padding-left: 58px !important; /* 50px extension + 8px original padding */
+}
+
+.staying-card[data-spans-next="true"] .staying-header {
+    border-right: none !important;
+    padding-right: 58px !important; /* 50px extension + 8px original padding */
+}
+
+/* Constrain width only when NOT spanning (to prevent overflow) */
+.staying-card:not([data-spans-previous="true"]):not([data-spans-next="true"]) .staying-header {
+    width: 100% !important;
+}
+
+/* When expanded with timeline indicators - remove bottom corner radius to connect with details */
+
+/* Grey vacant indicators */
+.staying-card.expanded[data-previous-vacant="true"] .staying-header {
+    border-radius: 8px 8px 8px 0 !important; /* Remove bottom-left radius */
+}
+
+.staying-card.expanded[data-next-vacant="true"] .staying-header {
+    border-radius: 8px 8px 0 8px !important; /* Remove bottom-right radius */
+}
+
+.staying-card.expanded[data-previous-vacant="true"][data-next-vacant="true"] .staying-header {
+    border-radius: 8px 8px 0 0 !important; /* Remove both bottom corners */
+}
+
+/* Colored status indicators (different booking on adjacent night) */
+.staying-card.expanded[data-previous-status]:not([data-previous-status=""]) .staying-header {
+    border-radius: 8px 8px 8px 0 !important; /* Remove bottom-left radius */
+}
+
+.staying-card.expanded[data-next-status]:not([data-next-status=""]) .staying-header {
+    border-radius: 8px 8px 0 8px !important; /* Remove bottom-right radius */
+}
+
+.staying-card.expanded[data-previous-status]:not([data-previous-status=""])[data-next-status]:not([data-next-status=""]) .staying-header {
+    border-radius: 8px 8px 0 0 !important; /* Remove both bottom corners */
+}
+
+/* Mixed indicators - vacant on one side, status on other */
+.staying-card.expanded[data-previous-vacant="true"][data-next-status]:not([data-next-status=""]) .staying-header,
+.staying-card.expanded[data-previous-status]:not([data-previous-status=""])[data-next-vacant="true"] .staying-header {
+    border-radius: 8px 8px 0 0 !important; /* Remove both bottom corners */
+}
+
+/* Spanning bookings when expanded - connect bottom to expanded section */
+.staying-card.expanded[data-spans-previous="true"]:not([data-spans-next="true"]) .staying-header {
+    border-radius: 0 8px 0 0 !important; /* Left flat, only top-right rounded */
+}
+
+.staying-card.expanded[data-spans-next="true"]:not([data-spans-previous="true"]) .staying-header {
+    border-radius: 8px 0 0 0 !important; /* Right flat, only top-left rounded */
+}
+
+.staying-card.expanded[data-spans-previous="true"][data-spans-next="true"] .staying-header {
+    border-radius: 0 !important; /* All corners square when spanning both sides */
+}
+
+.staying-expand-icon {
+    font-size: 12px !important;
+    color: #a0aec0 !important;
+    transition: transform 0.2s !important;
+}
+
+.staying-card.expanded .staying-expand-icon {
+    transform: rotate(180deg) !important;
+}
+
+/* Staying card details - hidden by default, shown when expanded */
+.staying-details {
+    display: none !important;
+}
+
+.staying-card.expanded .staying-details {
+    display: block !important;
+}
+
+/* Vacant row base margin - match staying-card structure */
+.vacant-room-line {
+    margin: 0 23px 5px 23px !important; /* Match staying-card margins */
+}
+
+/* Vacant row spanning margins - extend borders to edges */
+.vacant-room-line[data-spans-previous="true"] {
+    margin-left: -27px !important; /* -50px extension + 23px base = -27px net */
+}
+
+.vacant-room-line[data-spans-next="true"] {
+    margin-right: -27px !important; /* -50px extension + 23px base = -27px net */
+}
+
+/* Vacant row content - no padding to minimize height */
+.vacant-room-content {
+    padding: 0 !important; /* No padding - vacant lines take up minimal space */
+}
+
+/* Spanning vacant content needs padding to stay visible when row extends to edges */
+.vacant-room-line[data-spans-previous="true"] .vacant-room-content {
+    padding-left: 50px !important; /* Compensate for row's -27px margin (50px extension from base 23px) */
+}
+
+.vacant-room-line[data-spans-next="true"] .vacant-room-content {
+    padding-right: 50px !important; /* Compensate for row's -27px margin (50px extension from base 23px) */
+}
+
+/* Ensure staying-main-info doesn't overflow on spanning nights */
+.staying-main-info {
+    min-width: 0 !important; /* Allow flex item to shrink below content size */
+    flex: 1 !important;
+    overflow: hidden !important; /* Prevent content overflow */
+}
+
+.staying-guest-line {
+    min-width: 0 !important; /* Prevent overflow */
+}
+
+/* Adjust absolutely-positioned badges when spanning to keep them visible */
+.staying-card[data-spans-next="true"] .staying-badges {
+    right: 54px !important; /* 50px extension + 4px original position */
+}
+
+/* Badges stay on right side even when spanning from previous */
+.staying-card[data-spans-previous="true"] .staying-badges {
+    right: 4px !important; /* Keep on right side above expand arrow */
+}
 </style>
+
+<!-- Interactivity handled by extension's initializeStayingCards() function -->

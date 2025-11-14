@@ -132,6 +132,17 @@ class BMA_Admin {
             )
         );
 
+        // Register debug logging setting
+        register_setting(
+            'bma_settings_group',
+            'bma_enable_debug_logging',
+            array(
+                'type' => 'boolean',
+                'sanitize_callback' => 'rest_sanitize_boolean',
+                'default' => false
+            )
+        );
+
         // Add General Settings section
         add_settings_section(
             'bma_general_section',
@@ -153,6 +164,14 @@ class BMA_Admin {
             'bma_newbook_section',
             __('NewBook API Settings', 'booking-match-api'),
             array($this, 'render_newbook_section_description'),
+            'booking-match-api'
+        );
+
+        // Add Debug Settings section
+        add_settings_section(
+            'bma_debug_section',
+            __('Debug Settings', 'booking-match-api'),
+            array($this, 'render_debug_section_description'),
             'booking-match-api'
         );
 
@@ -222,6 +241,15 @@ class BMA_Admin {
             'booking-match-api',
             'bma_newbook_section'
         );
+
+        // Add debug settings fields
+        add_settings_field(
+            'bma_enable_debug_logging',
+            __('Enable Debug Logging', 'booking-match-api'),
+            array($this, 'render_debug_logging_field'),
+            'booking-match-api',
+            'bma_debug_section'
+        );
     }
 
     /**
@@ -257,6 +285,13 @@ class BMA_Admin {
      */
     public function render_newbook_section_description() {
         echo '<p>' . __('Configure your NewBook API credentials for hotel booking management.', 'booking-match-api') . '</p>';
+    }
+
+    /**
+     * Render Debug section description
+     */
+    public function render_debug_section_description() {
+        echo '<p>' . __('Configure debug settings for the plugin.', 'booking-match-api') . '</p>';
     }
 
     /**
@@ -359,6 +394,20 @@ class BMA_Admin {
         echo '</select>';
         echo '<p class="description">';
         echo __('Select your NewBook API region.', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Render debug logging field
+     */
+    public function render_debug_logging_field() {
+        $value = get_option('bma_enable_debug_logging', false);
+        echo '<label for="bma_enable_debug_logging">';
+        echo '<input type="checkbox" name="bma_enable_debug_logging" id="bma_enable_debug_logging" value="1" ' . checked($value, true, false) . ' />';
+        echo ' ' . __('Enable debug logging to WordPress debug.log', 'booking-match-api');
+        echo '</label>';
+        echo '<p class="description">';
+        echo __('When enabled, the plugin will write detailed debug information to the WordPress debug.log file. Disable this in production to improve performance and reduce log file size.', 'booking-match-api');
         echo '</p>';
     }
 

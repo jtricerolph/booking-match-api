@@ -194,26 +194,13 @@ if (!defined('ABSPATH')) {
                                 <?php endif; ?>
 
                                 <div class="bma-match-details<?php echo !empty($match['match_info']['is_group_member']) ? ' grouped' : ''; ?>">
-                                    <!-- Line 1: Guest Name - Time (People pax) OR Time - Group Icon - Lead ID (People pax) -->
+                                    <!-- Line 1: Guest Name - Time (People pax) -->
                                     <div class="bma-match-primary">
+                                        <?php echo esc_html($match['guest_name']); ?> -
+                                        <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
+                                        (<?php echo esc_html($match['people']); ?> pax)
                                         <?php if (!empty($match['match_info']['is_group_member'])): ?>
-                                            <?php echo esc_html($match['time'] ?? 'Not specified'); ?> -
                                             <span class="material-symbols-outlined group-icon" title="Group Booking">groups</span>
-                                            <?php
-                                            // Get lead booking ID from custom fields
-                                            $lead_booking_id = '';
-                                            if (!empty($match['booking_number'])) {
-                                                $lead_booking_id = $match['booking_number'];
-                                            }
-                                            if (!empty($lead_booking_id)) {
-                                                echo '<span class="lead-booking-id">#' . esc_html($lead_booking_id) . '</span>';
-                                            }
-                                            ?>
-                                            (<?php echo esc_html($match['people']); ?> pax)
-                                        <?php else: ?>
-                                            <?php echo esc_html($match['guest_name']); ?> -
-                                            <?php echo esc_html($match['time'] ?? 'Not specified'); ?>
-                                            (<?php echo esc_html($match['people']); ?> pax)
                                         <?php endif; ?>
                                     </div>
 
@@ -285,7 +272,7 @@ if (!defined('ABSPATH')) {
                                     <?php if ($match['match_info']['is_primary'] && !empty($match['resos_booking_id']) && !empty($match['restaurant_id'])): ?>
                                         <a href="https://app.resos.com/<?php echo esc_attr($match['restaurant_id']); ?>/bookings/timetable/<?php echo esc_attr($night['date']); ?>/<?php echo esc_attr($match['resos_booking_id']); ?>"
                                            class="bma-action-link bma-resos-link" target="_blank">
-                                            <span class="material-symbols-outlined">visibility</span> View in ResOS
+                                            <span class="material-symbols-outlined">visibility</span> ResOS
                                         </a>
                                     <?php endif; ?>
                                 </div>
@@ -1138,6 +1125,7 @@ if (!defined('ABSPATH')) {
 
 .bma-action-link:hover {
     background: #5568d3;
+    text-decoration: none;
 }
 
 .bma-action-link.bma-resos-link {
@@ -2081,10 +2069,10 @@ if (!defined('ABSPATH')) {
 }
 
 .group-icon {
-    color: #3b82f6;
-    font-size: 1.25rem;
+    color: #10b981;
+    font-size: 1.1rem;
     vertical-align: middle;
-    margin: 0 4px;
+    margin-left: 6px;
 }
 
 .lead-booking-id {
@@ -2118,6 +2106,279 @@ if (!defined('ABSPATH')) {
 .btn-manage-group .material-symbols-outlined {
     font-size: 18px;
 }
+
+/* ============================================
+   GROUP MANAGEMENT MODAL (MIGRATED FROM EXTENSION)
+   ============================================ */
+
+.group-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.group-modal.hidden {
+  display: none;
+}
+
+.group-modal-loading.hidden,
+.group-modal-error.hidden {
+  display: none;
+}
+
+.group-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.group-modal-content {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.group-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.group-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.group-modal-close {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.group-modal-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.group-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.group-modal-resos-info {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: #f0f9ff;
+  border-left: 3px solid #3b82f6;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1e40af;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+#group-link-group-id {
+  font-family: monospace;
+  color: #2563eb;
+}
+
+.group-bookings-container {
+  margin-top: 16px;
+}
+
+.group-section, .other-section {
+  margin-bottom: 24px;
+}
+
+.group-section.hidden, .other-section.hidden {
+  display: none;
+}
+
+.group-section-header, .other-section-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.group-section.active .group-section-header {
+  color: #dc2626;
+  border-bottom-color: #fecaca;
+}
+
+.group-section.active {
+  background: #fef2f2;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #fecaca;
+}
+
+.group-bookings-table {
+  width: 100%;
+}
+
+.group-bookings-table thead th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 8px 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.group-bookings-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.group-bookings-table tbody tr.excluded {
+  opacity: 0.6;
+}
+
+.group-bookings-table tbody tr.excluded .booking-info {
+  text-decoration: line-through;
+}
+
+.group-bookings-table td {
+  padding: 4px 4px;
+  font-size: 13px;
+}
+
+.booking-info-compact {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #374151;
+}
+
+.group-bookings-table input[type="radio"],
+.group-bookings-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.group-bookings-table .exclude-checkbox:checked::after {
+  content: '✕';
+  color: #dc2626;
+}
+
+.booking-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.booking-guest-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.booking-room {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: monospace;
+}
+
+.group-modal-loading,
+.group-modal-error {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.group-modal-loading .spinner {
+  margin: 0 auto 12px;
+}
+
+.group-modal-error .material-symbols-outlined {
+  font-size: 48px;
+  color: #ef4444;
+  margin-bottom: 12px;
+}
+
+.group-modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.group-modal-cancel,
+.group-modal-save {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.group-modal-cancel {
+  background: white;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.group-modal-cancel:hover {
+  background: #f9fafb;
+}
+
+.group-modal-save {
+  background: #3b82f6;
+  border: none;
+  color: white;
+}
+
+.group-modal-save:hover {
+  background: #2563eb;
+}
+
+.group-modal-save:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
 </style>
 
 <!-- Custom Modal Structure -->
@@ -2138,13 +2399,53 @@ if (!defined('ABSPATH')) {
 <!-- Toast Container -->
 <div id="bma-toast-container"></div>
 
+<!-- Group Management Modal -->
+<div id="group-management-modal" class="group-modal hidden">
+  <div class="group-modal-overlay"></div>
+  <div class="group-modal-content">
+    <div class="group-modal-header">
+      <h3>Manage Group Bookings</h3>
+      <button class="group-modal-close" title="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="group-modal-body">
+      <div class="group-modal-resos-info" id="group-modal-resos-info"></div>
+
+      <div class="group-bookings-container"></div>
+
+      <div class="group-modal-loading hidden">
+        <div class="spinner"></div>
+        <p>Loading bookings...</p>
+      </div>
+
+      <div class="group-modal-error hidden">
+        <span class="material-symbols-outlined">error</span>
+        <p class="error-message"></p>
+      </div>
+    </div>
+    <div class="group-modal-footer">
+      <button class="group-modal-cancel">Cancel</button>
+      <button class="group-modal-save">Save Group</button>
+    </div>
+  </div>
+</div>
+
 <!-- Load Material Symbols font for status icons -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
 <script>
-// Get API configuration from parent window or use defaults
+// Get API configuration from window or parent window
 function getAPIConfig() {
-    // Try to get from parent window's APIClient if available
+    // Try current window first (Chrome extension context)
+    if (window.apiClient) {
+        return {
+            baseUrl: window.apiClient.baseUrl,
+            authHeader: window.apiClient.authHeader
+        };
+    }
+
+    // Try parent window (iframe context)
     if (window.parent && window.parent.apiClient) {
         return {
             baseUrl: window.parent.apiClient.baseUrl,
@@ -2449,6 +2750,296 @@ async function executeExcludeMatch(resosBookingId, hotelBookingId) {
     }
 }
 
+// ============================================
+// GROUP MANAGEMENT MODAL (MIGRATED FROM EXTENSION)
+// ============================================
+
+// Global state for group modal
+const GROUP_MODAL_STATE = {
+  resosBookingId: null,
+  hotelBookingId: null,
+  date: null,
+  bookings: [],
+  groupExcludeData: { groups: [], excludes: [] },
+  leadBookingId: null
+};
+
+// Parse GROUP/EXCLUDE field value
+function parseGroupExcludeField(fieldValue) {
+  const result = { groups: [], excludes: [] };
+  if (!fieldValue) return result;
+
+  const parts = fieldValue.split(',').map(p => p.trim());
+  parts.forEach(part => {
+    if (part.startsWith('G-')) {
+      result.groups.push(part.substring(2)); // New format: G-{booking_id}
+    } else if (part.startsWith('N-')) {
+      result.excludes.push(part.substring(2)); // Exclude format: N-{booking_id}
+    } else if (part.startsWith('#')) {
+      result.groups.push(part.substring(1)); // Legacy/current format: #{booking_id}
+    }
+  });
+
+  console.log('BMA: parseGroupExcludeField - input:', fieldValue, 'output:', result);
+  return result;
+}
+
+// Open group management modal
+async function openGroupManagementModal(resosBookingId, hotelBookingId, date, resosTime = '', resosGuest = '', resosPeople = '0', resosBookingRef = '', groupExcludeField = '') {
+  const modal = document.getElementById('group-management-modal');
+  const resosInfo = document.getElementById('group-modal-resos-info');
+  const loading = modal.querySelector('.group-modal-loading');
+  const error = modal.querySelector('.group-modal-error');
+  const container = modal.querySelector('.group-bookings-container');
+
+  // Store state including lead booking ID from ResOS Booking # field
+  GROUP_MODAL_STATE.resosBookingId = resosBookingId;
+  GROUP_MODAL_STATE.hotelBookingId = hotelBookingId;
+  GROUP_MODAL_STATE.date = date;
+  GROUP_MODAL_STATE.leadBookingId = resosBookingRef;
+
+  console.log('BMA: openGroupManagementModal - resosBookingRef (lead):', resosBookingRef);
+  console.log('BMA: openGroupManagementModal - groupExcludeField raw:', groupExcludeField);
+  GROUP_MODAL_STATE.groupExcludeData = parseGroupExcludeField(groupExcludeField);
+  console.log('BMA: openGroupManagementModal - parsed groupExcludeData:', GROUP_MODAL_STATE.groupExcludeData);
+
+  // Show modal
+  modal.classList.remove('hidden');
+
+  // Show ResOS booking info
+  console.log('BMA: ResOS data - time:', resosTime, 'guest:', resosGuest, 'people:', resosPeople);
+  const time = (resosTime && resosTime.trim()) || 'N/A';
+  const guestName = (resosGuest && resosGuest.trim()) || 'Unknown';
+  const people = resosPeople || '0';
+  resosInfo.innerHTML = `${time} - ${guestName} (${people} pax)`;
+
+  // Show loading
+  loading.classList.remove('hidden');
+  container.classList.add('hidden');
+  error.classList.add('hidden');
+
+  try {
+    // Fetch bookings for date
+    const bookingsData = await fetchBookingsForDate(date, hotelBookingId);
+    GROUP_MODAL_STATE.bookings = bookingsData.bookings;
+
+    // Render bookings
+    renderGroupModal();
+
+    // Hide loading, show content
+    loading.classList.add('hidden');
+    container.classList.remove('hidden');
+
+  } catch (err) {
+    console.error('Error loading bookings:', err);
+    loading.classList.add('hidden');
+    error.classList.remove('hidden');
+    error.querySelector('.error-message').textContent = err.message || 'Failed to load bookings';
+  }
+}
+
+// Fetch bookings for a specific date
+async function fetchBookingsForDate(date, excludeBookingId) {
+  // Check if getAPIConfig is available
+  if (typeof getAPIConfig !== 'function') {
+    console.error('getAPIConfig function is not defined! Checking window.apiClient...');
+    // Fallback: try to use window.apiClient directly
+    if (!window.apiClient) {
+      throw new Error('API configuration not available. Please ensure the extension is properly initialized.');
+    }
+    // Define getAPIConfig locally if it doesn't exist
+    window.getAPIConfig = function() {
+      return {
+        baseUrl: window.apiClient.baseUrl,
+        authHeader: window.apiClient.authHeader
+      };
+    };
+  }
+
+  const config = getAPIConfig();
+  let url = `${config.baseUrl}/bookings/for-date?date=${date}`;
+  if (excludeBookingId) {
+    url += `&exclude_booking_id=${excludeBookingId}`;
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': config.authHeader,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const result = await response.json();
+  return result;
+}
+
+// Render the group modal with bookings
+function renderGroupModal() {
+  const container = document.querySelector('.group-bookings-container');
+
+  if (!GROUP_MODAL_STATE.bookings || GROUP_MODAL_STATE.bookings.length === 0) {
+    container.innerHTML = '<p style="text-align: center; padding: 20px; color: #6b7280;">No bookings found for this date</p>';
+    return;
+  }
+
+  // Render all bookings in a single table
+  container.innerHTML = renderBookingsTable(GROUP_MODAL_STATE.bookings);
+  attachGroupModalEventListeners();
+}
+
+// Render bookings table
+function renderBookingsTable(bookings) {
+  const groupExcludeData = GROUP_MODAL_STATE.groupExcludeData || { groups: [], excludes: [] };
+
+  let html = '<table class="group-bookings-table"><thead><tr>';
+  html += '<th>Lead</th>';
+  html += '<th>Group</th>';
+  html += '<th>Booking</th>';
+  html += '</tr></thead><tbody>';
+
+  bookings.forEach(booking => {
+    html += '<tr>';
+
+    // Lead radio - pre-select based on ResOS "Booking #" field
+    const isLeadBooking = String(booking.booking_id) === String(GROUP_MODAL_STATE.leadBookingId);
+    const checkedAttr = isLeadBooking ? ' checked' : '';
+    if (isLeadBooking) {
+      console.log('BMA: Booking', booking.booking_id, 'matches ResOS Booking # field, pre-selected as lead');
+    }
+    html += '<td>';
+    html += `<input type="radio" name="lead-booking" value="${booking.booking_id}" class="lead-radio"${checkedAttr}>`;
+    html += '</td>';
+
+    // Group checkbox - pre-select if in GROUP/EXCLUDE field or is lead booking
+    const isInGroupField = groupExcludeData.groups.includes(String(booking.booking_id));
+    const autoChecked = isLeadBooking || isInGroupField;
+    const checkedGroupAttr = autoChecked ? ' checked' : '';
+    if (autoChecked) {
+      console.log('BMA: Auto-checking group checkbox for booking', booking.booking_id, '(lead or in field)');
+    }
+    html += '<td>';
+    html += `<input type="checkbox" value="${booking.booking_id}" class="group-checkbox"${checkedGroupAttr}>`;
+    html += '</td>';
+
+    // Booking info - compact single line format
+    html += '<td>';
+    html += '<div class="booking-info-compact">';
+    html += `${booking.site_name || 'N/A'} - ${booking.guest_name || 'Guest'}`;
+    html += '</div>';
+    html += '</td>';
+
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
+}
+
+// Attach event listeners for group modal
+function attachGroupModalEventListeners() {
+  // Lead radio auto-checks group checkbox
+  document.querySelectorAll('.lead-radio').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const row = e.target.closest('tr');
+      const groupCheckbox = row.querySelector('.group-checkbox');
+      if (groupCheckbox && !groupCheckbox.checked) {
+        groupCheckbox.checked = true;
+      }
+    });
+  });
+}
+
+// Save group configuration
+async function saveGroupConfiguration() {
+  const leadRadios = document.querySelectorAll('.lead-radio');
+  const groupCheckboxes = document.querySelectorAll('.group-checkbox');
+
+  // Get lead booking ID
+  let leadBookingId = null;
+  leadRadios.forEach(radio => {
+    if (radio.checked) {
+      leadBookingId = radio.value;
+    }
+  });
+
+  // Get selected booking IDs
+  const selectedIds = [];
+  groupCheckboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      selectedIds.push(checkbox.value);
+    }
+  });
+
+  // Make API call
+  try {
+    const config = getAPIConfig();
+    const response = await fetch(`${config.baseUrl}/bookings/group`, {
+      method: 'POST',
+      headers: {
+        'Authorization': config.authHeader,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        resos_booking_id: GROUP_MODAL_STATE.resosBookingId,
+        lead_booking_id: leadBookingId,
+        group_booking_ids: selectedIds
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    // Show success message
+    if (window.showToast) {
+      window.showToast('Group updated successfully!', 'success');
+    } else {
+      showToast('Group updated successfully!', 'success');
+    }
+
+    // Close modal
+    closeGroupModal();
+
+    // Reload restaurant tab
+    if (window.parent && window.parent.reloadRestaurantTab) {
+      window.parent.reloadRestaurantTab();
+    } else if (window.reloadRestaurantTab) {
+      window.reloadRestaurantTab();
+    }
+
+  } catch (err) {
+    console.error('Error saving group:', err);
+    if (window.showToast) {
+      window.showToast(`Error: ${err.message}`, 'error');
+    } else {
+      showToast(`Error: ${err.message}`, 'error');
+    }
+  }
+}
+
+// Close group modal
+function closeGroupModal() {
+  const modal = document.getElementById('group-management-modal');
+  modal.classList.add('hidden');
+
+  // Reset state
+  GROUP_MODAL_STATE.resosBookingId = null;
+  GROUP_MODAL_STATE.hotelBookingId = null;
+  GROUP_MODAL_STATE.date = null;
+  GROUP_MODAL_STATE.bookings = [];
+  GROUP_MODAL_STATE.groups = {};
+  GROUP_MODAL_STATE.currentGroupId = null;
+}
+
+// Make functions globally available for template content
+window.openGroupManagementModal = openGroupManagementModal;
+
 // Show feedback message
 function showFeedback(feedbackElement, message, type) {
     if (!feedbackElement) return;
@@ -2492,15 +3083,16 @@ async function loadComparisonView(date, bookingId, resosBookingId, buttonElement
             body: JSON.stringify({
                 booking_id: bookingId,
                 resos_booking_id: resosBookingId,
-                date: date
+                date: date,
+                context: 'chrome-sidepanel'
             })
         });
 
         const result = await response.json();
 
-        if (result.success && result.comparison) {
-            const comparisonHTML = buildComparisonHTML(result.comparison, date, resosBookingId, isConfirmed, isMatchedElsewhere, hotelBookingId, guestName);
-            container.innerHTML = comparisonHTML;
+        if (result.success && result.html) {
+            // Use server-generated HTML (includes Manage Group button!)
+            container.innerHTML = result.html;
 
             // Attach event listeners to suggestion checkboxes for visual feedback
             attachSuggestionCheckboxListeners(container);
@@ -2534,7 +3126,7 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     let html = '<!-- TEMPLATE VERSION 1.4.0-2025-01-11 -->';
     html += '<div class="comparison-row-content">';
     html += '<div class="comparison-table-wrapper">';
-    html += '<div class="comparison-header">Match Comparison [v1.4.0-TEST]</div>';
+    html += '<div class="comparison-header">Match Comparison</div>';
     html += '<table class="comparison-table">';
     html += '<thead><tr>';
     html += '<th>Field</th>';
@@ -2586,16 +3178,34 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     html += '</button>';
 
     // 2. Manage Group button (always shown for matched bookings)
+    console.log('BMA: Manage Group button check:', { resosBookingId, hotelBookingId, date });
     if (resosBookingId) {
-        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}">`;
-        html += '<span class="material-symbols-outlined">groups</span> Manage Group';
+        console.log('BMA: Adding Manage Group button');
+        const resosTime = escapeHTML(resos.time || '');
+        const resosGuest = escapeHTML(resos.name || '');
+        const resosPeople = escapeHTML(resos.people || '0');
+        const resosBookingRef = escapeHTML(resos.booking_ref || '');
+
+        // Extract GROUP/EXCLUDE field from customFields
+        let groupExcludeField = '';
+        if (resos.customFields && Array.isArray(resos.customFields)) {
+            const field = resos.customFields.find(f => f.name === 'GROUP/EXCLUDE');
+            if (field && field.value) {
+                groupExcludeField = escapeHTML(field.value);
+            }
+        }
+
+        html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}" data-resos-time="${resosTime}" data-resos-guest="${resosGuest}" data-resos-people="${resosPeople}" data-resos-booking-ref="${resosBookingRef}" data-group-exclude="${groupExcludeField}" title="Manage Group">`;
+        html += '<span class="material-symbols-outlined">groups</span>';
         html += '</button>';
+    } else {
+        console.log('BMA: Manage Group button NOT added - resosBookingId is falsy');
     }
 
     // 3. Exclude Match button (only for non-confirmed, non-matched-elsewhere matches)
     if (!isConfirmed && !isMatchedElsewhere && resosBookingId && hotelBookingId) {
-        html += `<button class="btn-exclude-match" data-action="exclude-match" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-guest-name="${escapeHTML(guestName || 'Guest')}">`;
-        html += '<span class="material-symbols-outlined">close</span> Exclude Match';
+        html += `<button class="btn-exclude-match" data-action="exclude-match" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-guest-name="${escapeHTML(guestName || 'Guest')}" title="Exclude Match">`;
+        html += '<span class="material-symbols-outlined">close</span>';
         html += '</button>';
     }
 
@@ -2776,26 +3386,32 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
     // Build updates object from checked checkboxes
     const updates = {};
     checkboxes.forEach(checkbox => {
-        const name = checkbox.name.replace('suggestion_', '');
+        const field = checkbox.dataset.field;
         let value = checkbox.value;
 
-        // Handle special mappings
-        if (name === 'name') {
-            updates.guest_name = value;
-        } else if (name === 'booking_ref') {
-            updates.booking_ref = value;
-        } else if (name === 'hotel_guest') {
-            updates.hotel_guest = value;
-        } else if (name === 'dbb') {
-            updates.dbb = value; // Empty string means remove
-        } else if (name === 'people') {
+        // Map fields to what the API expects
+        if (field === 'name') {
+            updates.name = value;
+        } else if (field === 'email') {
+            updates.email = value;
+        } else if (field === 'phone') {
+            updates.phone = value;
+        } else if (field === 'people') {
             updates.people = parseInt(value);
-        } else if (name === 'status') {
+        } else if (field === 'booking_ref') {
+            updates.booking_ref = value;
+        } else if (field === 'hotel_guest') {
+            updates.hotel_guest = value;
+        } else if (field === 'dbb') {
+            updates.dbb = value; // Empty string means remove
+        } else if (field === 'status') {
             updates.status = value;
         } else {
-            updates[name] = value;
+            updates[field] = value;
         }
     });
+
+    console.log('BMA: Submitting updates:', { booking_id: resosBookingId, updates: updates });
 
     // Find the submit button to show loading state
     const submitBtn = container.querySelector('.btn-confirm-match');
@@ -2898,13 +3514,23 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
                     window.parent.openGroupManagementModal(
                         button.dataset.resosBookingId,
                         button.dataset.hotelBookingId,
-                        button.dataset.date
+                        button.dataset.date,
+                        button.dataset.resosTime || '',
+                        button.dataset.resosGuest || '',
+                        button.dataset.resosPeople || '0',
+                        button.dataset.resosBookingRef || '',
+                        button.dataset.groupExclude || ''
                     );
                 } else if (window.openGroupManagementModal) {
                     window.openGroupManagementModal(
                         button.dataset.resosBookingId,
                         button.dataset.hotelBookingId,
-                        button.dataset.date
+                        button.dataset.date,
+                        button.dataset.resosTime || '',
+                        button.dataset.resosGuest || '',
+                        button.dataset.resosPeople || '0',
+                        button.dataset.resosBookingRef || '',
+                        button.dataset.groupExclude || ''
                     );
                 }
                 break;
@@ -2942,5 +3568,21 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
     });
 
     console.log('BMA: Event listeners attached to document.body');
+
+    // Initialize group modal if present
+    const groupModal = document.getElementById('group-management-modal');
+    if (groupModal) {
+        const closeBtn = groupModal.querySelector('.group-modal-close');
+        const cancelBtn = groupModal.querySelector('.group-modal-cancel');
+        const saveBtn = groupModal.querySelector('.group-modal-save');
+        const overlay = groupModal.querySelector('.group-modal-overlay');
+
+        if (closeBtn) closeBtn.addEventListener('click', closeGroupModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeGroupModal);
+        if (overlay) overlay.addEventListener('click', closeGroupModal);
+        if (saveBtn) saveBtn.addEventListener('click', saveGroupConfiguration);
+
+        console.log('BMA: Group modal initialized');
+    }
 })();
 </script>

@@ -17,14 +17,23 @@ class BMA_NewBook_Search {
     private $api_base_url = 'https://api.newbook.cloud/rest/';
 
     /**
-     * Get single booking by ID
+     * Track when stale cache is used
      */
-    public function get_booking_by_id($booking_id) {
+    private $stale_cache_used = array();
+
+    /**
+     * Get single booking by ID
+     *
+     * @param int $booking_id NewBook booking ID
+     * @param bool $force_refresh If true, bypass and clear cache
+     * @return array|false Booking data or false on failure
+     */
+    public function get_booking_by_id($booking_id, $force_refresh = false) {
         $data = array(
             'booking_id' => intval($booking_id)
         );
 
-        $response = $this->call_api('bookings_get', $data);
+        $response = $this->call_api('bookings_get', $data, $force_refresh);
 
         if (!$response || !isset($response['data'])) {
             return false;
@@ -245,8 +254,11 @@ class BMA_NewBook_Search {
 
     /**
      * Fetch bookings from recent date range
+     *
+     * @param bool $force_refresh If true, bypass and clear cache
+     * @return array Array of bookings
      */
-    private function fetch_recent_bookings() {
+    private function fetch_recent_bookings($force_refresh = false) {
         // Fetch bookings ±7 days from today
         $today = date('Y-m-d');
         $from = date('Y-m-d', strtotime('-7 days'));
@@ -261,7 +273,7 @@ class BMA_NewBook_Search {
             'list_type' => 'staying'
         );
 
-        $response = $this->call_api('bookings_list', $data);
+        $response = $this->call_api('bookings_list', $data, $force_refresh);
 
         if (!$response || !isset($response['data'])) {
             return array();
@@ -275,9 +287,10 @@ class BMA_NewBook_Search {
      *
      * @param int $limit Maximum number of bookings to return
      * @param int $hours_back How many hours back to search (default 72)
+     * @param bool $force_refresh If true, bypass and clear cache
      * @return array Array of bookings sorted by booking_id descending
      */
-    public function fetch_recent_placed_bookings($limit = 5, $hours_back = 72) {
+    public function fetch_recent_placed_bookings($limit = 5, $hours_back = 72, $force_refresh = false) {
         $to_date = date('Y-m-d\TH:i:s');
         $from_date = date('Y-m-d\TH:i:s', strtotime("-{$hours_back} hours"));
 
@@ -287,10 +300,10 @@ class BMA_NewBook_Search {
             'list_type' => 'placed'  // Use 'placed' to get bookings by creation date
         );
 
-        $response = $this->call_api('bookings_list', $data);
+        $response = $this->call_api('bookings_list', $data, $force_refresh);
 
         if (!$response || !isset($response['data'])) {
-            error_log('BMA: Error fetching recent placed bookings - no data returned');
+            bma_log('BMA: Error fetching recent placed bookings - no data returned', 'error');
             return array();
         }
 
@@ -301,19 +314,53 @@ class BMA_NewBook_Search {
             return ($b['booking_id'] ?? 0) - ($a['booking_id'] ?? 0);
         });
 
-        error_log("BMA NewBook Search: Fetched " . count($bookings) . " bookings, applying limit = {$limit}");
+        bma_log("BMA NewBook Search: Fetched " . count($bookings) . " bookings, applying limit = {$limit}", 'debug');
 
         // Apply limit
         $limited_bookings = array_slice($bookings, 0, $limit);
-        error_log("BMA NewBook Search: Returning " . count($limited_bookings) . " bookings after limit");
+        bma_log("BMA NewBook Search: Returning " . count($limited_bookings) . " bookings after limit", 'debug');
 
         return $limited_bookings;
     }
 
     /**
-     * Call NewBook API (reuse from existing plugin)
+     * Fetch all hotel bookings for a specific date
+     * Used for GROUP modal to show all bookings on a particular date
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @param bool $force_refresh If true, bypass and clear cache
+     * @return array Array of bookings for the date
      */
-    private function call_api($action, $data = array()) {
+    public function fetch_hotel_bookings_for_date($date, $force_refresh = false) {
+        $period_from = $date . ' 00:00:00';
+        $period_to = $date . ' 23:59:59';
+
+        $data = array(
+            'period_from' => $period_from,
+            'period_to' => $period_to,
+            'list_type' => 'staying'
+        );
+
+        $response = $this->call_api('bookings_list', $data, $force_refresh);
+
+        if (!$response || !isset($response['data'])) {
+            bma_log('BMA: Failed to fetch hotel bookings for date ' . $date, 'error');
+            return array();
+        }
+
+        bma_log('BMA: Fetched ' . count($response['data']) . ' hotel bookings for date ' . $date, 'debug');
+        return $response['data'];
+    }
+
+    /**
+     * Call NewBook API with centralized caching
+     *
+     * @param string $action API action (e.g., 'bookings_get', 'bookings_list')
+     * @param array $data API request parameters
+     * @param bool $force_refresh If true, bypass and clear cache
+     * @return array|false API response data or false on failure
+     */
+    private function call_api($action, $data = array(), $force_refresh = false) {
         // Get NewBook API credentials (check new options first, fallback to old)
         $username = get_option('bma_newbook_username') ?: get_option('hotel_booking_api_username') ?: get_option('hotel_booking_newbook_username');
         $password = get_option('bma_newbook_password') ?: get_option('hotel_booking_api_password') ?: get_option('hotel_booking_newbook_password');
@@ -321,16 +368,36 @@ class BMA_NewBook_Search {
         $region = get_option('bma_newbook_region') ?: get_option('hotel_booking_api_region') ?: get_option('hotel_booking_newbook_region', 'au');
 
         if (empty($username) || empty($password) || empty($api_key)) {
-            error_log('BMA: API credentials not configured');
+            bma_log('BMA: API credentials not configured', 'error');
             return false;
+        }
+
+        // Add required parameters for cache key generation
+        $data['region'] = $region;
+        $data['api_key'] = $api_key;
+
+        // Generate cache keys based on action and serialized parameters
+        $cache_key = 'bma_newbook_' . $action . '_' . md5(serialize($data));
+        $stale_key = $cache_key . '_stale';
+
+        // If force refresh, clear both fresh and stale caches
+        if ($force_refresh) {
+            delete_transient($cache_key);
+            delete_transient($stale_key);
+            bma_log("NewBook API: Force refresh - cleared cache for {$action}", 'debug');
+        }
+
+        // Check fresh cache (60 seconds)
+        if (!$force_refresh) {
+            $cached = get_transient($cache_key);
+            if ($cached !== false) {
+                bma_log("NewBook API: Cache HIT for {$action} (key: " . substr($cache_key, 0, 40) . "...)", 'debug');
+                return $cached;
+            }
         }
 
         // Build URL
         $url = $this->api_base_url . $action;
-
-        // Add required parameters
-        $data['region'] = $region;
-        $data['api_key'] = $api_key;
 
         // Prepare request
         $args = array(
@@ -343,30 +410,88 @@ class BMA_NewBook_Search {
             'body' => json_encode($data)
         );
 
+        bma_log("NewBook API: Cache MISS - calling {$action} endpoint", 'debug');
+
         // Make request
         $response = wp_remote_post($url, $args);
 
+        // Handle WP_Error - check stale cache
         if (is_wp_error($response)) {
-            error_log('BMA: API request failed: ' . $response->get_error_message());
+            $error_msg = $response->get_error_message();
+            bma_log('BMA: API request failed: ' . $error_msg, 'error');
+
+            // Try stale cache as fallback
+            $stale_cached = get_transient($stale_key);
+            if ($stale_cached !== false) {
+                $this->stale_cache_used[] = $action;
+                bma_log("NewBook API: Using STALE cache for {$action} (API failed)", 'warning');
+                return $stale_cached;
+            }
+
             return false;
         }
 
         $response_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
 
+        // Handle non-200 response - check stale cache
         if ($response_code !== 200) {
-            error_log('BMA: API returned error code: ' . $response_code);
+            bma_log('BMA: API returned error code: ' . $response_code, 'error');
+
+            // Try stale cache as fallback
+            $stale_cached = get_transient($stale_key);
+            if ($stale_cached !== false) {
+                $this->stale_cache_used[] = $action;
+                bma_log("NewBook API: Using STALE cache for {$action} (API error {$response_code})", 'warning');
+                return $stale_cached;
+            }
+
             return false;
         }
 
-        $data = json_decode($response_body, true);
+        // Parse JSON response
+        $response_data = json_decode($response_body, true);
 
+        // Handle JSON parse error - check stale cache
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log('BMA: Failed to parse API response');
+            bma_log('BMA: Failed to parse API response: ' . json_last_error_msg(), 'error');
+
+            // Try stale cache as fallback
+            $stale_cached = get_transient($stale_key);
+            if ($stale_cached !== false) {
+                $this->stale_cache_used[] = $action;
+                bma_log("NewBook API: Using STALE cache for {$action} (JSON parse failed)", 'warning');
+                return $stale_cached;
+            }
+
             return false;
         }
 
-        return $data;
+        // Success - cache the response
+        // Fresh cache: 60 seconds, Stale cache: 600 seconds (10 minutes)
+        set_transient($cache_key, $response_data, 60);
+        set_transient($stale_key, $response_data, 600);
+        bma_log("NewBook API: Cached response for {$action} (60s fresh, 600s stale)", 'debug');
+
+        return $response_data;
+    }
+
+    /**
+     * Check if stale cache was used in this request
+     *
+     * @return bool True if any API call used stale cache
+     */
+    public function has_stale_data() {
+        return !empty($this->stale_cache_used);
+    }
+
+    /**
+     * Get list of actions that used stale cache
+     *
+     * @return array Array of action names that used stale cache
+     */
+    public function get_stale_actions() {
+        return $this->stale_cache_used;
     }
 
     /**
@@ -463,7 +588,7 @@ class BMA_NewBook_Search {
         $response = $this->call_api('sites_list', $data);
 
         if (!$response || !isset($response['data'])) {
-            error_log('BMA_NewBook_Search: Failed to fetch sites list');
+            bma_log('BMA_NewBook_Search: Failed to fetch sites list', 'error');
             return array();
         }
 

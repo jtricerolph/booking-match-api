@@ -16,11 +16,6 @@ if (!defined('ABSPATH')) {
 class BMA_Matcher {
 
     /**
-     * Cache for hotel bookings by date to prevent duplicate API calls
-     */
-    private $hotel_bookings_cache = array();
-
-    /**
      * Track dates that are using stale cache (fallback due to API failures)
      */
     private $stale_cache_dates = array();
@@ -93,6 +88,7 @@ class BMA_Matcher {
         $resos_bookings = $this->fetch_resos_bookings($date, $force_refresh);
 
         // Fetch ALL hotel bookings for this date (for "matched elsewhere" checking)
+        // Note: Caching is now handled in call_api(), not at matcher level
         $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date);
 
         // Build array of all hotel booking IDs for this date (excluding current booking)
@@ -127,7 +123,7 @@ class BMA_Matcher {
         $all_matches = array();
 
         foreach ($resos_bookings as $resos_booking) {
-            $match_info = $this->match_resos_to_hotel($resos_booking, $booking, $date, $other_booking_ids);
+            $match_info = $this->match_resos_to_hotel($resos_booking, $booking, $date, $other_booking_ids, $all_hotel_bookings);
 
             if ($match_info['matched']) {
                 $result['match_count']++;
@@ -159,10 +155,11 @@ class BMA_Matcher {
                     $booking_time = date('H:i', strtotime($resos_booking['time']));
                 }
 
-                // Check if there are suggested updates (only for primary matches)
-                // Suggested matches (non-primary) should not show update checkboxes
+                // Check if there are suggested updates (only for primary matches that are NOT group members)
+                // Suggested matches (non-primary) and group members should not show update checkboxes
                 $has_suggestions = false;
-                if ($match_info['is_primary']) {
+                $is_group_member = $match_info['is_group_member'] ?? false;
+                if ($match_info['is_primary'] && !$is_group_member) {
                     $comparison = new BMA_Comparison();
                     $comparison_data = $comparison->prepare_comparison_data($booking, $resos_booking, $date);
                     if (!empty($comparison_data['suggested_updates'])) {
@@ -208,7 +205,7 @@ class BMA_Matcher {
      * @param string $date Date being matched (YYYY-MM-DD)
      * @param array $other_booking_ids Array of OTHER hotel booking IDs for this date (for "matched elsewhere" checking)
      */
-    public function match_resos_to_hotel($resos_booking, $hotel_booking, $date, $other_booking_ids = array()) {
+    public function match_resos_to_hotel($resos_booking, $hotel_booking, $date, $other_booking_ids = array(), $all_hotel_bookings = array()) {
         $hotel_booking_id = $hotel_booking['booking_id'] ?? '';
         $hotel_ref = $hotel_booking['booking_reference_id'] ?? '';
         $hotel_room = $hotel_booking['site_name'] ?? '';
@@ -239,32 +236,7 @@ class BMA_Matcher {
             }
         }
 
-        // Check for group/individual match in GROUP/EXCLUDE field (Priority 0.5 - before "Booking #" field)
-        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data);
-        if ($group_match !== false) {
-            return $group_match;
-        }
-
-        // Check if this Resos booking's "Booking #" field matches ANY OTHER hotel booking ID
-        // If so, it's "matched elsewhere" and should not be considered for this booking
-        if (!empty($other_booking_ids)) {
-            $custom_fields = $resos_booking['customFields'] ?? array();
-            foreach ($custom_fields as $field) {
-                if (($field['name'] ?? '') === 'Booking #') {
-                    $value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
-                    if (!empty($value) && in_array(strval($value), $other_booking_ids, true)) {
-                        // This Resos booking is matched to a different hotel booking
-                        return array(
-                            'matched' => false,
-                            'matched_elsewhere' => true,
-                            'matched_to_booking_id' => $value
-                        );
-                    }
-                }
-            }
-        }
-
-        // Priority 1: Booking ID in custom fields
+        // Priority 1: Booking ID in custom fields (PRIMARY MATCH - highest priority)
         $custom_fields = $resos_booking['customFields'] ?? array();
         foreach ($custom_fields as $field) {
             if (($field['name'] ?? '') === 'Booking #') {
@@ -281,7 +253,33 @@ class BMA_Matcher {
             }
         }
 
-        // Priority 2: Agent reference match
+        // Priority 2: Check for group/individual match in GROUP/EXCLUDE field (secondary group member match)
+        // This must come BEFORE the "matched elsewhere" check, so group members match correctly
+        $group_match = $this->check_group_exclude_match($hotel_booking, $group_exclude_data, $resos_booking, $all_hotel_bookings);
+        if ($group_match !== false) {
+            return $group_match;
+        }
+
+        // Priority 3: Check if this Resos booking's "Booking #" field matches ANY OTHER hotel booking ID
+        // If so, it's "matched elsewhere" and should not be considered for this booking
+        // This comes AFTER group matching, so group members don't get flagged as "matched elsewhere"
+        if (!empty($other_booking_ids)) {
+            foreach ($custom_fields as $field) {
+                if (($field['name'] ?? '') === 'Booking #') {
+                    $value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
+                    if (!empty($value) && in_array(strval($value), $other_booking_ids, true)) {
+                        // This Resos booking is matched to a different hotel booking
+                        return array(
+                            'matched' => false,
+                            'matched_elsewhere' => true,
+                            'matched_to_booking_id' => $value
+                        );
+                    }
+                }
+            }
+        }
+
+        // Priority 4: Agent reference match
         foreach ($custom_fields as $field) {
             $value = $field['value'] ?? $field['multipleChoiceValueName'] ?? '';
             if (!empty($hotel_ref) && !empty($value) && $value == $hotel_ref) {
@@ -295,7 +293,7 @@ class BMA_Matcher {
             }
         }
 
-        // Priority 3: Booking ID in notes (SUGGESTED - should be in custom field)
+        // Priority 5: Booking ID in notes (SUGGESTED - should be in custom field)
         $notes = $this->get_resos_notes($resos_booking);
         if (!empty($hotel_booking_id) && stripos($notes, (string)$hotel_booking_id) !== false) {
             // Check current custom fields to suggest updates
@@ -324,7 +322,7 @@ class BMA_Matcher {
             );
         }
 
-        // Priority 4: Agent ref in notes (SUGGESTED - should be in custom field)
+        // Priority 6: Agent ref in notes (SUGGESTED - should be in custom field)
         if (!empty($hotel_ref) && stripos($notes, $hotel_ref) !== false) {
             // Check current custom fields
             $current_booking_number = '';
@@ -493,7 +491,7 @@ class BMA_Matcher {
         $api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
 
         if (empty($api_key)) {
-            error_log("BMA ERROR: Resos API key not configured");
+            bma_log("BMA ERROR: Resos API key not configured", 'error');
             return array();
         }
 
@@ -512,12 +510,12 @@ class BMA_Matcher {
         $response = wp_remote_get($url, $args);
 
         if (is_wp_error($response)) {
-            error_log("BMA ERROR: Resos API call failed for date {$date}: " . $response->get_error_message());
+            bma_log("BMA ERROR: Resos API call failed for date {$date}: " . $response->get_error_message(), 'error');
 
             // Try to return stale cache if available (with _stale suffix)
             $stale_cache = get_transient($cache_key . '_stale');
             if ($stale_cache !== false) {
-                error_log("BMA WARNING: Returning stale cache for date {$date} due to API failure");
+                bma_log("BMA WARNING: Returning stale cache for date {$date} due to API failure", 'warning');
                 $this->stale_cache_dates[] = $date;
                 return $stale_cache;
             }
@@ -527,12 +525,12 @@ class BMA_Matcher {
 
         $http_code = wp_remote_retrieve_response_code($response);
         if ($http_code !== 200) {
-            error_log("BMA ERROR: Resos API returned HTTP {$http_code} for date {$date}");
+            bma_log("BMA ERROR: Resos API returned HTTP {$http_code} for date {$date}", 'error');
 
             // Try to return stale cache
             $stale_cache = get_transient($cache_key . '_stale');
             if ($stale_cache !== false) {
-                error_log("BMA WARNING: Returning stale cache for date {$date} due to HTTP {$http_code}");
+                bma_log("BMA WARNING: Returning stale cache for date {$date} due to HTTP {$http_code}", 'warning');
                 $this->stale_cache_dates[] = $date;
                 return $stale_cache;
             }
@@ -544,12 +542,12 @@ class BMA_Matcher {
         $data = json_decode($body, true);
 
         if (!is_array($data)) {
-            error_log("BMA ERROR: Resos API returned invalid JSON for date {$date}");
+            bma_log("BMA ERROR: Resos API returned invalid JSON for date {$date}", 'error');
 
             // Try to return stale cache
             $stale_cache = get_transient($cache_key . '_stale');
             if ($stale_cache !== false) {
-                error_log("BMA WARNING: Returning stale cache for date {$date} due to invalid JSON");
+                bma_log("BMA WARNING: Returning stale cache for date {$date} due to invalid JSON", 'warning');
                 $this->stale_cache_dates[] = $date;
                 return $stale_cache;
             }
@@ -605,7 +603,7 @@ class BMA_Matcher {
             unset($this->stale_cache_dates[$key]);
         }
 
-        error_log("BMA: Cleared Resos bookings cache for date: {$date}");
+        bma_log("BMA: Cleared Resos bookings cache for date: {$date}", 'debug');
     }
 
     /**
@@ -639,7 +637,7 @@ class BMA_Matcher {
         // Clear stale cache tracking
         $this->stale_cache_dates = array();
 
-        error_log("BMA: Cleared {$cleared_count} Resos bookings transients");
+        bma_log("BMA: Cleared {$cleared_count} Resos bookings transients", 'debug');
     }
 
     /**
@@ -654,7 +652,7 @@ class BMA_Matcher {
 
         // Log first booking structure for debugging
         if (!empty($raw_bookings)) {
-            error_log('BMA_Matcher: Sample raw Resos booking structure: ' . print_r($raw_bookings[0], true));
+            bma_log('BMA_Matcher: Sample raw Resos booking structure: ' . print_r($raw_bookings[0], true), 'debug');
         }
 
         foreach ($raw_bookings as $booking) {
@@ -668,15 +666,15 @@ class BMA_Matcher {
                         // For multiple choice fields, use multipleChoiceValueName (not value which contains ID)
                         $field_value = $field['multipleChoiceValueName'] ?? $field['value'] ?? '';
                         $is_resident = ($field_value === 'Yes' || $field_value === 'yes' || $field_value === '1');
-                        error_log('BMA_Matcher: Found Hotel Guest field, value: ' . $field_value . ', is_resident: ' . ($is_resident ? 'yes' : 'no'));
+                        bma_log('BMA_Matcher: Found Hotel Guest field, value: ' . $field_value . ', is_resident: ' . ($is_resident ? 'yes' : 'no'), 'debug');
                         break;
                     }
                 }
                 if (!$is_resident) {
-                    error_log('BMA_Matcher: No Hotel Guest field found or value not Yes');
+                    bma_log('BMA_Matcher: No Hotel Guest field found or value not Yes', 'debug');
                 }
             } else {
-                error_log('BMA_Matcher: No customFields found in booking');
+                bma_log('BMA_Matcher: No customFields found in booking', 'debug');
             }
 
             // Try to extract guest name from various possible fields
@@ -723,7 +721,7 @@ class BMA_Matcher {
                 $people = $booking['numberOfGuests'];
             }
 
-            error_log('BMA_Matcher: Extracted - time: ' . $time . ', people: ' . $people . ', name: ' . $guest_name . ', is_resident: ' . ($is_resident ? 'yes' : 'no'));
+            bma_log('BMA_Matcher: Extracted - time: ' . $time . ', people: ' . $people . ', name: ' . $guest_name . ', is_resident: ' . ($is_resident ? 'yes' : 'no'), 'debug');
 
             $formatted_bookings[] = array(
                 'time' => $time,
@@ -733,7 +731,7 @@ class BMA_Matcher {
             );
         }
 
-        error_log('BMA_Matcher: Fetched ' . count($formatted_bookings) . ' bookings for Gantt chart on ' . $date);
+        bma_log('BMA_Matcher: Fetched ' . count($formatted_bookings) . ' bookings for Gantt chart on ' . $date, 'debug');
         return $formatted_bookings;
     }
 
@@ -741,62 +739,20 @@ class BMA_Matcher {
      * Fetch ALL hotel bookings for a specific date
      * Used for "matched elsewhere" checking
      * Uses caching to prevent duplicate API calls for the same date
+     *
+     * @param string $date Date in Y-m-d format
+     * @param bool $force_refresh If true, bypass cache and fetch fresh data (for detail views)
+     */
+    /**
+     * Fetch hotel bookings for a specific date
+     * All caching is now handled in BMA_NewBook_Search::call_api()
+     *
+     * @param string $date Date in YYYY-MM-DD format
+     * @return array Array of hotel bookings for the date
      */
     private function fetch_hotel_bookings_for_date($date) {
-        // Check cache first
-        if (isset($this->hotel_bookings_cache[$date])) {
-            error_log('BMA_Matcher: Using cached hotel bookings for date ' . $date);
-            return $this->hotel_bookings_cache[$date];
-        }
-
-        // Get NewBook API credentials (check new options first, fallback to old)
-        $username = get_option('bma_newbook_username') ?: get_option('hotel_booking_newbook_username');
-        $password = get_option('bma_newbook_password') ?: get_option('hotel_booking_newbook_password');
-        $api_key = get_option('bma_newbook_api_key') ?: get_option('hotel_booking_newbook_api_key');
-        $region = get_option('bma_newbook_region') ?: get_option('hotel_booking_newbook_region', 'au');
-        $hotel_id = get_option('bma_hotel_id') ?: get_option('hotel_booking_default_hotel_id', '1');
-
-        if (empty($username) || empty($password) || empty($api_key)) {
-            return array();
-        }
-
-        // Build NewBook API URL
-        $url = "https://api.{$region}.newbook.cloud/rest/v1/site/{$hotel_id}/bookings";
-        $url .= '?from_date=' . urlencode($date);
-        $url .= '&to_date=' . urlencode($date);
-        $url .= '&expand=guests,guests.contact_details,tariffs_quoted,inventory_items';
-
-        $args = array(
-            'headers' => array(
-                'Authorization' => 'Basic ' . base64_encode($username . ':' . $password),
-                'x-api-key' => $api_key
-            ),
-            'timeout' => 30
-        );
-
-        error_log('BMA_Matcher: Fetching hotel bookings for date ' . $date . ' from NewBook API');
-        $response = wp_remote_get($url, $args);
-
-        if (is_wp_error($response)) {
-            error_log('BMA_Matcher: Failed to fetch hotel bookings for date ' . $date . ': ' . $response->get_error_message());
-            $this->hotel_bookings_cache[$date] = array(); // Cache empty result to prevent retry
-            return array();
-        }
-
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-
-        if (!is_array($data)) {
-            error_log('BMA_Matcher: Invalid response when fetching hotel bookings for date ' . $date);
-            $this->hotel_bookings_cache[$date] = array(); // Cache empty result to prevent retry
-            return array();
-        }
-
-        // Cache the result
-        $this->hotel_bookings_cache[$date] = $data;
-        error_log('BMA_Matcher: Cached ' . count($data) . ' hotel bookings for date ' . $date);
-
-        return $data;
+        $searcher = new BMA_NewBook_Search();
+        return $searcher->fetch_hotel_bookings_for_date($date);
     }
 
     /**
@@ -1076,11 +1032,43 @@ class BMA_Matcher {
      *
      * @param array $hotel_booking Hotel booking data
      * @param array $group_exclude_data Parsed GROUP/EXCLUDE data
+     * @param array $resos_booking Resos booking data (for extracting lead booking ID)
+     * @param array $all_hotel_bookings All hotel bookings for this date (for lead booking lookup)
      * @return array|false Match result or false if no match
      */
-    private function check_group_exclude_match($hotel_booking, $group_exclude_data) {
+    private function check_group_exclude_match($hotel_booking, $group_exclude_data, $resos_booking = array(), $all_hotel_bookings = array()) {
         $booking_id = strval($hotel_booking['booking_id'] ?? '');
         $bookings_group_id = strval($hotel_booking['bookings_group_id'] ?? '');
+
+        // Get lead booking ID from ResOS "Booking #" field
+        $lead_booking_id = '';
+        $lead_booking_room = '';
+        if (!empty($resos_booking['customFields'])) {
+            foreach ($resos_booking['customFields'] as $field) {
+                if (($field['name'] ?? '') === 'Booking #') {
+                    $lead_booking_id = $field['value'] ?? '';
+                    bma_log('BMA_Matcher: Found lead booking ID in ResOS: ' . $lead_booking_id, 'debug');
+                    break;
+                }
+            }
+        }
+
+        // Find lead booking's room number
+        if (!empty($lead_booking_id) && !empty($all_hotel_bookings)) {
+            bma_log('BMA_Matcher: Searching for lead booking ID ' . $lead_booking_id . ' in ' . count($all_hotel_bookings) . ' hotel bookings', 'debug');
+            foreach ($all_hotel_bookings as $hb) {
+                if (($hb['booking_id'] ?? '') == $lead_booking_id) {
+                    $lead_booking_room = $hb['site_name'] ?? '';
+                    bma_log('BMA_Matcher: Found lead booking - room: ' . $lead_booking_room . ' (site_name: ' . ($hb['site_name'] ?? 'MISSING') . ')', 'debug');
+                    break;
+                }
+            }
+            if (empty($lead_booking_room)) {
+                bma_log('BMA_Matcher: Lead booking ID ' . $lead_booking_id . ' not found in hotel bookings list', 'error');
+            }
+        } else {
+            bma_log('BMA_Matcher: Cannot find lead room - lead_booking_id: ' . ($lead_booking_id ?: 'EMPTY') . ', all_hotel_bookings count: ' . count($all_hotel_bookings), 'error');
+        }
 
         // Check if booking is in a group that's linked (G#5678)
         if (!empty($bookings_group_id) && !empty($group_exclude_data['groups'])) {
@@ -1092,7 +1080,8 @@ class BMA_Matcher {
                     'is_primary' => true,
                     'is_group_member' => true,
                     'matched_via_group_id' => $bookings_group_id,
-                    'match_label' => 'Group Member (G#' . $bookings_group_id . ')'
+                    'match_label' => 'Group Member (G#' . $bookings_group_id . ')',
+                    'lead_booking_room' => $lead_booking_room
                 );
             }
         }
@@ -1107,7 +1096,8 @@ class BMA_Matcher {
                     'is_primary' => true,
                     'is_group_member' => true,
                     'matched_via_individual_id' => $booking_id,
-                    'match_label' => 'Individual Link (#' . $booking_id . ')'
+                    'match_label' => 'Individual Link (#' . $booking_id . ')',
+                    'lead_booking_room' => $lead_booking_room
                 );
             }
         }

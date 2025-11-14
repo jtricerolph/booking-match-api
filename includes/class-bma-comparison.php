@@ -189,6 +189,14 @@ class BMA_Comparison {
         $resos_people = isset($resos_booking['people']) ? intval($resos_booking['people']) : 0;
         $resos_status = isset($resos_booking['status']) ? $resos_booking['status'] : 'request';
 
+        // Extract time - use timeString if available, otherwise format from time
+        $resos_time = '';
+        if (isset($resos_booking['timeString'])) {
+            $resos_time = $resos_booking['timeString'];
+        } elseif (isset($resos_booking['time'])) {
+            $resos_time = date('H:i', strtotime($resos_booking['time']));
+        }
+
         // Determine which fields match for highlighting
         $matches = array();
 
@@ -249,26 +257,26 @@ class BMA_Comparison {
         $hotel_has_package = false;
         $package_inventory_name = get_option('bma_package_inventory_name', '');
 
-        error_log("BMA DEBUG: Package detection - input_date: '{$input_date}', package_inventory_name option: '{$package_inventory_name}'");
-        error_log("BMA DEBUG: Has inventory_items: " . (isset($hotel_booking['inventory_items']) ? 'YES' : 'NO') . ", Count: " . (isset($hotel_booking['inventory_items']) ? count($hotel_booking['inventory_items']) : 0));
+        bma_log("BMA DEBUG: Package detection - input_date: '{$input_date}', package_inventory_name option: '{$package_inventory_name}'", 'debug');
+        bma_log("BMA DEBUG: Has inventory_items: " . (isset($hotel_booking['inventory_items']) ? 'YES' : 'NO') . ", Count: " . (isset($hotel_booking['inventory_items']) ? count($hotel_booking['inventory_items']) : 0), 'debug');
 
         if (!empty($package_inventory_name) && isset($hotel_booking['inventory_items']) && is_array($hotel_booking['inventory_items'])) {
             foreach ($hotel_booking['inventory_items'] as $item) {
-                error_log("BMA DEBUG: Inventory item - stay_date: '" . ($item['stay_date'] ?? 'NOT SET') . "', description: '" . ($item['description'] ?? 'NOT SET') . "'");
+                bma_log("BMA DEBUG: Inventory item - stay_date: '" . ($item['stay_date'] ?? 'NOT SET') . "', description: '" . ($item['description'] ?? 'NOT SET') . "'", 'debug');
                 if (isset($item['stay_date']) && $item['stay_date'] == $input_date) {
                     if (isset($item['description']) && stripos($item['description'], $package_inventory_name) !== false) {
-                        error_log("BMA DEBUG: PACKAGE FOUND! Matched '{$package_inventory_name}' in '{$item['description']}'");
+                        bma_log("BMA DEBUG: PACKAGE FOUND! Matched '{$package_inventory_name}' in '{$item['description']}'", 'debug');
                         $hotel_has_package = true;
                         break;
                     } else {
-                        error_log("BMA DEBUG: Date matches but description doesn't contain '{$package_inventory_name}'");
+                        bma_log("BMA DEBUG: Date matches but description doesn't contain '{$package_inventory_name}'", 'debug');
                     }
                 } else {
-                    error_log("BMA DEBUG: Date doesn't match - item date: '" . ($item['stay_date'] ?? 'NOT SET') . "' vs input: '{$input_date}'");
+                    bma_log("BMA DEBUG: Date doesn't match - item date: '" . ($item['stay_date'] ?? 'NOT SET') . "' vs input: '{$input_date}'", 'debug');
                 }
             }
         } else {
-            error_log("BMA DEBUG: Package check skipped - package_inventory_name empty: " . (empty($package_inventory_name) ? 'YES' : 'NO'));
+            bma_log("BMA DEBUG: Package check skipped - package_inventory_name empty: " . (empty($package_inventory_name) ? 'YES' : 'NO'), 'debug');
         }
 
         // Check package/DBB match
@@ -326,18 +334,18 @@ class BMA_Comparison {
         // To clear: omit the field from customFields array (handled in update action)
         // Don't suggest if already matched
         // DEBUG: Log DBB matching status
-        error_log("BMA DEBUG: DBB Check - hotel_has_package: " . ($hotel_has_package ? 'YES' : 'NO') . ", resos_dbb: '{$resos_dbb}', matches[dbb]: " . (isset($matches['dbb']) && $matches['dbb'] ? 'TRUE' : 'FALSE'));
+        bma_log("BMA DEBUG: DBB Check - hotel_has_package: " . ($hotel_has_package ? 'YES' : 'NO') . ", resos_dbb: '{$resos_dbb}', matches[dbb]: " . (isset($matches['dbb']) && $matches['dbb'] ? 'TRUE' : 'FALSE'), 'debug');
         if (!isset($matches['dbb']) || !$matches['dbb']) {
             if ($hotel_has_package && $resos_dbb !== 'Yes') {
-                error_log("BMA DEBUG: Suggesting DBB = 'Yes'");
+                bma_log("BMA DEBUG: Suggesting DBB = 'Yes'", 'debug');
                 $suggested_updates['dbb'] = 'Yes';
             } elseif (!$hotel_has_package && $resos_dbb === 'Yes') {
-                error_log("BMA DEBUG: Suggesting DBB = '' (clear)");
+                bma_log("BMA DEBUG: Suggesting DBB = '' (clear)", 'debug');
                 // Suggest clearing DBB (empty string = omit from customFields array when updating)
                 $suggested_updates['dbb'] = '';
             }
         } else {
-            error_log("BMA DEBUG: DBB already matches, NOT suggesting update");
+            bma_log("BMA DEBUG: DBB already matches, NOT suggesting update", 'debug');
         }
 
         // People/Covers: Suggest hotel occupancy if different from Resos covers
@@ -379,7 +387,8 @@ class BMA_Comparison {
                 'notes' => $resos_notes,
                 'hotel_guest' => $resos_hotel_guest,
                 'dbb' => $resos_dbb,
-                'status' => $resos_status
+                'status' => $resos_status,
+                'time' => $resos_time
             ),
             'matches' => $matches,
             'suggested_updates' => $suggested_updates

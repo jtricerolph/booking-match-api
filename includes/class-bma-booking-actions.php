@@ -23,6 +23,8 @@ class BMA_Booking_Actions {
      * @return array Success/error response
      */
     public function update_resos_booking($booking_id, $updates) {
+        bma_log('BMA: update_resos_booking called with booking_id=' . $booking_id . ', updates=' . json_encode($updates), 'debug');
+
         // Validate parameters
         if (empty($booking_id)) {
             return array(
@@ -90,7 +92,7 @@ class BMA_Booking_Actions {
         }
         if (!empty($guest_data)) {
             $updates['guest'] = $guest_data;
-            error_log('BMA: Transformed guest fields to nested structure: ' . json_encode($guest_data));
+            bma_log('BMA: Transformed guest fields to nested structure: ' . json_encode($guest_data), 'debug');
         }
 
         // Make PUT request to Resos API
@@ -106,8 +108,8 @@ class BMA_Booking_Actions {
             'body' => $request_body
         );
 
-        error_log('BMA: Update Resos Booking - PUT ' . $url);
-        error_log('BMA: Request Body: ' . $request_body);
+        bma_log('BMA: Update Resos Booking - PUT ' . $url, 'debug');
+        bma_log('BMA: Request Body: ' . $request_body, 'debug');
 
         $response = wp_remote_request($url, $args);
 
@@ -121,8 +123,8 @@ class BMA_Booking_Actions {
         $response_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
 
-        error_log('BMA: Response Code: ' . $response_code);
-        error_log('BMA: Response Body: ' . $response_body);
+        bma_log('BMA: Response Code: ' . $response_code, 'debug');
+        bma_log('BMA: Response Body: ' . $response_body, 'debug');
 
         if ($response_code !== 200) {
             return array(
@@ -195,7 +197,7 @@ class BMA_Booking_Actions {
             )
         );
 
-        error_log('BMA: Exclude Match - Fetching current booking ' . $resos_booking_id);
+        bma_log('BMA: Exclude Match - Fetching current booking ' . $resos_booking_id, 'debug');
 
         $response = wp_remote_get($booking_url, $fetch_args);
 
@@ -237,7 +239,7 @@ class BMA_Booking_Actions {
             $current_data['excludes']
         );
 
-        error_log('BMA: Exclude Match - Updating GROUP/EXCLUDE to: ' . $new_field_value);
+        bma_log('BMA: Exclude Match - Updating GROUP/EXCLUDE to: ' . $new_field_value, 'debug');
 
         // Update the booking with new GROUP/EXCLUDE value
         $update_result = $this->update_resos_booking($resos_booking_id, array(
@@ -248,7 +250,7 @@ class BMA_Booking_Actions {
             return $update_result;
         }
 
-        error_log('BMA: Exclude Match SUCCESS - Added NOT-#' . $hotel_booking_id . ' to Resos booking ' . $resos_booking_id);
+        bma_log('BMA: Exclude Match SUCCESS - Added NOT-#' . $hotel_booking_id . ' to Resos booking ' . $resos_booking_id, 'debug');
 
         return array(
             'success' => true,
@@ -373,7 +375,7 @@ class BMA_Booking_Actions {
             }
 
             if (!$field_definition) {
-                error_log("BMA: WARNING: Could not find customField definition for '$resos_name'");
+                bma_log("BMA: WARNING: Could not find customField definition for '$resos_name'", 'warning');
                 continue;
             }
 
@@ -413,7 +415,7 @@ class BMA_Booking_Actions {
                     if (!empty($choice_objects)) {
                         $field_value_data['value'] = $choice_objects;  // Array of objects for multiselect
                     } else {
-                        error_log("BMA: WARNING: No valid choices found for checkbox field {$field_definition['name']}");
+                        bma_log("BMA: WARNING: No valid choices found for checkbox field {$field_definition['name']}", 'warning');
                         continue;
                     }
                 } else {
@@ -432,7 +434,7 @@ class BMA_Booking_Actions {
                         $field_value_data['value'] = $choice_id;
                         $field_value_data['multipleChoiceValueName'] = $new_value;
                     } else {
-                        error_log("BMA: WARNING: Could not find choice ID for {$field_definition['name']} with value '{$new_value}'");
+                        bma_log("BMA: WARNING: Could not find choice ID for {$field_definition['name']} with value '{$new_value}'", 'warning');
                         continue;
                     }
                 }
@@ -717,7 +719,7 @@ class BMA_Booking_Actions {
                                !empty($dietary_other);
 
         if ($needs_custom_fields) {
-            error_log('BMA: Custom fields detected for create, fetching definitions...');
+            bma_log('BMA: Custom fields detected for create, fetching definitions...', 'debug');
 
             // Fetch customField definitions from Resos
             $custom_fields_url = 'https://api.resos.com/v1/customFields';
@@ -790,7 +792,7 @@ class BMA_Booking_Actions {
                 }
 
                 if (!$field_definition) {
-                    error_log("BMA: WARNING: Could not find customField definition for '{$resos_name}'");
+                    bma_log("BMA: WARNING: Could not find customField definition for '{$resos_name}'", 'warning');
                     continue;
                 }
 
@@ -829,7 +831,7 @@ class BMA_Booking_Actions {
                     if (!empty($choice_objects)) {
                         $field_value_data['value'] = $choice_objects;  // Array of objects for multiselect
                     } else {
-                        error_log("BMA: WARNING: No valid choices found for dietary requirements");
+                        bma_log("BMA: WARNING: No valid choices found for dietary requirements", 'warning');
                         continue;
                     }
                 } elseif ($is_multiple_choice) {
@@ -848,7 +850,7 @@ class BMA_Booking_Actions {
                         $field_value_data['value'] = $choice_id;
                         $field_value_data['multipleChoiceValueName'] = $value;
                     } else {
-                        error_log("BMA: WARNING: Could not find choice ID for {$resos_name} with value '{$value}'");
+                        bma_log("BMA: WARNING: Could not find choice ID for {$resos_name} with value '{$value}'", 'warning');
                         continue;
                     }
                 } else {
@@ -878,8 +880,8 @@ class BMA_Booking_Actions {
             'body' => $request_body
         );
 
-        error_log('BMA: Create Resos Booking - POST ' . $url);
-        error_log('BMA: Request Body: ' . $request_body);
+        bma_log('BMA: Create Resos Booking - POST ' . $url, 'debug');
+        bma_log('BMA: Request Body: ' . $request_body, 'debug');
 
         $response = wp_remote_request($url, $args);
 
@@ -893,8 +895,8 @@ class BMA_Booking_Actions {
         $response_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
 
-        error_log('BMA: Response Code: ' . $response_code);
-        error_log('BMA: Response Body: ' . $response_body);
+        bma_log('BMA: Response Code: ' . $response_code, 'debug');
+        bma_log('BMA: Response Body: ' . $response_body, 'debug');
 
         if ($response_code !== 200 && $response_code !== 201) {
             return array(
@@ -913,7 +915,7 @@ class BMA_Booking_Actions {
             );
         }
 
-        error_log('BMA: Create Booking SUCCESS - ' . $guest_name . ' on ' . $date . ' at ' . $time);
+        bma_log('BMA: Create Booking SUCCESS - ' . $guest_name . ' on ' . $date . ' at ' . $time, 'debug');
 
         // Extract booking ID from response
         $booking_id = '';
@@ -925,7 +927,7 @@ class BMA_Booking_Actions {
 
         // If there's a booking note, add it via separate endpoint
         if (!empty($booking_note) && !empty($booking_id)) {
-            error_log('BMA: Adding booking note to ' . $booking_id);
+            bma_log('BMA: Adding booking note to ' . $booking_id, 'debug');
 
             $note_url = 'https://api.resos.com/v1/bookings/' . urlencode($booking_id) . '/restaurantNote';
             $note_data = array('text' => $booking_note);
@@ -944,14 +946,14 @@ class BMA_Booking_Actions {
             $note_response = wp_remote_request($note_url, $note_args);
 
             if (is_wp_error($note_response)) {
-                error_log('BMA: WARNING: Failed to add note: ' . $note_response->get_error_message());
+                bma_log('BMA: WARNING: Failed to add note: ' . $note_response->get_error_message(), 'warning');
                 // Don't fail the entire booking if note fails
             } else {
                 $note_response_code = wp_remote_retrieve_response_code($note_response);
                 if ($note_response_code === 200 || $note_response_code === 201) {
-                    error_log('BMA: Note added successfully');
+                    bma_log('BMA: Note added successfully', 'debug');
                 } else {
-                    error_log('BMA: WARNING: Failed to add note. Status: ' . $note_response_code);
+                    bma_log('BMA: WARNING: Failed to add note. Status: ' . $note_response_code, 'warning');
                 }
             }
         }
@@ -997,14 +999,14 @@ class BMA_Booking_Actions {
         $cached = get_transient( $cache_key );
 
         if ( $cached !== false ) {
-            error_log( 'BMA: Returning cached opening hours (all)' );
+            bma_log( 'BMA: Returning cached opening hours (all)', 'debug' );
             return $cached;
         }
 
         // Get Resos API key (check new option first, fallback to old)
         $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
         if ( empty( $resos_api_key ) ) {
-            error_log( 'BMA: Resos API key not configured' );
+            bma_log( 'BMA: Resos API key not configured', 'error' );
             return array();
         }
 
@@ -1018,17 +1020,17 @@ class BMA_Booking_Actions {
             ),
         );
 
-        error_log( 'BMA: Fetching all opening hours from Resos API: ' . $url );
+        bma_log( 'BMA: Fetching all opening hours from Resos API: ' . $url, 'debug' );
         $response = wp_remote_get( $url, $args );
 
         if ( is_wp_error( $response ) ) {
-            error_log( 'BMA: Opening hours fetch error: ' . $response->get_error_message() );
+            bma_log( 'BMA: Opening hours fetch error: ' . $response->get_error_message(), 'error' );
             return array();
         }
 
         $response_code = wp_remote_retrieve_response_code( $response );
         if ( $response_code !== 200 ) {
-            error_log( 'BMA: Opening hours fetch failed with status: ' . $response_code );
+            bma_log( 'BMA: Opening hours fetch failed with status: ' . $response_code, 'error' );
             return array();
         }
 
@@ -1036,13 +1038,13 @@ class BMA_Booking_Actions {
         $data = json_decode( $body, true );
 
         if ( ! is_array( $data ) ) {
-            error_log( 'BMA: Invalid opening hours response format' );
+            bma_log( 'BMA: Invalid opening hours response format', 'error' );
             return array();
         }
 
         // Cache for 1 hour
         set_transient( $cache_key, $data, HOUR_IN_SECONDS );
-        error_log( 'BMA: Cached ' . count( $data ) . ' opening hours entries' );
+        bma_log( 'BMA: Cached ' . count( $data ) . ' opening hours entries', 'debug' );
 
         return $data;
     }
@@ -1083,7 +1085,7 @@ class BMA_Booking_Actions {
             usort( $special_hours, function( $a, $b ) {
                 return intval( $a['open'] ) - intval( $b['open'] );
             });
-            error_log( 'BMA: Found ' . count( $special_hours ) . ' special opening hours for ' . $date );
+            bma_log( 'BMA: Found ' . count( $special_hours ) . ' special opening hours for ' . $date, 'debug' );
             return $special_hours;
         }
 
@@ -1107,9 +1109,9 @@ class BMA_Booking_Actions {
             usort( $day_hours, function( $a, $b ) {
                 return intval( $a['open'] ) - intval( $b['open'] );
             });
-            error_log( 'BMA: Found ' . count( $day_hours ) . ' regular opening hours for ' . $date . ' (day ' . $day_of_week . ')' );
+            bma_log( 'BMA: Found ' . count( $day_hours ) . ' regular opening hours for ' . $date . ' (day ' . $day_of_week . ')', 'debug' );
         } else {
-            error_log( 'BMA: No opening hours found for ' . $date . ' (day ' . $day_of_week . ')' );
+            bma_log( 'BMA: No opening hours found for ' . $date . ' (day ' . $day_of_week . ')', 'debug' );
         }
 
         return $day_hours;
@@ -1161,11 +1163,11 @@ class BMA_Booking_Actions {
             ),
         );
 
-        error_log( 'BMA: Fetching available times from Resos API: ' . $url );
+        bma_log( 'BMA: Fetching available times from Resos API: ' . $url, 'debug' );
         $response = wp_remote_get( $url, $args );
 
         if ( is_wp_error( $response ) ) {
-            error_log( 'BMA: Available times fetch error: ' . $response->get_error_message() );
+            bma_log( 'BMA: Available times fetch error: ' . $response->get_error_message(), 'error' );
             return array(
                 'success' => false,
                 'message' => $response->get_error_message(),
@@ -1176,7 +1178,7 @@ class BMA_Booking_Actions {
 
         $response_code = wp_remote_retrieve_response_code( $response );
         if ( $response_code !== 200 ) {
-            error_log( 'BMA: Available times fetch failed with status: ' . $response_code );
+            bma_log( 'BMA: Available times fetch failed with status: ' . $response_code, 'error' );
             return array(
                 'success' => false,
                 'message' => 'API request failed with status: ' . $response_code,
@@ -1189,7 +1191,7 @@ class BMA_Booking_Actions {
         $data = json_decode( $body, true );
 
         if ( ! is_array( $data ) ) {
-            error_log( 'BMA: Invalid available times response format' );
+            bma_log( 'BMA: Invalid available times response format', 'error' );
             return array(
                 'success' => false,
                 'message' => 'Invalid response format',
@@ -1228,7 +1230,7 @@ class BMA_Booking_Actions {
         $cached = get_transient( $cache_key );
 
         if ( $cached !== false ) {
-            error_log( 'BMA: Returning cached special events for: ' . $date );
+            bma_log( 'BMA: Returning cached special events for: ' . $date, 'debug' );
             return $cached;
         }
 
@@ -1236,7 +1238,7 @@ class BMA_Booking_Actions {
         $all_hours = $this->get_all_opening_hours();
 
         if ( empty( $all_hours ) ) {
-            error_log( 'BMA: No opening hours data available for filtering special events' );
+            bma_log( 'BMA: No opening hours data available for filtering special events', 'debug' );
             return array();
         }
 
@@ -1265,11 +1267,11 @@ class BMA_Booking_Actions {
             }
         }
 
-        error_log( 'BMA: Found ' . count( $special_events ) . ' special event(s) for date: ' . $date );
+        bma_log( 'BMA: Found ' . count( $special_events ) . ' special event(s) for date: ' . $date, 'debug' );
 
         // Cache for 30 minutes
         set_transient( $cache_key, $special_events, 30 * MINUTE_IN_SECONDS );
-        error_log( 'BMA: Cached ' . count( $special_events ) . ' special event(s) for: ' . $date );
+        bma_log( 'BMA: Cached ' . count( $special_events ) . ' special event(s) for: ' . $date, 'debug' );
 
         return $special_events;
     }
@@ -1284,14 +1286,14 @@ class BMA_Booking_Actions {
         $cached = get_transient( $cache_key );
 
         if ( $cached !== false ) {
-            error_log( 'BMA: Returning cached dietary choices' );
+            bma_log( 'BMA: Returning cached dietary choices', 'debug' );
             return $cached;
         }
 
         // Get Resos API key (check new option first, fallback to old)
         $resos_api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
         if ( empty( $resos_api_key ) ) {
-            error_log( 'BMA: Resos API key not configured' );
+            bma_log( 'BMA: Resos API key not configured', 'error' );
             return array();
         }
 
@@ -1305,17 +1307,17 @@ class BMA_Booking_Actions {
             ),
         );
 
-        error_log( 'BMA: Fetching custom fields from Resos API' );
+        bma_log( 'BMA: Fetching custom fields from Resos API', 'debug' );
         $response = wp_remote_get( $url, $args );
 
         if ( is_wp_error( $response ) ) {
-            error_log( 'BMA: Custom fields fetch error: ' . $response->get_error_message() );
+            bma_log( 'BMA: Custom fields fetch error: ' . $response->get_error_message(), 'error' );
             return array();
         }
 
         $response_code = wp_remote_retrieve_response_code( $response );
         if ( $response_code !== 200 ) {
-            error_log( 'BMA: Custom fields fetch failed with status: ' . $response_code );
+            bma_log( 'BMA: Custom fields fetch failed with status: ' . $response_code, 'error' );
             return array();
         }
 
@@ -1323,7 +1325,7 @@ class BMA_Booking_Actions {
         $data = json_decode( $body, true );
 
         if ( ! is_array( $data ) ) {
-            error_log( 'BMA: Invalid custom fields response format' );
+            bma_log( 'BMA: Invalid custom fields response format', 'error' );
             return array();
         }
 
@@ -1343,7 +1345,7 @@ class BMA_Booking_Actions {
 
         // Cache for 24 hours
         set_transient( $cache_key, $choices, DAY_IN_SECONDS );
-        error_log( 'BMA: Cached ' . count( $choices ) . ' dietary choices' );
+        bma_log( 'BMA: Cached ' . count( $choices ) . ' dietary choices', 'debug' );
 
         return $choices;
     }
@@ -1376,17 +1378,17 @@ class BMA_Booking_Actions {
             ),
         );
 
-        error_log( 'BMA: Checking online booking availability for ' . $from_date );
+        bma_log( 'BMA: Checking online booking availability for ' . $from_date, 'debug' );
         $response = wp_remote_get( $url, $args );
 
         if ( is_wp_error( $response ) ) {
-            error_log( 'BMA: Online booking check failed: ' . $response->get_error_message() );
+            bma_log( 'BMA: Online booking check failed: ' . $response->get_error_message(), 'error' );
             return false;
         }
 
         $response_code = wp_remote_retrieve_response_code( $response );
         if ( $response_code !== 200 ) {
-            error_log( 'BMA: Online booking check failed with status: ' . $response_code );
+            bma_log( 'BMA: Online booking check failed with status: ' . $response_code, 'error' );
             return false;
         }
 
@@ -1394,13 +1396,13 @@ class BMA_Booking_Actions {
         $data = json_decode( $body, true );
 
         if ( ! is_array( $data ) ) {
-            error_log( 'BMA: Invalid online booking availability response format' );
+            bma_log( 'BMA: Invalid online booking availability response format', 'error' );
             return false;
         }
 
         // Check if the from_date is in the available dates array
         $is_available = in_array( $from_date, $data, true );
-        error_log( 'BMA: Online booking available for ' . $from_date . ': ' . ( $is_available ? 'yes' : 'no' ) );
+        bma_log( 'BMA: Online booking available for ' . $from_date . ': ' . ( $is_available ? 'yes' : 'no' ), 'debug' );
 
         return $is_available;
     }

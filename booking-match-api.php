@@ -125,5 +125,22 @@ function bma_init() {
     return Booking_Match_API::get_instance();
 }
 
+/**
+ * Debug logging utility - respects bma_enable_debug_logging setting
+ *
+ * @param string $message Log message
+ * @param string $level Log level (debug, info, warning, error)
+ */
+function bma_log($message, $level = 'debug') {
+    // Always log errors, only log debug/info/warning if setting is enabled
+    $debug_enabled = get_option('bma_enable_debug_logging', false);
+
+    if ($level === 'error' || $debug_enabled) {
+        $prefix = strtoupper($level);
+        $formatted_message = sprintf('[BMA] [%s] %s', $prefix, $message);
+        error_log($formatted_message);
+    }
+}
+
 // Start the plugin
 bma_init();
