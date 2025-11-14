@@ -302,7 +302,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                             <?php if ($is_group_member): ?>
                                 <span class="restaurant-status has-booking group-member-status" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Group booking">
                                     with <?php echo esc_html($lead_room); ?>
-                                    <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
+                                    <span class="material-symbols-outlined" style="color: #10b981; font-size: 16px; vertical-align: middle;">groups</span>
                                 </span>
                             <?php elseif ($has_suggestions): ?>
                                 <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
@@ -451,7 +451,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                     <span class="night-time">
                                         <?php if ($is_group_member): ?>
                                             with <?php echo esc_html($lead_room); ?>
-                                            <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
+                                            <span class="material-symbols-outlined" style="color: #10b981; font-size: 16px; vertical-align: middle;">groups</span>
                                         <?php else: ?>
                                             <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                         <?php endif; ?>
