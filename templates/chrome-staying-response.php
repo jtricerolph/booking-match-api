@@ -300,7 +300,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
                             <?php if ($is_group_member): ?>
-                                <span class="restaurant-status has-booking">
+                                <span class="restaurant-status has-booking group-member-status" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Group booking">
                                     with <?php echo esc_html($lead_room); ?>
                                     <span class="material-symbols-outlined" style="color: #10b981;">groups</span>
                                 </span>
@@ -792,6 +792,27 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
 
 .clickable-status.has-issue:hover {
     background-color: rgba(251, 191, 36, 0.1);
+}
+
+/* Group member status styling */
+.restaurant-status.group-member-status {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    background-color: rgba(16, 185, 129, 0.08);
+}
+
+.restaurant-status.group-member-status:hover {
+    background-color: rgba(16, 185, 129, 0.15);
+}
+
+/* Highlight all related group bookings on hover */
+.restaurant-status.group-highlight {
+    background-color: rgba(16, 185, 129, 0.2) !important;
 }
 
 .status-icon {
