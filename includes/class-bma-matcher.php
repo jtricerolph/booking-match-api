@@ -128,7 +128,7 @@ class BMA_Matcher {
         $all_matches = array();
 
         foreach ($resos_bookings as $resos_booking) {
-            $match_info = $this->match_resos_to_hotel($resos_booking, $booking, $date, $other_booking_ids);
+            $match_info = $this->match_resos_to_hotel($resos_booking, $booking, $date, $other_booking_ids, $all_hotel_bookings);
 
             if ($match_info['matched']) {
                 $result['match_count']++;
@@ -210,7 +210,7 @@ class BMA_Matcher {
      * @param string $date Date being matched (YYYY-MM-DD)
      * @param array $other_booking_ids Array of OTHER hotel booking IDs for this date (for "matched elsewhere" checking)
      */
-    public function match_resos_to_hotel($resos_booking, $hotel_booking, $date, $other_booking_ids = array()) {
+    public function match_resos_to_hotel($resos_booking, $hotel_booking, $date, $other_booking_ids = array(), $all_hotel_bookings = array()) {
         $hotel_booking_id = $hotel_booking['booking_id'] ?? '';
         $hotel_ref = $hotel_booking['booking_reference_id'] ?? '';
         $hotel_room = $hotel_booking['site_name'] ?? '';
