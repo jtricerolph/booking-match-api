@@ -503,7 +503,13 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'sanitize_callback' => 'sanitize_text_field',
             ),
             'force_refresh' => array(
-                'description' => __('Force refresh of Resos cache', 'booking-match-api'),
+                'description' => __('Force refresh bookings list (not matching data)', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => false,
+            ),
+            'force_refresh_matches' => array(
+                'description' => __('Force refresh matching/Resos data', 'booking-match-api'),
                 'type' => 'boolean',
                 'required' => false,
                 'default' => false,
@@ -548,13 +554,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
         try {
             $context = $request->get_param('context') ?: 'json';
             $limit = $request->get_param('limit') ?: 5;
-            $force_refresh = $request->get_param('force_refresh') ?: false;
 
-            bma_log("BMA Summary: Requested limit = {$limit}, context = {$context}", 'debug');
+            // Separate force refresh controls
+            $force_refresh_bookings = $request->get_param('force_refresh') ?: false;
+            $force_refresh_matches = $request->get_param('force_refresh_matches') ?: false;
 
-            // Fetch recently placed bookings from NewBook
+            bma_log("BMA Summary: Requested limit = {$limit}, context = {$context}, force_refresh_bookings = " . ($force_refresh_bookings ? 'true' : 'false') . ", force_refresh_matches = " . ($force_refresh_matches ? 'true' : 'false'), 'debug');
+
+            // Fetch recently placed bookings from NewBook (use force_refresh_bookings for THIS call only)
             $searcher = new BMA_NewBook_Search();
-            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit, 72, $force_refresh);
+            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit, 72, $force_refresh_bookings);
 
             if (empty($recent_bookings)) {
                 // Return empty success response
@@ -587,7 +596,8 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $matcher = new BMA_Matcher();
 
             foreach ($recent_bookings as $nb_booking) {
-                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh, $matcher);
+                // Pass force_refresh_matches to matching operations (NOT force_refresh_bookings)
+                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh_matches, $matcher);
                 $summary_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];

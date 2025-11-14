@@ -353,6 +353,74 @@ class BMA_NewBook_Search {
     }
 
     /**
+     * Calculate cache TTL based on booking date proximity
+     * Tiered approach: bookings arriving soon get shorter stale cache
+     *
+     * - Within 30 days: 60s fresh, 300s (5min) stale
+     * - 30 days to 6 months: 60s fresh, 600s (10min) stale
+     * - Over 6 months: 60s fresh, 900s (15min) stale
+     * - No date info: 60s fresh, 600s (10min) stale (default)
+     *
+     * @param string $action API action
+     * @param array $data Request parameters
+     * @return array [fresh_ttl, stale_ttl]
+     */
+    private function calculate_cache_ttl($action, $data) {
+        // Only apply tiered caching to bookings_list calls
+        if ($action !== 'bookings_list') {
+            return array(60, 600); // Default: 60s fresh, 10min stale
+        }
+
+        // Extract date from request parameters
+        $check_date = null;
+        if (isset($data['period_from'])) {
+            // Extract date from period_from (e.g., "2025-01-15 00:00:00")
+            $check_date = substr($data['period_from'], 0, 10);
+        } elseif (isset($data['list_type']) && $data['list_type'] === 'placed') {
+            // For "placed" bookings, use current date (recent bookings)
+            $check_date = date('Y-m-d');
+        }
+
+        if (!$check_date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $check_date)) {
+            return array(60, 600); // Default if no valid date
+        }
+
+        try {
+            // Calculate days until/since the date
+            $today = new DateTime();
+            $target_date = new DateTime($check_date);
+            $interval = $today->diff($target_date);
+            $days_diff = $interval->days;
+            $is_future = ($target_date > $today);
+
+            // Only apply tiers to future dates or recent past (bookings arriving/arrived)
+            if (!$is_future && $days_diff > 30) {
+                // Past bookings older than 30 days: longest cache
+                bma_log("NewBook API: Cache TTL for date {$check_date}: 60s fresh, 900s stale (past > 30 days)", 'debug');
+                return array(60, 900); // 15min stale
+            }
+
+            // Calculate appropriate tier
+            if ($days_diff <= 30) {
+                // Within 30 days: shortest stale period (most activity)
+                bma_log("NewBook API: Cache TTL for date {$check_date}: 60s fresh, 300s stale (within 30 days)", 'debug');
+                return array(60, 300); // 5min stale
+            } elseif ($days_diff <= 180) {
+                // 30 days to 6 months: medium stale period
+                bma_log("NewBook API: Cache TTL for date {$check_date}: 60s fresh, 600s stale (30-180 days)", 'debug');
+                return array(60, 600); // 10min stale
+            } else {
+                // Over 6 months: longest stale period (least activity)
+                bma_log("NewBook API: Cache TTL for date {$check_date}: 60s fresh, 900s stale (> 180 days)", 'debug');
+                return array(60, 900); // 15min stale
+            }
+        } catch (Exception $e) {
+            bma_log("NewBook API: Error calculating cache TTL for {$check_date}: " . $e->getMessage(), 'error');
+            return array(60, 600); // Default on error
+        }
+    }
+
+    /**
      * Call NewBook API with centralized caching
      *
      * @param string $action API action (e.g., 'bookings_get', 'bookings_list')
@@ -467,11 +535,11 @@ class BMA_NewBook_Search {
             return false;
         }
 
-        // Success - cache the response
-        // Fresh cache: 60 seconds, Stale cache: 600 seconds (10 minutes)
-        set_transient($cache_key, $response_data, 60);
-        set_transient($stale_key, $response_data, 600);
-        bma_log("NewBook API: Cached response for {$action} (60s fresh, 600s stale)", 'debug');
+        // Success - cache the response with dynamic TTL based on date proximity
+        list($fresh_ttl, $stale_ttl) = $this->calculate_cache_ttl($action, $data);
+        set_transient($cache_key, $response_data, $fresh_ttl);
+        set_transient($stale_key, $response_data, $stale_ttl);
+        bma_log("NewBook API: Cached response for {$action} ({$fresh_ttl}s fresh, {$stale_ttl}s stale)", 'debug');
 
         return $response_data;
     }

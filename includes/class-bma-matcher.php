@@ -89,7 +89,7 @@ class BMA_Matcher {
 
         // Fetch ALL hotel bookings for this date (for "matched elsewhere" checking)
         // Note: Caching is now handled in call_api(), not at matcher level
-        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date);
+        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date, $force_refresh);
 
         // Build array of all hotel booking IDs for this date (excluding current booking)
         $current_booking_id = $booking['booking_id'] ?? '';
@@ -748,11 +748,12 @@ class BMA_Matcher {
      * All caching is now handled in BMA_NewBook_Search::call_api()
      *
      * @param string $date Date in YYYY-MM-DD format
+     * @param bool $force_refresh If true, bypass and clear cache
      * @return array Array of hotel bookings for the date
      */
-    private function fetch_hotel_bookings_for_date($date) {
+    private function fetch_hotel_bookings_for_date($date, $force_refresh = false) {
         $searcher = new BMA_NewBook_Search();
-        return $searcher->fetch_hotel_bookings_for_date($date);
+        return $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
     }
 
     /**
