@@ -1054,7 +1054,7 @@ class BMA_Matcher {
             }
         }
 
-        // Find lead booking's room number
+        // Find lead booking's room number (only if this booking references a lead)
         if (!empty($lead_booking_id) && !empty($all_hotel_bookings)) {
             bma_log('BMA_Matcher: Searching for lead booking ID ' . $lead_booking_id . ' in ' . count($all_hotel_bookings) . ' hotel bookings', 'debug');
             foreach ($all_hotel_bookings as $hb) {
@@ -1067,9 +1067,8 @@ class BMA_Matcher {
             if (empty($lead_booking_room)) {
                 bma_log('BMA_Matcher: Lead booking ID ' . $lead_booking_id . ' not found in hotel bookings list', 'error');
             }
-        } else {
-            bma_log('BMA_Matcher: Cannot find lead room - lead_booking_id: ' . ($lead_booking_id ?: 'EMPTY') . ', all_hotel_bookings count: ' . count($all_hotel_bookings), 'error');
         }
+        // Note: Empty lead_booking_id is normal - means this is a standalone booking or the lead itself
 
         // Check if booking is in a group that's linked (G#5678)
         if (!empty($bookings_group_id) && !empty($group_exclude_data['groups'])) {
