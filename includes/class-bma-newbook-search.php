@@ -405,10 +405,10 @@ class BMA_NewBook_Search {
      * Calculate cache TTL based on booking date proximity
      * Tiered approach: bookings arriving soon get shorter stale cache
      *
-     * - Within 30 days: 60s fresh, 300s (5min) stale
-     * - 30 days to 6 months: 60s fresh, 600s (10min) stale
-     * - Over 6 months: 60s fresh, 900s (15min) stale
-     * - No date info: 60s fresh, 600s (10min) stale (default)
+     * - Within 30 days: 120s fresh, 600s (10min) stale
+     * - 30 days to 6 months: 120s fresh, 1200s (20min) stale
+     * - Over 6 months: 120s fresh, 1800s (30min) stale
+     * - No date info: 120s fresh, 1200s (20min) stale (default)
      *
      * @param string $action API action
      * @param array $data Request parameters
@@ -417,7 +417,7 @@ class BMA_NewBook_Search {
     private function calculate_cache_ttl($action, $data) {
         // Only apply tiered caching to bookings_list calls
         if ($action !== 'bookings_list') {
-            return array(60, 600); // Default: 60s fresh, 10min stale
+            return array(120, 1200); // Default: 120s fresh, 20min stale
         }
 
         // Extract date from request parameters
@@ -431,7 +431,7 @@ class BMA_NewBook_Search {
         }
 
         if (!$check_date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $check_date)) {
-            return array(60, 600); // Default if no valid date
+            return array(120, 1200); // Default if no valid date
         }
 
         try {
@@ -445,27 +445,27 @@ class BMA_NewBook_Search {
             // Only apply tiers to future dates or recent past (bookings arriving/arrived)
             if (!$is_future && $days_diff > 30) {
                 // Past bookings older than 30 days: longest cache
-                bma_log("NewBook API: Cache TTL for date {$check_date}: 60s fresh, 900s stale (past > 30 days)", 'debug');
-                return array(60, 900); // 15min stale
+                bma_log("NewBook API: Cache TTL for date {$check_date}: 120s fresh, 1800s stale (past > 30 days)", 'debug');
+                return array(120, 1800); // 30min stale
             }
 
             // Calculate appropriate tier
             if ($days_diff <= 30) {
                 // Within 30 days: shortest stale period (most activity)
-                bma_log("NewBook API: Cache TTL for date {$check_date}: 60s fresh, 300s stale (within 30 days)", 'debug');
-                return array(60, 300); // 5min stale
+                bma_log("NewBook API: Cache TTL for date {$check_date}: 120s fresh, 600s stale (within 30 days)", 'debug');
+                return array(120, 600); // 10min stale
             } elseif ($days_diff <= 180) {
                 // 30 days to 6 months: medium stale period
-                bma_log("NewBook API: Cache TTL for date {$check_date}: 60s fresh, 600s stale (30-180 days)", 'debug');
-                return array(60, 600); // 10min stale
+                bma_log("NewBook API: Cache TTL for date {$check_date}: 120s fresh, 1200s stale (30-180 days)", 'debug');
+                return array(120, 1200); // 20min stale
             } else {
                 // Over 6 months: longest stale period (least activity)
-                bma_log("NewBook API: Cache TTL for date {$check_date}: 60s fresh, 900s stale (> 180 days)", 'debug');
-                return array(60, 900); // 15min stale
+                bma_log("NewBook API: Cache TTL for date {$check_date}: 120s fresh, 1800s stale (> 180 days)", 'debug');
+                return array(120, 1800); // 30min stale
             }
         } catch (Exception $e) {
             bma_log("NewBook API: Error calculating cache TTL for {$check_date}: " . $e->getMessage(), 'error');
-            return array(60, 600); // Default on error
+            return array(120, 1200); // Default on error
         }
     }
 
@@ -526,7 +526,7 @@ class BMA_NewBook_Search {
             bma_log("NewBook API: Force refresh - cleared cache for {$action}", 'debug');
         }
 
-        // Check fresh cache (60 seconds)
+        // Check fresh cache (120 seconds)
         if (!$force_refresh) {
             $cached = get_transient($cache_key);
             if ($cached !== false) {
