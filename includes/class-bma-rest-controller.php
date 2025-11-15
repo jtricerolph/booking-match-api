@@ -427,8 +427,31 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 }
             }
 
-            // Match each booking with Resos
+            // PRE-CACHE: Collect all unique dates from all bookings to prevent duplicate API calls
+            $all_dates = array();
+            foreach ($bookings as $booking) {
+                $dates = $this->extract_booking_dates($booking);
+                $all_dates = array_merge($all_dates, $dates);
+            }
+            $all_dates = array_unique($all_dates);
+
+            // Pre-populate cache for all dates BEFORE matching bookings
             $matcher = new BMA_Matcher();
+            $searcher = new BMA_NewBook_Search();
+
+            if (!empty($all_dates)) {
+                bma_log("Restaurant: Pre-caching " . count($all_dates) . " unique dates for booking", 'info');
+
+                foreach ($all_dates as $date) {
+                    // Warm ResOS cache
+                    $matcher->fetch_resos_bookings($date, $force_refresh);
+
+                    // Warm NewBook cache
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
+                }
+            }
+
+            // Match each booking with Resos
             $results = array();
 
             foreach ($bookings as $booking) {
@@ -585,13 +608,37 @@ class BMA_REST_Controller extends WP_REST_Controller {
             // Fetch recently cancelled bookings (last 5 days)
             $cancelled_bookings = $searcher->fetch_recent_cancelled_bookings(5, $force_refresh_bookings);
 
+            // PRE-CACHE: Collect all unique dates from all bookings to prevent duplicate API calls
+            $all_dates = array();
+            foreach ($recent_bookings as $nb_booking) {
+                $dates = $this->extract_booking_dates($nb_booking);
+                $all_dates = array_merge($all_dates, $dates);
+            }
+            foreach ($cancelled_bookings as $nb_booking) {
+                $dates = $this->extract_booking_dates($nb_booking);
+                $all_dates = array_merge($all_dates, $dates);
+            }
+            $all_dates = array_unique($all_dates);
+
+            // Pre-populate cache for all dates BEFORE processing bookings
+            $matcher = new BMA_Matcher();
+
+            if (!empty($all_dates)) {
+                bma_log("Summary: Pre-caching " . count($all_dates) . " unique dates", 'info');
+
+                foreach ($all_dates as $date) {
+                    // Warm ResOS cache
+                    $matcher->fetch_resos_bookings($date, $force_refresh_bookings);
+
+                    // Warm NewBook cache
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh_bookings);
+                }
+            }
+
             // Process placed bookings
             $summary_bookings = array();
             $total_critical_count = 0;
             $total_warning_count = 0;
-
-            // Create matcher ONCE and reuse for all bookings to share cache
-            $matcher = new BMA_Matcher();
 
             foreach ($recent_bookings as $nb_booking) {
                 // Pass force_refresh_matches to matching operations (NOT force_refresh_bookings)
@@ -871,8 +918,26 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 );
             }
 
-            // Process booking through matcher to get normalized fields (same as Restaurant tab)
+            // PRE-CACHE: Extract all dates from booking to prevent duplicate API calls
+            $dates = $this->extract_booking_dates($nb_booking);
+
+            // Pre-populate cache for all dates BEFORE processing
             $matcher = new BMA_Matcher();
+            $searcher = new BMA_NewBook_Search();
+
+            if (!empty($dates)) {
+                bma_log("Checks: Pre-caching " . count($dates) . " dates for booking", 'info');
+
+                foreach ($dates as $date) {
+                    // Warm ResOS cache
+                    $matcher->fetch_resos_bookings($date, $force_refresh);
+
+                    // Warm NewBook cache
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
+                }
+            }
+
+            // Process booking through matcher to get normalized fields (same as Restaurant tab)
             $processed_booking = $matcher->match_booking_all_nights($nb_booking, $force_refresh);
 
             // TODO: Implement actual checks logic
@@ -974,6 +1039,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $current_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
             $next_bookings = $searcher->fetch_hotel_bookings_for_date($next_date, $force_refresh);
 
+            // PRE-CACHE: Pre-populate ResOS cache for target date to prevent duplicate API calls
+            // (All bookings will call match_single_night for same target date)
+            $matcher = new BMA_Matcher();
+            bma_log("Staying: Pre-caching ResOS data for dates: $previous_date, $date, $next_date", 'info');
+            $matcher->fetch_resos_bookings($date, $force_refresh);
+
             // Merge and deduplicate by booking_id
             $all_bookings = array();
             $booking_ids_seen = array();
@@ -1034,8 +1105,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_critical_count = 0;
             $total_warning_count = 0;
 
-            // Create matcher ONCE and reuse for all bookings to share cache
-            $matcher = new BMA_Matcher();
+            // Matcher already created above for pre-caching, reuse for all bookings to share cache
 
             foreach ($bookings_by_room as $room => $dates) {
                 // Check if room has a booking staying on target date
@@ -2612,5 +2682,31 @@ class BMA_REST_Controller extends WP_REST_Controller {
         }
 
         return $html;
+    }
+
+    /**
+     * Extract all dates (nights) from a booking
+     *
+     * @param array $booking Booking array with booking_arrival and booking_departure
+     * @return array Array of dates in Y-m-d format
+     */
+    private function extract_booking_dates($booking) {
+        $arrival = substr($booking['booking_arrival'] ?? '', 0, 10);
+        $departure = substr($booking['booking_departure'] ?? '', 0, 10);
+
+        if (empty($arrival) || empty($departure)) {
+            return array();
+        }
+
+        $dates = array();
+        $current = new DateTime($arrival);
+        $end = new DateTime($departure);
+
+        while ($current < $end) {
+            $dates[] = $current->format('Y-m-d');
+            $current->modify('+1 day');
+        }
+
+        return $dates;
     }
 }
