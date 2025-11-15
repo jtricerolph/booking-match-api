@@ -1006,7 +1006,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 );
             }
 
-            // Handle chrome-restaurant context - return raw ResOS bookings for client-side rendering
+            // Handle chrome-restaurant context - return ResOS bookings with hotel room numbers
             if ($context === 'chrome-restaurant') {
                 bma_log("BMA Restaurant: Fetching ResOS bookings for date = {$date} (chrome-restaurant context)", 'debug');
 
@@ -1015,15 +1015,62 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
                 bma_log("BMA Restaurant: Fetched " . count($resos_bookings) . " ResOS bookings for {$date}", 'debug');
 
-                // Return raw bookings in format expected by client-side JavaScript
+                // Fetch hotel bookings to match room numbers
+                $searcher = new BMA_NewBook_Search();
+                $hotel_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
+
+                bma_log("BMA Restaurant: Fetched " . count($hotel_bookings) . " hotel bookings for {$date}", 'debug');
+
+                // Create hotel bookings lookup by booking_id for fast matching
+                $hotel_bookings_by_id = array();
+                foreach ($hotel_bookings as $hotel_booking) {
+                    $booking_id = $hotel_booking['booking_id'] ?? null;
+                    if ($booking_id) {
+                        $hotel_bookings_by_id[$booking_id] = $hotel_booking;
+                    }
+                }
+
+                // Enhance each ResOS booking with room number from hotel booking match
+                $enhanced_bookings = array();
+                foreach ($resos_bookings as $resos_booking) {
+                    // Extract "Booking #" custom field to get hotel booking ID
+                    $hotel_booking_id = null;
+                    $custom_fields = $resos_booking['customFields'] ?? array();
+
+                    foreach ($custom_fields as $field) {
+                        if (($field['name'] ?? '') === 'Booking #') {
+                            $hotel_booking_id = $field['value'] ?? null;
+                            break;
+                        }
+                    }
+
+                    // If we have a hotel booking ID, look up the room number
+                    if ($hotel_booking_id && isset($hotel_bookings_by_id[$hotel_booking_id])) {
+                        $hotel_booking = $hotel_bookings_by_id[$hotel_booking_id];
+                        $resos_booking['room_number'] = $hotel_booking['site_name'] ?? '';
+                        $resos_booking['is_hotel_guest'] = true;
+                        $resos_booking['hotel_booking_id'] = $hotel_booking_id;
+
+                        bma_log("BMA Restaurant: Matched ResOS booking {$resos_booking['_id']} to hotel booking {$hotel_booking_id}, room: {$resos_booking['room_number']}", 'debug');
+                    } else {
+                        $resos_booking['room_number'] = '';
+                        $resos_booking['is_hotel_guest'] = false;
+                    }
+
+                    $enhanced_bookings[] = $resos_booking;
+                }
+
+                bma_log("BMA Restaurant: Enhanced " . count($enhanced_bookings) . " bookings with room numbers", 'debug');
+
+                // Return enhanced bookings in format expected by client-side JavaScript
                 return array(
                     'success' => true,
                     'bookings_by_date' => array(
-                        $date => $resos_bookings
+                        $date => $enhanced_bookings
                     ),
-                    'bookings' => $resos_bookings,
+                    'bookings' => $enhanced_bookings,
                     'date' => $date,
-                    'booking_count' => count($resos_bookings)
+                    'booking_count' => count($enhanced_bookings)
                 );
             }
 
