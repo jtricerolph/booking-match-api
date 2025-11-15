@@ -541,13 +541,13 @@ class BMA_NewBook_Search {
         // ============================================
         $lock_key = $cache_key . '_lock';
         $lock_wait_seconds = 0;
-        $max_wait_seconds = 30;
+        $max_wait_seconds = 10; // Reduced from 30 to prevent gateway timeouts
 
         // Check if another request is already fetching this data
         while (get_transient($lock_key) !== false && $lock_wait_seconds < $max_wait_seconds) {
             // Another request is currently fetching - wait for it to complete
-            usleep(500000); // Wait 0.5 seconds
-            $lock_wait_seconds += 0.5;
+            usleep(200000); // Wait 0.2 seconds (reduced from 0.5s for faster polling)
+            $lock_wait_seconds += 0.2;
 
             // Check if cache is now populated by the other request
             $cached = get_transient($cache_key);
@@ -557,8 +557,13 @@ class BMA_NewBook_Search {
             }
         }
 
-        // Set lock to indicate this request is fetching data (30 second lock)
-        set_transient($lock_key, time(), 30);
+        // If we hit max wait time, proceed anyway to avoid cascade timeouts
+        if (get_transient($lock_key) !== false) {
+            bma_log("NewBook API: Lock timeout ({$max_wait_seconds}s) - proceeding anyway - {$action} from {$caller}", 'warning');
+        }
+
+        // Set lock to indicate this request is fetching data (15 second lock)
+        set_transient($lock_key, time(), 15);
         // ============================================
 
         // Build URL
