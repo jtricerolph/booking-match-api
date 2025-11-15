@@ -42,6 +42,38 @@ class BMA_Comparison {
     }
 
     /**
+     * Check if an email domain is in the excluded domains list
+     *
+     * @param string $email The email address to check
+     * @return bool True if domain is excluded, false otherwise
+     */
+    private function is_email_domain_excluded($email) {
+        if (empty($email)) {
+            return false;
+        }
+
+        // Extract domain from email
+        $email_parts = explode('@', $email);
+        if (count($email_parts) !== 2) {
+            return false; // Invalid email format
+        }
+
+        $domain = strtolower(trim($email_parts[1]));
+
+        // Get excluded domains from settings
+        $excluded_domains = get_option('bma_excluded_email_domains', '');
+        if (empty($excluded_domains)) {
+            return false; // No domains excluded
+        }
+
+        // Split comma-separated domains into array
+        $excluded_list = array_map('trim', explode(',', $excluded_domains));
+
+        // Check if domain is in excluded list
+        return in_array($domain, $excluded_list);
+    }
+
+    /**
      * Prepare comparison data between hotel booking and Resos booking
      *
      * @param array $hotel_booking NewBook booking data
@@ -313,9 +345,21 @@ class BMA_Comparison {
         }
 
         // Email: Suggest if Resos doesn't have one or if they don't match
+        // UNLESS NewBook email is excluded domain and Resos already has an email
         if (!empty($hotel_email)) {
-            if (empty($resos_email) || strtolower(trim($hotel_email)) !== strtolower(trim($resos_email))) {
+            $is_excluded_domain = $this->is_email_domain_excluded($hotel_email);
+
+            if (empty($resos_email)) {
+                // ResOS has NO email - suggest NewBook email even if excluded
+                // (better to have a forwarding email than no email)
                 $suggested_updates['email'] = $hotel_email;
+            } elseif (strtolower(trim($hotel_email)) !== strtolower(trim($resos_email))) {
+                // ResOS HAS an email and it doesn't match NewBook email
+                if (!$is_excluded_domain) {
+                    // NewBook email is NOT excluded - suggest the update
+                    $suggested_updates['email'] = $hotel_email;
+                }
+                // If NewBook email IS excluded domain - don't suggest overwriting ResOS email
             }
         }
 

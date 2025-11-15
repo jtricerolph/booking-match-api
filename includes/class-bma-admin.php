@@ -132,6 +132,17 @@ class BMA_Admin {
             )
         );
 
+        // Register excluded email domains setting
+        register_setting(
+            'bma_settings_group',
+            'bma_excluded_email_domains',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => array($this, 'sanitize_excluded_domains'),
+                'default' => ''
+            )
+        );
+
         // Register debug logging setting
         register_setting(
             'bma_settings_group',
@@ -196,6 +207,14 @@ class BMA_Admin {
             'bma_hotel_id',
             __('Hotel ID', 'booking-match-api'),
             array($this, 'render_hotel_id_field'),
+            'booking-match-api',
+            'bma_general_section'
+        );
+
+        add_settings_field(
+            'bma_excluded_email_domains',
+            __('Excluded Email Domains', 'booking-match-api'),
+            array($this, 'render_excluded_email_domains_field'),
             'booking-match-api',
             'bma_general_section'
         );
@@ -267,6 +286,31 @@ class BMA_Admin {
     }
 
     /**
+     * Sanitize excluded email domains input
+     */
+    public function sanitize_excluded_domains($input) {
+        if (empty($input)) {
+            return '';
+        }
+
+        // Split by comma or newline, trim, lowercase, remove @ prefix
+        $domains = preg_split('/[\n,]+/', $input);
+        $cleaned = array();
+
+        foreach ($domains as $domain) {
+            $domain = trim(strtolower($domain));
+            $domain = ltrim($domain, '@'); // Remove leading @ if present
+
+            if (!empty($domain)) {
+                $cleaned[] = $domain;
+            }
+        }
+
+        // Return as comma-separated string for storage
+        return implode(',', $cleaned);
+    }
+
+    /**
      * Render general section description
      */
     public function render_general_section_description() {
@@ -334,6 +378,31 @@ class BMA_Admin {
         echo '<input type="text" name="bma_hotel_id" id="bma_hotel_id" value="' . esc_attr($value) . '" class="regular-text" placeholder="1" />';
         echo '<p class="description">';
         echo __('Enter your NewBook hotel ID (usually "1").', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Render excluded email domains field
+     */
+    public function render_excluded_email_domains_field() {
+        $value = get_option('bma_excluded_email_domains', '');
+        // Convert comma-separated to newline-separated for display
+        $display_value = str_replace(',', "\n", $value);
+
+        echo '<textarea name="bma_excluded_email_domains" id="bma_excluded_email_domains" rows="4" class="large-text code">' . esc_textarea($display_value) . '</textarea>';
+        echo '<p class="description">';
+        echo __('Enter email domains to exclude from email update suggestions (one per line or comma-separated).', 'booking-match-api');
+        echo '<br />';
+        echo __('Example: <code>booking.com</code>, <code>expedia.com</code>, <code>hotels.com</code>', 'booking-match-api');
+        echo '<br />';
+        echo '<strong>' . __('Use case:', 'booking-match-api') . '</strong> ' . __('Agent bookings often use forwarding emails (@booking.com, @expedia.com). If the guest entered their personal email in Resos, you don\'t want to overwrite it with the forwarding address.', 'booking-match-api');
+        echo '<br />';
+        echo '<strong>' . __('Logic:', 'booking-match-api') . '</strong>';
+        echo '<ul style="margin: 5px 0 0 20px;">';
+        echo '<li>' . __('If Resos has <strong>no email</strong> → Still suggest excluded domain email (better than nothing)', 'booking-match-api') . '</li>';
+        echo '<li>' . __('If Resos has email + NewBook has excluded domain → Don\'t suggest overwriting', 'booking-match-api') . '</li>';
+        echo '<li>' . __('If Resos has email + NewBook has non-excluded domain → Normal suggestion logic', 'booking-match-api') . '</li>';
+        echo '</ul>';
         echo '</p>';
     }
 
