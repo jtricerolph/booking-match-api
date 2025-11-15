@@ -60,7 +60,320 @@ curl "https://api.resos.com/v1/customFields" \
 
 ---
 
-## GET/POST `/opening-hours`
+## Core Matching Endpoints
+
+These endpoints are used by both the Chrome extension and the NewBook Assistant Web App for booking matching and validation.
+
+### POST `/bookings/match`
+
+Match a hotel booking with restaurant reservations.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `booking_id` | integer | **Yes** | NewBook booking ID |
+| `context` | string | No | Response format: `chrome-extension`, `chrome-sidepanel`, `webapp-restaurant`, or omit for JSON |
+| `force_refresh` | boolean | No | Bypass cache (default: false) |
+| `force_refresh_matches` | boolean | No | Bypass Resos matches cache (default: false) |
+
+#### Request Examples
+
+**Chrome Extension (HTML):**
+```bash
+curl -X POST "https://site.com/wp-json/bma/v1/bookings/match" \
+  -u "username:app_password" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "booking_id": 12345,
+    "context": "chrome-sidepanel"
+  }'
+```
+
+**Web App (HTML):**
+```bash
+curl -X POST "https://site.com/wp-json/bma/v1/bookings/match" \
+  -u "username:app_password" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "booking_id": 12345,
+    "context": "webapp-restaurant"
+  }'
+```
+
+**Default (JSON):**
+```bash
+curl -X POST "https://site.com/wp-json/bma/v1/bookings/match" \
+  -u "username:app_password" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "booking_id": 12345
+  }'
+```
+
+#### Response (HTML Context)
+
+```json
+{
+  "success": true,
+  "context": "webapp-restaurant",
+  "html": "<div class='booking-match'>...</div>",
+  "bookings_found": 1,
+  "search_method": "direct",
+  "badge_count": 2,
+  "critical_count": 1,
+  "warning_count": 1,
+  "bookings_by_date": {
+    "2025-11-15": [
+      {
+        "time": "19:00",
+        "people": 4,
+        "name": "John Smith",
+        "room": "101"
+      }
+    ]
+  }
+}
+```
+
+**Badge Count Logic:**
+- **Critical (red):** Package booking without restaurant reservation
+- **Warning (amber):** Multiple matches or non-primary matches
+
+#### Response (JSON Context)
+
+```json
+{
+  "success": true,
+  "search_method": "direct",
+  "bookings_found": 1,
+  "bookings": [
+    {
+      "booking_id": 12345,
+      "booking_reference": "NB12345",
+      "guest_name": "John Smith",
+      "room": "101",
+      "arrival": "2025-11-04",
+      "departure": "2025-11-06",
+      "total_nights": 2,
+      "nights": [
+        {
+          "date": "2025-11-04",
+          "date_formatted": "04/11/25",
+          "has_match": true,
+          "match_count": 1,
+          "has_package": true,
+          "resos_bookings": [
+            {
+              "id": "resos_abc123",
+              "guest_name": "John Smith",
+              "people": 4,
+              "time": "19:00",
+              "status": "confirmed",
+              "is_hotel_guest": true,
+              "is_dbb": true,
+              "booking_number": "12345",
+              "match_type": "booking_id",
+              "match_label": "Booking #",
+              "confidence": "high",
+              "is_primary": true,
+              "score": 27,
+              "deep_link": "https://site.com/bookings/?booking_id=12345&date=2025-11-04&resos_id=resos_abc123"
+            }
+          ],
+          "deep_link": "https://site.com/bookings/?booking_id=12345&date=2025-11-04",
+          "action": "update"
+        }
+      ]
+    }
+  ],
+  "should_auto_open": false,
+  "badge_count": 0
+}
+```
+
+**Match Confidence Levels:**
+- **high:** Booking ID match OR score ≥20 OR ≥3 field matches
+- **medium:** Score ≥15 OR ≥2 field matches
+- **low:** Score >0
+
+**Match Types:**
+- `booking_id` - Matched via Booking # custom field (highest priority)
+- `email` - Matched via email address (+10 points)
+- `phone` - Matched via phone (last 8 digits, +9 points)
+- `name` - Matched via surname (+7 points)
+- `composite` - Multiple field matches combined
+
+#### Caching
+
+- **NewBook Bookings:** 5-minute cache (can bypass with `force_refresh=true`)
+- **Resos Matches:** 5-minute cache (can bypass with `force_refresh_matches=true`)
+- **Cache Key:** `bma_booking_{booking_id}`, `bma_resos_matches_{date}`
+
+---
+
+### GET `/summary`
+
+Get summary of recent bookings with restaurant match status.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `context` | string | No | Response format: `chrome-summary`, `webapp-summary`, or omit for JSON |
+| `limit` | integer | No | Number of bookings to fetch (default: 5) |
+| `force_refresh` | boolean | No | Bypass NewBook bookings cache |
+| `force_refresh_matches` | boolean | No | Bypass Resos matches cache |
+| `cancelled_hours` | integer | No | Hours to look back for cancelled bookings (default: 24) |
+| `include_flagged_cancelled` | boolean | No | Include cancelled bookings with issues (default: true) |
+
+#### Request Examples
+
+**Chrome Extension:**
+```bash
+curl -X GET "https://site.com/wp-json/bma/v1/summary?context=chrome-summary&limit=10" \
+  -u "username:app_password"
+```
+
+**Web App:**
+```bash
+curl -X GET "https://site.com/wp-json/bma/v1/summary?context=webapp-summary" \
+  -u "username:app_password"
+```
+
+#### Response (HTML Context)
+
+```json
+{
+  "success": true,
+  "html_placed": "<div class='bma-summary'>...</div>",
+  "html_cancelled": "<div class='bma-summary-cancelled'>...</div>",
+  "placed_count": 12,
+  "cancelled_count": 3,
+  "critical_count": 2,
+  "warning_count": 5,
+  "badge_count": 7
+}
+```
+
+**Badge Count Components:**
+- **Critical:** Package bookings without restaurant reservations
+- **Warning:** Multiple matches, non-primary matches
+- **Total Badge Count:** critical_count + warning_count
+
+#### Response (JSON Context)
+
+```json
+{
+  "success": true,
+  "bookings": [
+    {
+      "booking_id": 12345,
+      "guest_name": "John Smith",
+      "arrival": "2025-11-04",
+      "departure": "2025-11-06",
+      "nights": [...],
+      "actions_required": [
+        {
+          "type": "critical",
+          "date": "2025-11-04",
+          "message": "Package booking without restaurant reservation"
+        }
+      ]
+    }
+  ],
+  "total_critical_count": 2,
+  "total_warning_count": 5,
+  "badge_count": 7
+}
+```
+
+#### Features
+
+- **Recent Bookings:** Last 5 (or specified limit) placed bookings from past 72 hours
+- **Cancelled Bookings:** Cancellations from last 24 hours (configurable)
+- **Issue Detection:** Automatically identifies package bookings without reservations
+- **Multi-Match Warnings:** Flags bookings with multiple Resos matches
+- **Time-Since-Placed:** Shows relative time since booking was placed
+
+#### Caching
+
+- **NewBook Recent:** 5-minute cache
+- **Resos Matches:** Shared with `/bookings/match` endpoint
+
+---
+
+### GET `/checks/{booking_id}`
+
+Run validation checks on a specific booking.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `booking_id` | integer | **Yes** | NewBook booking ID (in URL path) |
+| `context` | string | No | Response format: `chrome-checks`, `webapp-checks`, or omit for JSON |
+| `force_refresh` | boolean | No | Bypass cache (default: false) |
+
+#### Request Examples
+
+**Chrome Extension:**
+```bash
+curl -X GET "https://site.com/wp-json/bma/v1/checks/12345?context=chrome-checks" \
+  -u "username:app_password"
+```
+
+**Web App:**
+```bash
+curl -X GET "https://site.com/wp-json/bma/v1/checks/12345?context=webapp-checks" \
+  -u "username:app_password"
+```
+
+#### Response (HTML Context)
+
+```json
+{
+  "success": true,
+  "html": "<div class='bma-checks'>...</div>",
+  "badge_count": 0
+}
+```
+
+#### Response (JSON Context)
+
+```json
+{
+  "success": true,
+  "booking_id": 12345,
+  "booking": {
+    "booking_id": 12345,
+    "guest_name": "John Smith",
+    "room": "101",
+    "nights": [...]
+  },
+  "checks": {
+    "twin_bed_request": false,
+    "sofa_bed_request": false,
+    "special_requests": [],
+    "room_features_mismatch": []
+  },
+  "badge_count": 0
+}
+```
+
+#### Current Implementation
+
+⚠️ **Note:** Checks endpoint currently returns placeholder data. Future implementation will include:
+- Twin bed request validation
+- Sofa bed request validation
+- Special request matching
+- Room feature compatibility checks
+
+---
+
+## Booking Form Support Endpoints
+
+### GET/POST `/opening-hours`
 
 Fetch restaurant opening hours/service periods.
 
