@@ -641,16 +641,17 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_all_warning = $total_warning_count + $cancelled_warning_count;
 
             // Format response based on context
-            if ($context === 'chrome-summary') {
+            if ($context === 'chrome-summary' || $context === 'webapp-summary') {
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
-                    'html_placed' => $formatter->format_summary_html($summary_bookings),
-                    'html_cancelled' => $formatter->format_summary_html($summary_cancelled),
+                    'html_placed' => $formatter->format_summary_html($summary_bookings, $context),
+                    'html_cancelled' => $formatter->format_summary_html($summary_cancelled, $context),
                     'placed_count' => count($summary_bookings),
                     'cancelled_count' => count($summary_cancelled),
                     'critical_count' => $total_all_critical,
                     'warning_count' => $total_all_warning,
+                    'badge_count' => $total_all_critical + $total_all_warning,
                 );
             }
 
@@ -885,12 +886,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             $badge_count = 0; // No issues for now
 
-            if ($context === 'chrome-checks') {
-                // Format as HTML for Chrome sidepanel
+            if ($context === 'chrome-checks' || $context === 'webapp-checks') {
+                // Format as HTML for Chrome sidepanel or webapp
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
-                    'html' => $formatter->format_checks_html($processed_booking, $checks),
+                    'html' => $formatter->format_checks_html($processed_booking, $checks, $context),
                     'badge_count' => $badge_count,
                 );
             }
