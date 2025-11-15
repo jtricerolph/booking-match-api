@@ -393,9 +393,13 @@ if (!defined('ABSPATH')) {
                                 </div>
                             </div>
 
-                            <!-- Service Period Accordion Sections -->
-                            <div id="service-period-sections-<?php echo esc_attr($night['date']); ?>" class="service-period-sections">
+                            <!-- Service Period Tabs (for tab buttons) -->
+                            <div id="service-period-tabs-<?php echo esc_attr($night['date']); ?>" class="service-period-tabs">
                                 <p style="padding: 10px; text-align: center; color: #666;">Loading service periods...</p>
+                            </div>
+
+                            <!-- Time Slots Sections (for time slot content) -->
+                            <div id="time-slots-sections-<?php echo esc_attr($night['date']); ?>" class="time-slots-sections">
                             </div>
 
                             <!-- Hidden fields for selected time and period -->
