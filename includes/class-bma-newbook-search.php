@@ -535,6 +535,32 @@ class BMA_NewBook_Search {
             }
         }
 
+        // ============================================
+        // LOCK-BASED REQUEST DEDUPLICATION
+        // Prevent multiple parallel requests from hitting API for same data
+        // ============================================
+        $lock_key = $cache_key . '_lock';
+        $lock_wait_seconds = 0;
+        $max_wait_seconds = 30;
+
+        // Check if another request is already fetching this data
+        while (get_transient($lock_key) !== false && $lock_wait_seconds < $max_wait_seconds) {
+            // Another request is currently fetching - wait for it to complete
+            usleep(500000); // Wait 0.5 seconds
+            $lock_wait_seconds += 0.5;
+
+            // Check if cache is now populated by the other request
+            $cached = get_transient($cache_key);
+            if ($cached !== false) {
+                bma_log("NewBook API: ✓ CACHE HIT after lock wait ({$lock_wait_seconds}s) - {$action} from {$caller}", 'info');
+                return $cached;
+            }
+        }
+
+        // Set lock to indicate this request is fetching data (30 second lock)
+        set_transient($lock_key, time(), 30);
+        // ============================================
+
         // Build URL
         $url = $this->api_base_url . $action;
 
@@ -551,68 +577,75 @@ class BMA_NewBook_Search {
 
         bma_log("NewBook API: ⚠ CACHE MISS - {$action} from {$caller} - CALLING API ENDPOINT", 'warning');
 
-        // Make request
-        $response = wp_remote_post($url, $args);
+        // Make request and process response (lock released in finally block)
+        try {
+            // Make request
+            $response = wp_remote_post($url, $args);
 
-        // Handle WP_Error - check stale cache
-        if (is_wp_error($response)) {
-            $error_msg = $response->get_error_message();
-            bma_log('BMA: API request failed: ' . $error_msg, 'error');
+            // Handle WP_Error - check stale cache
+            if (is_wp_error($response)) {
+                $error_msg = $response->get_error_message();
+                bma_log('BMA: API request failed: ' . $error_msg, 'error');
 
-            // Try stale cache as fallback
-            $stale_cached = get_transient($stale_key);
-            if ($stale_cached !== false) {
-                $this->stale_cache_used[] = $action;
-                bma_log("NewBook API: ⚠ STALE CACHE - {$action} from {$caller} (API failed, using old data)", 'warning');
-                return $stale_cached;
+                // Try stale cache as fallback
+                $stale_cached = get_transient($stale_key);
+                if ($stale_cached !== false) {
+                    $this->stale_cache_used[] = $action;
+                    bma_log("NewBook API: ⚠ STALE CACHE - {$action} from {$caller} (API failed, using old data)", 'warning');
+                    return $stale_cached;
+                }
+
+                return false;
             }
 
-            return false;
-        }
+            $response_code = wp_remote_retrieve_response_code($response);
+            $response_body = wp_remote_retrieve_body($response);
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+            // Handle non-200 response - check stale cache
+            if ($response_code !== 200) {
+                bma_log("BMA: API returned error code: {$response_code} for {$action} from {$caller}", 'error');
 
-        // Handle non-200 response - check stale cache
-        if ($response_code !== 200) {
-            bma_log("BMA: API returned error code: {$response_code} for {$action} from {$caller}", 'error');
+                // Try stale cache as fallback
+                $stale_cached = get_transient($stale_key);
+                if ($stale_cached !== false) {
+                    $this->stale_cache_used[] = $action;
+                    bma_log("NewBook API: ⚠ STALE CACHE - {$action} from {$caller} (API error {$response_code}, using old data)", 'warning');
+                    return $stale_cached;
+                }
 
-            // Try stale cache as fallback
-            $stale_cached = get_transient($stale_key);
-            if ($stale_cached !== false) {
-                $this->stale_cache_used[] = $action;
-                bma_log("NewBook API: ⚠ STALE CACHE - {$action} from {$caller} (API error {$response_code}, using old data)", 'warning');
-                return $stale_cached;
+                return false;
             }
 
-            return false;
-        }
+            // Parse JSON response
+            $response_data = json_decode($response_body, true);
 
-        // Parse JSON response
-        $response_data = json_decode($response_body, true);
+            // Handle JSON parse error - check stale cache
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                bma_log('BMA: Failed to parse API response: ' . json_last_error_msg(), 'error');
 
-        // Handle JSON parse error - check stale cache
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            bma_log('BMA: Failed to parse API response: ' . json_last_error_msg(), 'error');
+                // Try stale cache as fallback
+                $stale_cached = get_transient($stale_key);
+                if ($stale_cached !== false) {
+                    $this->stale_cache_used[] = $action;
+                    bma_log("NewBook API: Using STALE cache for {$action} (JSON parse failed)", 'warning');
+                    return $stale_cached;
+                }
 
-            // Try stale cache as fallback
-            $stale_cached = get_transient($stale_key);
-            if ($stale_cached !== false) {
-                $this->stale_cache_used[] = $action;
-                bma_log("NewBook API: Using STALE cache for {$action} (JSON parse failed)", 'warning');
-                return $stale_cached;
+                return false;
             }
 
-            return false;
+            // Success - cache the response with dynamic TTL based on date proximity
+            list($fresh_ttl, $stale_ttl) = $this->calculate_cache_ttl($action, $data);
+            set_transient($cache_key, $response_data, $fresh_ttl);
+            set_transient($stale_key, $response_data, $stale_ttl);
+            bma_log("NewBook API: ✓ SUCCESS - {$action} from {$caller} - cached ({$fresh_ttl}s fresh, {$stale_ttl}s stale)", 'info');
+
+            return $response_data;
+
+        } finally {
+            // Always release lock, even if there was an error
+            delete_transient($lock_key);
         }
-
-        // Success - cache the response with dynamic TTL based on date proximity
-        list($fresh_ttl, $stale_ttl) = $this->calculate_cache_ttl($action, $data);
-        set_transient($cache_key, $response_data, $fresh_ttl);
-        set_transient($stale_key, $response_data, $stale_ttl);
-        bma_log("NewBook API: ✓ SUCCESS - {$action} from {$caller} - cached ({$fresh_ttl}s fresh, {$stale_ttl}s stale)", 'info');
-
-        return $response_data;
     }
 
     /**

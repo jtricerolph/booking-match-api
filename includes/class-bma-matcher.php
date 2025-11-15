@@ -487,11 +487,38 @@ class BMA_Matcher {
             return $cached;
         }
 
+        // ============================================
+        // LOCK-BASED REQUEST DEDUPLICATION
+        // Prevent multiple parallel requests from hitting ResOS API for same date
+        // ============================================
+        $lock_key = $cache_key . '_lock';
+        $lock_wait_seconds = 0;
+        $max_wait_seconds = 30;
+
+        // Check if another request is already fetching this data
+        while (get_transient($lock_key) !== false && $lock_wait_seconds < $max_wait_seconds) {
+            // Another request is currently fetching - wait for it to complete
+            usleep(500000); // Wait 0.5 seconds
+            $lock_wait_seconds += 0.5;
+
+            // Check if cache is now populated by the other request
+            $cached = get_transient($cache_key);
+            if ($cached !== false) {
+                bma_log("BMA: ResOS ✓ CACHE HIT after lock wait ({$lock_wait_seconds}s) for date {$date}", 'info');
+                return $cached;
+            }
+        }
+
+        // Set lock to indicate this request is fetching data (30 second lock)
+        set_transient($lock_key, time(), 30);
+        // ============================================
+
         // Get Resos API key (check new option first, fallback to old)
         $api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
 
         if (empty($api_key)) {
             bma_log("BMA ERROR: Resos API key not configured", 'error');
+            delete_transient($lock_key); // Release lock before returning
             return array();
         }
 
@@ -507,72 +534,79 @@ class BMA_Matcher {
             'timeout' => 30
         );
 
-        $response = wp_remote_get($url, $args);
+        // Make request and process response (lock released in finally block)
+        try {
+            $response = wp_remote_get($url, $args);
 
-        if (is_wp_error($response)) {
-            bma_log("BMA ERROR: Resos API call failed for date {$date}: " . $response->get_error_message(), 'error');
+            if (is_wp_error($response)) {
+                bma_log("BMA ERROR: Resos API call failed for date {$date}: " . $response->get_error_message(), 'error');
 
-            // Try to return stale cache if available (with _stale suffix)
-            $stale_cache = get_transient($cache_key . '_stale');
-            if ($stale_cache !== false) {
-                bma_log("BMA WARNING: Returning stale cache for date {$date} due to API failure", 'warning');
-                $this->stale_cache_dates[] = $date;
-                return $stale_cache;
+                // Try to return stale cache if available (with _stale suffix)
+                $stale_cache = get_transient($cache_key . '_stale');
+                if ($stale_cache !== false) {
+                    bma_log("BMA WARNING: Returning stale cache for date {$date} due to API failure", 'warning');
+                    $this->stale_cache_dates[] = $date;
+                    return $stale_cache;
+                }
+
+                return array();
             }
 
-            return array();
-        }
+            $http_code = wp_remote_retrieve_response_code($response);
+            if ($http_code !== 200) {
+                bma_log("BMA ERROR: Resos API returned HTTP {$http_code} for date {$date}", 'error');
 
-        $http_code = wp_remote_retrieve_response_code($response);
-        if ($http_code !== 200) {
-            bma_log("BMA ERROR: Resos API returned HTTP {$http_code} for date {$date}", 'error');
+                // Try to return stale cache
+                $stale_cache = get_transient($cache_key . '_stale');
+                if ($stale_cache !== false) {
+                    bma_log("BMA WARNING: Returning stale cache for date {$date} due to HTTP {$http_code}", 'warning');
+                    $this->stale_cache_dates[] = $date;
+                    return $stale_cache;
+                }
 
-            // Try to return stale cache
-            $stale_cache = get_transient($cache_key . '_stale');
-            if ($stale_cache !== false) {
-                bma_log("BMA WARNING: Returning stale cache for date {$date} due to HTTP {$http_code}", 'warning');
-                $this->stale_cache_dates[] = $date;
-                return $stale_cache;
+                return array();
             }
 
-            return array();
-        }
+            $body = wp_remote_retrieve_body($response);
+            $data = json_decode($body, true);
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
+            if (!is_array($data)) {
+                bma_log("BMA ERROR: Resos API returned invalid JSON for date {$date}", 'error');
 
-        if (!is_array($data)) {
-            bma_log("BMA ERROR: Resos API returned invalid JSON for date {$date}", 'error');
+                // Try to return stale cache
+                $stale_cache = get_transient($cache_key . '_stale');
+                if ($stale_cache !== false) {
+                    bma_log("BMA WARNING: Returning stale cache for date {$date} due to invalid JSON", 'warning');
+                    $this->stale_cache_dates[] = $date;
+                    return $stale_cache;
+                }
 
-            // Try to return stale cache
-            $stale_cache = get_transient($cache_key . '_stale');
-            if ($stale_cache !== false) {
-                bma_log("BMA WARNING: Returning stale cache for date {$date} due to invalid JSON", 'warning');
-                $this->stale_cache_dates[] = $date;
-                return $stale_cache;
+                return array();
             }
 
-            return array();
-        }
+            // Filter out canceled/no-show
+            $excluded_statuses = array('canceled', 'cancelled', 'no_show', 'no-show', 'deleted');
+            $filtered = array();
 
-        // Filter out canceled/no-show
-        $excluded_statuses = array('canceled', 'cancelled', 'no_show', 'no-show', 'deleted');
-        $filtered = array();
-
-        foreach ($data as $booking) {
-            $status = strtolower($booking['status'] ?? '');
-            if (!in_array($status, $excluded_statuses)) {
-                $filtered[] = $booking;
+            foreach ($data as $booking) {
+                $status = strtolower($booking['status'] ?? '');
+                if (!in_array($status, $excluded_statuses)) {
+                    $filtered[] = $booking;
+                }
             }
+
+            // Cache for 60 seconds
+            set_transient($cache_key, $filtered, 60);
+
+            // Also set a stale cache (5 minutes) as fallback
+            set_transient($cache_key . '_stale', $filtered, 300);
+
+            return $filtered;
+
+        } finally {
+            // Always release lock, even if there was an error
+            delete_transient($lock_key);
         }
-
-        // Cache for 60 seconds
-        set_transient($cache_key, $filtered, 60);
-
-        // Also set a stale cache (5 minutes) as fallback
-        set_transient($cache_key . '_stale', $filtered, 300);
-
-        return $filtered;
     }
 
     /**
