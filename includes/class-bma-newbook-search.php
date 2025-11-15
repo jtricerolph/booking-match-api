@@ -478,6 +478,28 @@ class BMA_NewBook_Search {
      * @return array|false API response data or false on failure
      */
     private function call_api($action, $data = array(), $force_refresh = false) {
+        // ============================================
+        // DIAGNOSTIC LOGGING: Track API call source
+        // ============================================
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        $caller = 'unknown';
+        if (isset($backtrace[1])) {
+            $caller_class = $backtrace[1]['class'] ?? '';
+            $caller_function = $backtrace[1]['function'] ?? '';
+            $caller = $caller_class ? "{$caller_class}::{$caller_function}" : $caller_function;
+        }
+
+        // Extract key params for logging (without sensitive data)
+        $log_params = array();
+        if (isset($data['booking_id'])) $log_params['booking_id'] = $data['booking_id'];
+        if (isset($data['check_from'])) $log_params['check_from'] = $data['check_from'];
+        if (isset($data['check_to'])) $log_params['check_to'] = $data['check_to'];
+        if (isset($data['status'])) $log_params['status'] = $data['status'];
+
+        $params_str = !empty($log_params) ? json_encode($log_params) : 'none';
+        bma_log("NewBook API CALL: action={$action}, caller={$caller}, params={$params_str}, force_refresh=" . ($force_refresh ? 'TRUE' : 'FALSE'), 'info');
+        // ============================================
+
         // Get NewBook API credentials (check new options first, fallback to old)
         $username = get_option('bma_newbook_username') ?: get_option('hotel_booking_api_username') ?: get_option('hotel_booking_newbook_username');
         $password = get_option('bma_newbook_password') ?: get_option('hotel_booking_api_password') ?: get_option('hotel_booking_newbook_password');
@@ -508,7 +530,7 @@ class BMA_NewBook_Search {
         if (!$force_refresh) {
             $cached = get_transient($cache_key);
             if ($cached !== false) {
-                bma_log("NewBook API: Cache HIT for {$action} (key: " . substr($cache_key, 0, 40) . "...)", 'debug');
+                bma_log("NewBook API: ✓ CACHE HIT - {$action} from {$caller} (using cached data)", 'info');
                 return $cached;
             }
         }
@@ -527,7 +549,7 @@ class BMA_NewBook_Search {
             'body' => json_encode($data)
         );
 
-        bma_log("NewBook API: Cache MISS - calling {$action} endpoint", 'debug');
+        bma_log("NewBook API: ⚠ CACHE MISS - {$action} from {$caller} - CALLING API ENDPOINT", 'warning');
 
         // Make request
         $response = wp_remote_post($url, $args);
@@ -541,7 +563,7 @@ class BMA_NewBook_Search {
             $stale_cached = get_transient($stale_key);
             if ($stale_cached !== false) {
                 $this->stale_cache_used[] = $action;
-                bma_log("NewBook API: Using STALE cache for {$action} (API failed)", 'warning');
+                bma_log("NewBook API: ⚠ STALE CACHE - {$action} from {$caller} (API failed, using old data)", 'warning');
                 return $stale_cached;
             }
 
@@ -553,13 +575,13 @@ class BMA_NewBook_Search {
 
         // Handle non-200 response - check stale cache
         if ($response_code !== 200) {
-            bma_log('BMA: API returned error code: ' . $response_code, 'error');
+            bma_log("BMA: API returned error code: {$response_code} for {$action} from {$caller}", 'error');
 
             // Try stale cache as fallback
             $stale_cached = get_transient($stale_key);
             if ($stale_cached !== false) {
                 $this->stale_cache_used[] = $action;
-                bma_log("NewBook API: Using STALE cache for {$action} (API error {$response_code})", 'warning');
+                bma_log("NewBook API: ⚠ STALE CACHE - {$action} from {$caller} (API error {$response_code}, using old data)", 'warning');
                 return $stale_cached;
             }
 
@@ -588,7 +610,7 @@ class BMA_NewBook_Search {
         list($fresh_ttl, $stale_ttl) = $this->calculate_cache_ttl($action, $data);
         set_transient($cache_key, $response_data, $fresh_ttl);
         set_transient($stale_key, $response_data, $stale_ttl);
-        bma_log("NewBook API: Cached response for {$action} ({$fresh_ttl}s fresh, {$stale_ttl}s stale)", 'debug');
+        bma_log("NewBook API: ✓ SUCCESS - {$action} from {$caller} - cached ({$fresh_ttl}s fresh, {$stale_ttl}s stale)", 'info');
 
         return $response_data;
     }
