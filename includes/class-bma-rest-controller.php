@@ -1033,14 +1033,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 // Enhance each ResOS booking with room number from hotel booking match
                 $enhanced_bookings = array();
                 foreach ($resos_bookings as $resos_booking) {
-                    // Extract "Booking #" custom field to get hotel booking ID
+                    // Extract "Booking #" and "GROUP/EXCLUDE" custom fields
                     $hotel_booking_id = null;
+                    $group_exclude_field = null;
                     $custom_fields = $resos_booking['customFields'] ?? array();
 
                     foreach ($custom_fields as $field) {
                         if (($field['name'] ?? '') === 'Booking #') {
                             $hotel_booking_id = $field['value'] ?? null;
-                            break;
+                        } elseif (($field['name'] ?? '') === 'GROUP/EXCLUDE') {
+                            $group_exclude_field = $field['value'] ?? null;
                         }
                     }
 
@@ -1056,6 +1058,33 @@ class BMA_REST_Controller extends WP_REST_Controller {
                         $resos_booking['room_number'] = '';
                         $resos_booking['is_hotel_guest'] = false;
                     }
+
+                    // Parse GROUP/EXCLUDE field to find grouped booking rooms
+                    $grouped_rooms = array();
+                    if ($group_exclude_field) {
+                        $parts = explode(',', $group_exclude_field);
+                        foreach ($parts as $part) {
+                            $part = trim($part);
+                            // Extract booking ID from G-{id}, #${id}, etc.
+                            $grouped_booking_id = null;
+                            if (strpos($part, 'G-') === 0) {
+                                $grouped_booking_id = substr($part, 2);
+                            } elseif (strpos($part, '#') === 0) {
+                                $grouped_booking_id = substr($part, 1);
+                            }
+
+                            // Look up room number for this grouped booking
+                            if ($grouped_booking_id && isset($hotel_bookings_by_id[$grouped_booking_id])) {
+                                $grouped_hotel_booking = $hotel_bookings_by_id[$grouped_booking_id];
+                                $grouped_room = $grouped_hotel_booking['site_name'] ?? '';
+                                // Don't include the primary room in the grouped rooms list
+                                if ($grouped_room && $grouped_booking_id !== $hotel_booking_id) {
+                                    $grouped_rooms[] = $grouped_room;
+                                }
+                            }
+                        }
+                    }
+                    $resos_booking['grouped_rooms'] = $grouped_rooms;
 
                     $enhanced_bookings[] = $resos_booking;
                 }
