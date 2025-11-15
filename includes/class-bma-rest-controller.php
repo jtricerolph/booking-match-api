@@ -925,6 +925,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         try {
             $date = $request->get_param('date');
             $force_refresh = $request->get_param('force_refresh') ?: false;
+            $context = $request->get_param('context') ?: '';
 
             // Default to today if no date provided
             if (empty($date)) {
@@ -937,6 +938,27 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     'invalid_date',
                     __('Invalid date format. Use YYYY-MM-DD', 'booking-match-api'),
                     array('status' => 400)
+                );
+            }
+
+            // Handle chrome-restaurant context - return raw ResOS bookings for client-side rendering
+            if ($context === 'chrome-restaurant') {
+                bma_log("BMA Restaurant: Fetching ResOS bookings for date = {$date} (chrome-restaurant context)", 'debug');
+
+                $matcher = new BMA_Matcher();
+                $resos_bookings = $matcher->fetch_resos_bookings($date, $force_refresh);
+
+                bma_log("BMA Restaurant: Fetched " . count($resos_bookings) . " ResOS bookings for {$date}", 'debug');
+
+                // Return raw bookings in format expected by client-side JavaScript
+                return array(
+                    'success' => true,
+                    'bookings_by_date' => array(
+                        $date => $resos_bookings
+                    ),
+                    'bookings' => $resos_bookings,
+                    'date' => $date,
+                    'booking_count' => count($resos_bookings)
                 );
             }
 
