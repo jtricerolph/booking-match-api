@@ -20,6 +20,7 @@ class BMA_Admin {
     public function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
+        add_action('admin_init', array($this, 'handle_clear_transients'));
         add_filter('plugin_action_links_booking-match-api/booking-match-api.php', array($this, 'add_settings_link'));
     }
 
@@ -196,6 +197,14 @@ class BMA_Admin {
             'booking-match-api'
         );
 
+        // Add Cache Maintenance section
+        add_settings_section(
+            'bma_cache_maintenance_section',
+            __('Cache Maintenance', 'booking-match-api'),
+            array($this, 'render_cache_maintenance_section_description'),
+            'booking-match-api'
+        );
+
         // Add general settings fields
         add_settings_field(
             'bma_booking_page_url',
@@ -286,6 +295,15 @@ class BMA_Admin {
             array($this, 'render_debug_logging_field'),
             'booking-match-api',
             'bma_debug_section'
+        );
+
+        // Add cache maintenance fields
+        add_settings_field(
+            'bma_clear_old_transients',
+            __('Clear Old Transients', 'booking-match-api'),
+            array($this, 'render_clear_transients_field'),
+            'booking-match-api',
+            'bma_cache_maintenance_section'
         );
     }
 
@@ -531,6 +549,79 @@ class BMA_Admin {
         echo '<p class="description">';
         echo __('When enabled, the plugin will write detailed debug information to the WordPress debug.log file. Disable this in production to improve performance and reduce log file size.', 'booking-match-api');
         echo '</p>';
+    }
+
+    /**
+     * Render Cache Maintenance section description
+     */
+    public function render_cache_maintenance_section_description() {
+        echo '<p>' . __('Advanced maintenance tools for clearing old cache data. Use with caution.', 'booking-match-api') . '</p>';
+    }
+
+    /**
+     * Render clear transients field
+     */
+    public function render_clear_transients_field() {
+        // Check if transients were just cleared
+        if (isset($_GET['transients_cleared'])) {
+            echo '<div class="notice notice-success inline" style="margin: 0 0 10px 0; padding: 8px 12px;">';
+            echo '<p style="margin: 0.5em 0;"><strong>✓ Old transients cleared successfully!</strong></p>';
+            echo '</div>';
+        }
+
+        echo '<p>';
+        echo '<a href="' . wp_nonce_url(admin_url('options-general.php?page=booking-match-api&action=clear_bma_transients'), 'clear_bma_transients') . '" class="button button-secondary">';
+        echo __('Clear Old BMA Transients', 'booking-match-api');
+        echo '</a>';
+        echo '</p>';
+        echo '<p class="description">';
+        echo __('Click this button to remove old cached data from previous plugin versions.', 'booking-match-api');
+        echo '<br />';
+        echo __('<strong>Use case:</strong> After updating the plugin, old transient cache entries may cause stale data issues. Clearing them forces fresh data from the cache plugin or API.', 'booking-match-api');
+        echo '<br />';
+        echo '<strong style="color: #d63638;">' . __('Note:', 'booking-match-api') . '</strong> ' . __('This is safe to run and only removes legacy cache entries (bma_newbook_* transients).', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Handle clear transients action
+     */
+    public function handle_clear_transients() {
+        // Check if we're on the right page and action
+        if (!isset($_GET['page']) || $_GET['page'] !== 'booking-match-api') {
+            return;
+        }
+
+        if (!isset($_GET['action']) || $_GET['action'] !== 'clear_bma_transients') {
+            return;
+        }
+
+        // Check nonce
+        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'clear_bma_transients')) {
+            wp_die(__('Security check failed.', 'booking-match-api'));
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Unauthorized.', 'booking-match-api'));
+        }
+
+        // Clear old BMA transients
+        global $wpdb;
+        $deleted = $wpdb->query(
+            "DELETE FROM {$wpdb->options}
+             WHERE option_name LIKE '_transient_bma_newbook_%'
+             OR option_name LIKE '_transient_timeout_bma_newbook_%'"
+        );
+
+        bma_log("Cleared {$deleted} old BMA transients", 'info');
+
+        // Redirect back with success message
+        wp_redirect(add_query_arg(array(
+            'page' => 'booking-match-api',
+            'transients_cleared' => '1'
+        ), admin_url('options-general.php')));
+        exit;
     }
 
     /**
