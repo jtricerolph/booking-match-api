@@ -25,9 +25,10 @@ class BMA_Matcher {
      *
      * @param array $booking NewBook booking data
      * @param bool $force_refresh Force refresh of Resos cache
+     * @param array $request_context Request context for logging (user, IP, route, etc.)
      * @return array Match results for all nights
      */
-    public function match_booking_all_nights($booking, $force_refresh = false) {
+    public function match_booking_all_nights($booking, $force_refresh = false, $request_context = null) {
         // Extract arrival and departure dates
         $arrival = $booking['booking_arrival'] ?? '';
         $departure = $booking['booking_departure'] ?? '';
@@ -48,7 +49,7 @@ class BMA_Matcher {
         // Match for each night
         $night_matches = array();
         foreach ($nights as $night) {
-            $match = $this->match_single_night($booking, $night, $force_refresh);
+            $match = $this->match_single_night($booking, $night, $force_refresh, $request_context);
             $night_matches[] = $match;
         }
 
@@ -83,13 +84,13 @@ class BMA_Matcher {
     /**
      * Match booking for a single night
      */
-    private function match_single_night($booking, $date, $force_refresh = false) {
+    private function match_single_night($booking, $date, $force_refresh = false, $request_context = null) {
         // Fetch Resos bookings for this date
         $resos_bookings = $this->fetch_resos_bookings($date, $force_refresh);
 
         // Fetch ALL hotel bookings for this date (for "matched elsewhere" checking)
         // Note: Caching is now handled in call_api(), not at matcher level
-        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date, $force_refresh);
+        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
 
         // Build array of all hotel booking IDs for this date (excluding current booking)
         $current_booking_id = $booking['booking_id'] ?? '';
@@ -788,11 +789,12 @@ class BMA_Matcher {
      *
      * @param string $date Date in YYYY-MM-DD format
      * @param bool $force_refresh If true, bypass and clear cache
+     * @param array $request_context Request context for logging (user, IP, route, etc.)
      * @return array Array of hotel bookings for the date
      */
-    private function fetch_hotel_bookings_for_date($date, $force_refresh = false) {
+    private function fetch_hotel_bookings_for_date($date, $force_refresh = false, $request_context = null) {
         $searcher = new BMA_NewBook_Search();
-        return $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
+        return $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
     }
 
     /**
