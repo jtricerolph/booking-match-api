@@ -46,9 +46,10 @@ class BMA_NewBook_Search {
      * Search for bookings by guest details
      *
      * @param array $criteria Search criteria
+     * @param array $request_context Request context for logging
      * @return array|WP_Error Array with 'bookings' and 'search_method' or WP_Error
      */
-    public function search_bookings($criteria) {
+    public function search_bookings($criteria, $request_context = null) {
         // Determine search strategy based on criteria
         $email = $criteria['email'] ?? '';
         $phone = $criteria['phone'] ?? '';
@@ -57,17 +58,17 @@ class BMA_NewBook_Search {
 
         // Confident search: Agent reference
         if (!empty($agent_ref)) {
-            return $this->search_by_agent_reference($agent_ref);
+            return $this->search_by_agent_reference($agent_ref, $request_context);
         }
 
         // Confident search: Email (alone or with name)
         if (!empty($email)) {
-            return $this->search_by_email($email, $guest_name);
+            return $this->search_by_email($email, $guest_name, $request_context);
         }
 
         // Confident search: Phone (alone or with name)
         if (!empty($phone)) {
-            return $this->search_by_phone($phone, $guest_name);
+            return $this->search_by_phone($phone, $guest_name, $request_context);
         }
 
         // Name + other field already validated in controller
@@ -82,9 +83,9 @@ class BMA_NewBook_Search {
     /**
      * Search by agent reference
      */
-    private function search_by_agent_reference($agent_ref) {
+    private function search_by_agent_reference($agent_ref, $request_context = null) {
         // Fetch recent bookings (±7 days from today)
-        $bookings = $this->fetch_recent_bookings();
+        $bookings = $this->fetch_recent_bookings(false, $request_context);
 
         if (empty($bookings)) {
             return array('bookings' => array(), 'search_method' => 'agent_reference');
@@ -118,8 +119,8 @@ class BMA_NewBook_Search {
     /**
      * Search by email
      */
-    private function search_by_email($email, $guest_name = '') {
-        $bookings = $this->fetch_recent_bookings();
+    private function search_by_email($email, $guest_name = '', $request_context = null) {
+        $bookings = $this->fetch_recent_bookings(false, $request_context);
 
         if (empty($bookings)) {
             return array('bookings' => array(), 'search_method' => 'email');
@@ -185,8 +186,8 @@ class BMA_NewBook_Search {
     /**
      * Search by phone
      */
-    private function search_by_phone($phone, $guest_name = '') {
-        $bookings = $this->fetch_recent_bookings();
+    private function search_by_phone($phone, $guest_name = '', $request_context = null) {
+        $bookings = $this->fetch_recent_bookings(false, $request_context);
 
         if (empty($bookings)) {
             return array('bookings' => array(), 'search_method' => 'phone');
@@ -256,9 +257,10 @@ class BMA_NewBook_Search {
      * Fetch bookings from recent date range
      *
      * @param bool $force_refresh If true, bypass and clear cache
+     * @param array $request_context Request context for logging
      * @return array Array of bookings
      */
-    private function fetch_recent_bookings($force_refresh = false) {
+    private function fetch_recent_bookings($force_refresh = false, $request_context = null) {
         // Fetch bookings ±7 days from today
         $today = date('Y-m-d');
         $from = date('Y-m-d', strtotime('-7 days'));
@@ -273,7 +275,7 @@ class BMA_NewBook_Search {
             'list_type' => 'staying'
         );
 
-        $response = $this->call_api('bookings_list', $data, $force_refresh);
+        $response = $this->call_api('bookings_list', $data, $force_refresh, $request_context);
 
         if (!$response || !isset($response['data'])) {
             return array();

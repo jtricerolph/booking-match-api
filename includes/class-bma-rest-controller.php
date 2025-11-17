@@ -412,7 +412,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     'phone' => $phone,
                     'group_id' => $group_id,
                     'agent_reference' => $agent_ref,
-                ));
+                ), $request_context);
 
                 if (is_wp_error($search_result)) {
                     return $search_result;
