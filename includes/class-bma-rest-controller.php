@@ -1256,7 +1256,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $timeline_data['next_vacant'] = true;
                 }
 
-                $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data, $matcher);
+                $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data, $matcher, $request_context);
                 $processed_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
@@ -1368,7 +1368,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for staying display
      */
-    private function process_booking_for_staying($booking, $target_date, $force_refresh = false, $timeline_data = array(), $matcher = null) {
+    private function process_booking_for_staying($booking, $target_date, $force_refresh = false, $timeline_data = array(), $matcher = null, $request_context = null) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -1415,7 +1415,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $reflection = new ReflectionClass($matcher);
         $method = $reflection->getMethod('match_single_night');
         $method->setAccessible(true);
-        $night_result = $method->invoke($matcher, $booking, $target_date, $force_refresh);
+        $night_result = $method->invoke($matcher, $booking, $target_date, $force_refresh, $request_context);
 
         $matches = $night_result['resos_matches'] ?? array();
 
