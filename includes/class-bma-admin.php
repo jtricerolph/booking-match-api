@@ -132,6 +132,16 @@ class BMA_Admin {
             )
         );
 
+        register_setting(
+            'bma_settings_group',
+            'bma_use_newbook_cache',
+            array(
+                'type' => 'boolean',
+                'sanitize_callback' => 'rest_sanitize_boolean',
+                'default' => true
+            )
+        );
+
         // Register excluded email domains setting
         register_setting(
             'bma_settings_group',
@@ -257,6 +267,14 @@ class BMA_Admin {
             'bma_newbook_region',
             __('Region', 'booking-match-api'),
             array($this, 'render_newbook_region_field'),
+            'booking-match-api',
+            'bma_newbook_section'
+        );
+
+        add_settings_field(
+            'bma_use_newbook_cache',
+            __('API Caching', 'booking-match-api'),
+            array($this, 'render_use_newbook_cache_field'),
             'booking-match-api',
             'bma_newbook_section'
         );
@@ -464,6 +482,41 @@ class BMA_Admin {
         echo '<p class="description">';
         echo __('Select your NewBook API region.', 'booking-match-api');
         echo '</p>';
+    }
+
+    /**
+     * Render NewBook cache plugin toggle field
+     */
+    public function render_use_newbook_cache_field() {
+        $enabled = get_option('bma_use_newbook_cache', true);
+        $cache_plugin_active = class_exists('NewBook_API_Cache');
+
+        echo '<label for="bma_use_newbook_cache">';
+        echo '<input type="checkbox" name="bma_use_newbook_cache" id="bma_use_newbook_cache" value="1" ' . checked($enabled, true, false);
+
+        if (!$cache_plugin_active) {
+            echo ' disabled';
+        }
+
+        echo ' />';
+        echo ' ' . __('Use NewBook API Cache plugin for faster performance', 'booking-match-api');
+        echo '</label>';
+
+        if ($cache_plugin_active) {
+            echo '<p class="description" style="color: #46b450;">';
+            echo '✓ ' . __('NewBook API Cache plugin detected and active', 'booking-match-api');
+            echo '<br />';
+            echo '<a href="' . admin_url('options-general.php?page=newbook-cache-settings') . '">';
+            echo __('Configure cache settings', 'booking-match-api') . ' →';
+            echo '</a>';
+            echo '</p>';
+        } else {
+            echo '<p class="description" style="color: #f0b849;">';
+            echo '⚠ ' . __('NewBook API Cache plugin not installed', 'booking-match-api');
+            echo '<br />';
+            echo __('Install the newbook-api-cache plugin to enable caching and reduce API calls by ~95%.', 'booking-match-api');
+            echo '</p>';
+        }
     }
 
     /**

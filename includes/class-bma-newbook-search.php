@@ -28,12 +28,12 @@ class BMA_NewBook_Search {
      * @param bool $force_refresh If true, bypass and clear cache
      * @return array|false Booking data or false on failure
      */
-    public function get_booking_by_id($booking_id, $force_refresh = false) {
+    public function get_booking_by_id($booking_id, $force_refresh = false, $request_context = null) {
         $data = array(
             'booking_id' => intval($booking_id)
         );
 
-        $response = $this->call_api('bookings_get', $data, $force_refresh);
+        $response = $this->call_api('bookings_get', $data, $force_refresh, $request_context);
 
         if (!$response || !isset($response['data'])) {
             return false;
@@ -290,7 +290,7 @@ class BMA_NewBook_Search {
      * @param bool $force_refresh If true, bypass and clear cache
      * @return array Array of bookings sorted by booking_id descending
      */
-    public function fetch_recent_placed_bookings($limit = 5, $hours_back = 72, $force_refresh = false) {
+    public function fetch_recent_placed_bookings($limit = 5, $hours_back = 72, $force_refresh = false, $request_context = null) {
         $to_date = date('Y-m-d\TH:i:s');
         $from_date = date('Y-m-d\TH:i:s', strtotime("-{$hours_back} hours"));
 
@@ -300,7 +300,7 @@ class BMA_NewBook_Search {
             'list_type' => 'placed'  // Use 'placed' to get bookings by creation date
         );
 
-        $response = $this->call_api('bookings_list', $data, $force_refresh);
+        $response = $this->call_api('bookings_list', $data, $force_refresh, $request_context);
 
         if (!$response || !isset($response['data'])) {
             bma_log('BMA: Error fetching recent placed bookings - no data returned', 'error');
@@ -330,7 +330,7 @@ class BMA_NewBook_Search {
      * @param bool $force_refresh Whether to bypass cache
      * @return array Array of cancelled bookings
      */
-    public function fetch_recent_cancelled_bookings($days_back = 5, $force_refresh = false) {
+    public function fetch_recent_cancelled_bookings($days_back = 5, $force_refresh = false, $request_context = null) {
         $to_date = date('Y-m-d\TH:i:s');
         $from_date = date('Y-m-d\TH:i:s', strtotime("-{$days_back} days"));
 
@@ -340,7 +340,7 @@ class BMA_NewBook_Search {
             'list_type' => 'cancelled'  // Use 'cancelled' to get cancelled bookings
         );
 
-        $response = $this->call_api('bookings_list', $data, $force_refresh);
+        $response = $this->call_api('bookings_list', $data, $force_refresh, $request_context);
 
         if (!$response || !isset($response['data'])) {
             bma_log('BMA: Error fetching recent cancelled bookings - no data returned', 'error');
@@ -380,7 +380,7 @@ class BMA_NewBook_Search {
      * @param bool $force_refresh If true, bypass and clear cache
      * @return array Array of bookings for the date
      */
-    public function fetch_hotel_bookings_for_date($date, $force_refresh = false) {
+    public function fetch_hotel_bookings_for_date($date, $force_refresh = false, $request_context = null) {
         $period_from = $date . ' 00:00:00';
         $period_to = $date . ' 23:59:59';
 
@@ -390,7 +390,7 @@ class BMA_NewBook_Search {
             'list_type' => 'staying'
         );
 
-        $response = $this->call_api('bookings_list', $data, $force_refresh);
+        $response = $this->call_api('bookings_list', $data, $force_refresh, $request_context);
 
         if (!$response || !isset($response['data'])) {
             bma_log('BMA: Failed to fetch hotel bookings for date ' . $date, 'error');
@@ -475,9 +475,10 @@ class BMA_NewBook_Search {
      * @param string $action API action (e.g., 'bookings_get', 'bookings_list')
      * @param array $data API request parameters
      * @param bool $force_refresh If true, bypass and clear cache
+     * @param array|null $request_context Optional request context (user, IP, route, etc.) for logging
      * @return array|false API response data or false on failure
      */
-    private function call_api($action, $data = array(), $force_refresh = false) {
+    private function call_api($action, $data = array(), $force_refresh = false, $request_context = null) {
         // ============================================
         // DIAGNOSTIC LOGGING: Track API call source
         // ============================================
@@ -498,6 +499,32 @@ class BMA_NewBook_Search {
 
         $params_str = !empty($log_params) ? json_encode($log_params) : 'none';
         bma_log("NewBook API CALL: action={$action}, caller={$caller}, params={$params_str}, force_refresh=" . ($force_refresh ? 'TRUE' : 'FALSE'), 'info');
+        // ============================================
+
+        // ============================================
+        // CACHE PLUGIN INTEGRATION
+        // Check if NewBook API Cache plugin should handle this request
+        // ============================================
+        $use_cache = get_option('bma_use_newbook_cache', true);
+        if (apply_filters('bma_use_newbook_cache', $use_cache)) {
+            // Build context info for cache plugin logging
+            $context_info = array(
+                'caller' => $caller,
+                'force_refresh' => $force_refresh
+            );
+
+            // Merge in request context if provided (user, IP, route, etc.)
+            if ($request_context !== null && is_array($request_context)) {
+                $context_info = array_merge($context_info, $request_context);
+            }
+
+            $cached_response = apply_filters('bma_newbook_api_call', null, $action, $data, $context_info);
+
+            if ($cached_response !== null) {
+                bma_log("NewBook API: ✓ Handled by cache plugin - {$action} from {$caller}", 'debug');
+                return $cached_response;
+            }
+        }
         // ============================================
 
         // Get NewBook API credentials (check new options first, fallback to old)
@@ -724,7 +751,7 @@ class BMA_NewBook_Search {
      * @param string $date Date in YYYY-MM-DD format
      * @return array Array of booking objects
      */
-    public function fetch_staying_bookings($date) {
+    public function fetch_staying_bookings($date, $request_context = null) {
         // Fetch 3-day window for timeline indicators (previous night, selected date, next night)
         $previous_night = date('Y-m-d', strtotime($date . ' -1 day'));
         $next_night = date('Y-m-d', strtotime($date . ' +1 day'));
@@ -738,7 +765,7 @@ class BMA_NewBook_Search {
             'list_type' => 'staying'  // NewBook API filters for guests staying on this date
         );
 
-        $response = $this->call_api('bookings_list', $data);
+        $response = $this->call_api('bookings_list', $data, false, $request_context);
 
         if (!$response || !isset($response['data'])) {
             return array();
@@ -753,7 +780,7 @@ class BMA_NewBook_Search {
      *
      * @return array Array of site objects with site_id, site_name, etc.
      */
-    public function fetch_sites() {
+    public function fetch_sites($request_context = null) {
         // Check cache first (cache for 1 hour since rooms don't change often)
         $cache_key = 'bma_newbook_sites';
         $cached = get_transient($cache_key);
@@ -762,7 +789,7 @@ class BMA_NewBook_Search {
         }
 
         $data = array();
-        $response = $this->call_api('sites_list', $data);
+        $response = $this->call_api('sites_list', $data, false, $request_context);
 
         if (!$response || !isset($response['data'])) {
             bma_log('BMA_NewBook_Search: Failed to fetch sites list', 'error');

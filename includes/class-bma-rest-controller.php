@@ -369,6 +369,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function match_booking($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             // Extract parameters
             $booking_id = $request->get_param('booking_id');
             $guest_name = $request->get_param('guest_name');
@@ -391,7 +394,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             // Search for booking(s)
             if ($booking_id) {
                 // Direct booking ID lookup
-                $bookings = $searcher->get_booking_by_id($booking_id, $force_refresh);
+                $bookings = $searcher->get_booking_by_id($booking_id, $force_refresh, $request_context);
                 if (!$bookings) {
                     return new WP_Error(
                         'booking_not_found',
@@ -447,7 +450,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $matcher->fetch_resos_bookings($date, $force_refresh);
 
                     // Warm NewBook cache
-                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
                 }
             }
 
@@ -588,6 +591,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_summary($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $context = $request->get_param('context') ?: 'json';
             $limit = $request->get_param('limit') ?: 5;
 
@@ -603,10 +609,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Fetch recently placed bookings from NewBook (use force_refresh_bookings for THIS call only)
             $searcher = new BMA_NewBook_Search();
-            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit, 72, $force_refresh_bookings);
+            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit, 72, $force_refresh_bookings, $request_context);
 
             // Fetch recently cancelled bookings (last 5 days)
-            $cancelled_bookings = $searcher->fetch_recent_cancelled_bookings(5, $force_refresh_bookings);
+            $cancelled_bookings = $searcher->fetch_recent_cancelled_bookings(5, $force_refresh_bookings, $request_context);
 
             // PRE-CACHE: Collect all unique dates from all bookings to prevent duplicate API calls
             $all_dates = array();
@@ -631,7 +637,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $matcher->fetch_resos_bookings($date, $force_refresh_bookings);
 
                     // Warm NewBook cache
-                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh_bookings);
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh_bookings, $request_context);
                 }
             }
 
@@ -902,13 +908,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_checks($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $booking_id = $request->get_param('booking_id');
             $context = $request->get_param('context') ?: 'json';
             $force_refresh = $request->get_param('force_refresh') ?: false;
 
             // Fetch booking details from NewBook
             $searcher = new BMA_NewBook_Search();
-            $nb_booking = $searcher->get_booking_by_id($booking_id, $force_refresh);
+            $nb_booking = $searcher->get_booking_by_id($booking_id, $force_refresh, $request_context);
 
             if (!$nb_booking) {
                 return new WP_Error(
@@ -933,7 +942,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $matcher->fetch_resos_bookings($date, $force_refresh);
 
                     // Warm NewBook cache
-                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
                 }
             }
 
@@ -988,6 +997,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_staying_bookings($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $date = $request->get_param('date');
             $force_refresh = $request->get_param('force_refresh') ?: false;
             $context = $request->get_param('context') ?: '';
@@ -1017,7 +1029,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
                 // Fetch hotel bookings to match room numbers
                 $searcher = new BMA_NewBook_Search();
-                $hotel_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
+                $hotel_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
 
                 bma_log("BMA Restaurant: Fetched " . count($hotel_bookings) . " hotel bookings for {$date}", 'debug');
 
@@ -1111,9 +1123,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Fetch each date individually for per-date cache reuse
             $searcher = new BMA_NewBook_Search();
-            $previous_bookings = $searcher->fetch_hotel_bookings_for_date($previous_date, $force_refresh);
-            $current_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
-            $next_bookings = $searcher->fetch_hotel_bookings_for_date($next_date, $force_refresh);
+            $previous_bookings = $searcher->fetch_hotel_bookings_for_date($previous_date, $force_refresh, $request_context);
+            $current_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
+            $next_bookings = $searcher->fetch_hotel_bookings_for_date($next_date, $force_refresh, $request_context);
 
             // PRE-CACHE: Pre-populate ResOS cache for target date to prevent duplicate API calls
             // (All bookings will call match_single_night for same target date)
@@ -1251,7 +1263,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             }
 
             // Get list of all sites/rooms
-            $all_sites = $searcher->fetch_sites();
+            $all_sites = $searcher->fetch_sites($request_context);
 
             // Create a map of occupied room names
             $occupied_rooms = array();
@@ -1987,13 +1999,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_bookings_for_date($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $date = $request->get_param('date');
             $exclude_booking_id = $request->get_param('exclude_booking_id');
 
             $search = new BMA_NewBook_Search();
 
             // Fetch all hotel bookings for this date
-            $bookings = $search->fetch_hotel_bookings_for_date($date);
+            $bookings = $search->fetch_hotel_bookings_for_date($date, false, $request_context);
 
             if (empty($bookings)) {
                 return rest_ensure_response(array(
