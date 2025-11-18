@@ -493,7 +493,7 @@ if (empty($bookings)) {
 }
 
 .detail-section h4 .material-symbols-outlined {
-    font-size: 16px;
+    font-size: 10px;
 }
 
 /* Clickable Restaurant Header */
