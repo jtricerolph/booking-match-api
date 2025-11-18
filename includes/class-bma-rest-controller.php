@@ -647,8 +647,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_warning_count = 0;
 
             foreach ($recent_bookings as $nb_booking) {
+                // Check if booking is cancelled (even in "placed" section, it may have been cancelled after placement)
+                $booking_status = strtolower($nb_booking['booking_status'] ?? '');
+                $is_cancelled = ($booking_status === 'cancelled');
+
                 // Pass force_refresh_matches to matching operations (NOT force_refresh_bookings)
-                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh_matches, $matcher, false, $request_context);
+                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh_matches, $matcher, $is_cancelled, $request_context);
                 $summary_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];

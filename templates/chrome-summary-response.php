@@ -366,13 +366,13 @@ if (empty($bookings)) {
 /* Status badges for confirmed/unconfirmed bookings */
 .status-badge {
     display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 9px;
     font-weight: 600;
     line-height: 1.2;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
 .status-badge.status-confirmed {
