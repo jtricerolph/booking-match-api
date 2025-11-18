@@ -26,8 +26,33 @@ if (empty($bookings)) {
         $today = date('Y-m-d');
         $is_arrived = !$is_cancelled && $arrival_date && $arrival_date <= $today && $departure_date && $departure_date > $today;
         $is_departed = !$is_cancelled && $departure_date && $departure_date <= $today;
+
+        // Check if booking is "new" (placed or cancelled within 24 hours)
+        $is_new = false;
+        $now = time();
+        $new_threshold = 24 * 60 * 60; // 24 hours in seconds
+
+        if ($is_cancelled && !empty($booking['booking_cancelled'])) {
+            // Check if recently cancelled
+            $cancelled_time = strtotime($booking['booking_cancelled']);
+            $is_new = ($now - $cancelled_time) <= $new_threshold;
+        } elseif (!$is_cancelled && !empty($booking['booking_placed'])) {
+            // Check if recently placed
+            $placed_time = strtotime($booking['booking_placed']);
+            $is_new = ($now - $placed_time) <= $new_threshold;
+        }
+
+        // Build CSS classes
+        $card_classes = array();
+        if ($is_cancelled) {
+            $card_classes[] = 'cancelled-booking';
+        }
+        if ($is_new) {
+            $card_classes[] = 'new-booking';
+        }
+        $card_class_string = implode(' ', $card_classes);
     ?>
-        <div class="booking-card <?php echo $is_cancelled ? 'cancelled-booking' : ''; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
+        <div class="booking-card <?php echo $card_class_string; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
             <!-- Collapsed Summary -->
             <div class="booking-header">
                 <div class="booking-main-info">
