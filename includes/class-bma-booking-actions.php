@@ -975,8 +975,10 @@ class BMA_Booking_Actions {
 
             bma_log('BMA: GROUP/EXCLUDE field value: ' . $group_field_value, 'debug');
 
-            // Update the custom field
-            $update_result = $this->update_booking_custom_field($booking_id, 'GROUP/EXCLUDE', $group_field_value);
+            // Update the custom field using update_resos_booking
+            $update_result = $this->update_resos_booking($booking_id, array(
+                'group_exclude' => $group_field_value
+            ));
 
             if ($update_result['success']) {
                 bma_log('BMA: GROUP/EXCLUDE field updated successfully for booking ' . $booking_id, 'info');
