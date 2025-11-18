@@ -700,6 +700,30 @@ class BMA_REST_Controller extends WP_REST_Controller {
             // Merge placed and cancelled bookings into single activity array
             $activity_bookings = array_merge($summary_bookings, $summary_cancelled);
 
+            // Remove duplicates (keep cancelled version if booking appears in both arrays)
+            $seen_ids = array();
+            $activity_bookings = array_filter($activity_bookings, function($booking) use (&$seen_ids) {
+                $booking_id = $booking['booking_id'];
+
+                // If we haven't seen this ID yet, mark it as seen
+                if (!isset($seen_ids[$booking_id])) {
+                    $seen_ids[$booking_id] = $booking;
+                    return true;
+                }
+
+                // If we've seen this ID before, keep the cancelled version (more current state)
+                if ($booking['is_cancelled'] && !$seen_ids[$booking_id]['is_cancelled']) {
+                    $seen_ids[$booking_id] = $booking;
+                    return true;
+                }
+
+                // Otherwise skip this duplicate
+                return false;
+            });
+
+            // Re-index array after filtering
+            $activity_bookings = array_values($activity_bookings);
+
             // Sort by timestamp (most recent first)
             usort($activity_bookings, function($a, $b) {
                 // Use booking_cancelled for cancelled, booking_placed for placed
