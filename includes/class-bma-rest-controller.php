@@ -862,7 +862,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
         // Extract booking placed/cancelled timestamp
         $booking_placed = $booking['booking_placed'] ?? null;
-        $booking_cancelled = $booking['booking_cancelled'] ?? null;
+        // For cancelled bookings, use booking_modified as the cancellation timestamp
+        // NewBook API doesn't have a separate booking_cancelled field
+        $booking_cancelled = $is_cancelled ? ($booking['booking_modified'] ?? null) : null;
 
         return array(
             'booking_id' => $booking_id,
