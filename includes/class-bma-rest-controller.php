@@ -697,13 +697,25 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_all_critical = $total_critical_count + $cancelled_critical_count;
             $total_all_warning = $total_warning_count + $cancelled_warning_count;
 
+            // Merge placed and cancelled bookings into single activity array
+            $activity_bookings = array_merge($summary_bookings, $summary_cancelled);
+
+            // Sort by timestamp (most recent first)
+            usort($activity_bookings, function($a, $b) {
+                // Use booking_cancelled for cancelled, booking_placed for placed
+                $time_a = $a['is_cancelled'] ? ($a['booking_cancelled'] ?? $a['booking_placed']) : $a['booking_placed'];
+                $time_b = $b['is_cancelled'] ? ($b['booking_cancelled'] ?? $b['booking_placed']) : $b['booking_placed'];
+                return strcmp($time_b, $time_a); // DESC order (most recent first)
+            });
+
             // Format response based on context
             if ($context === 'chrome-summary' || $context === 'webapp-summary') {
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
-                    'html_placed' => $formatter->format_summary_html($summary_bookings, $context),
-                    'html_cancelled' => $formatter->format_summary_html($summary_cancelled, $context),
+                    'html_activity' => $formatter->format_summary_html($activity_bookings, $context),
+                    'activity_bookings' => $activity_bookings,
+                    'activity_count' => count($activity_bookings),
                     'placed_count' => count($summary_bookings),
                     'cancelled_count' => count($summary_cancelled),
                     'critical_count' => $total_all_critical,
@@ -715,8 +727,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
             // Default JSON response
             return array(
                 'success' => true,
+                'activity_bookings' => $activity_bookings,
                 'placed_bookings' => $summary_bookings,
                 'cancelled_bookings' => $summary_cancelled,
+                'activity_count' => count($activity_bookings),
                 'placed_count' => count($summary_bookings),
                 'cancelled_count' => count($summary_cancelled),
                 'critical_count' => $total_all_critical,
