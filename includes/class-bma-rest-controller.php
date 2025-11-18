@@ -726,9 +726,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Sort by timestamp (most recent first)
             usort($activity_bookings, function($a, $b) {
-                // Use booking_modified for cancelled, booking_placed for placed
-                $time_a = $a['is_cancelled'] ? ($a['booking_modified'] ?? $a['booking_placed']) : $a['booking_placed'];
-                $time_b = $b['is_cancelled'] ? ($b['booking_modified'] ?? $b['booking_placed']) : $b['booking_placed'];
+                // Use booking_cancelled for cancelled, booking_placed for placed
+                $time_a = $a['is_cancelled'] ? ($a['booking_cancelled'] ?? $a['booking_placed']) : $a['booking_placed'];
+                $time_b = $b['is_cancelled'] ? ($b['booking_cancelled'] ?? $b['booking_placed']) : $b['booking_placed'];
                 return strcmp($time_b, $time_a); // DESC order (most recent first)
             });
 
@@ -862,7 +862,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
         // Extract booking timestamps
         $booking_placed = $booking['booking_placed'] ?? null;
-        $booking_modified = $booking['booking_modified'] ?? null;
+        $booking_cancelled = $booking['booking_cancelled'] ?? null;
 
         return array(
             'booking_id' => $booking_id,
@@ -876,7 +876,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'occupants' => $occupants,
             'tariffs' => $tariffs,
             'booking_placed' => $booking_placed,
-            'booking_modified' => $booking_modified,
+            'booking_cancelled' => $booking_cancelled,
             'actions_required' => array_unique($actions_required),
             'critical_count' => $critical_count,
             'warning_count' => $warning_count,
