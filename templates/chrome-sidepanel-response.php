@@ -3552,57 +3552,7 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
                 break;
 
             case 'open-group-create':
-                {
-                    console.log('BMA: GROUP button clicked');
-                    console.log('BMA: Checking for openGroupManagementModal:', typeof window.openGroupManagementModal);
-
-                    // Get create form for this date
-                    const formId = 'create-form-' + button.dataset.date;
-                    const form = document.getElementById(formId);
-                    if (!form) {
-                        console.error('Create form not found:', formId);
-                        break;
-                    }
-
-                    // Get current form values
-                    const guestName = form.querySelector('.form-guest-name')?.value || 'New Booking';
-                    const people = form.querySelector('.form-people')?.value || '2';
-                    const timeSelected = form.querySelector('.form-time-selected')?.value || '';
-
-                    // Get existing group selections if any
-                    const groupMembers = form.querySelector('.form-group-members')?.value || '';
-
-                    console.log('BMA: GROUP modal params:', {
-                        resosBookingId: null,
-                        hotelBookingId: form.dataset.bookingId,
-                        date: button.dataset.date,
-                        time: timeSelected,
-                        guestName: guestName,
-                        people: people
-                    });
-
-                    // Open GROUP modal in CREATE mode (no resosBookingId)
-                    // Content is injected directly into DOM, so window.openGroupManagementModal should work
-                    if (typeof window.openGroupManagementModal === 'function') {
-                        console.log('BMA: Opening GROUP modal...');
-                        window.openGroupManagementModal(
-                            null,                      // No Resos booking ID (CREATE mode)
-                            form.dataset.bookingId,    // Hotel booking ID
-                            button.dataset.date,       // Date
-                            timeSelected,              // Selected time
-                            guestName,                 // Guest name
-                            people,                    // Number of people
-                            form.dataset.bookingId,    // Use hotel booking as temp lead ID
-                            groupMembers               // Existing group selections
-                        );
-                    } else {
-                        console.error('BMA: openGroupManagementModal function not found on window');
-                        console.error('BMA: Available window properties:', Object.keys(window).filter(k => k.includes('Group') || k.includes('Modal')));
-                        if (typeof showToast === 'function') {
-                            showToast('Group management feature not available', 'error');
-                        }
-                    }
-                }
+                // Handled by chrome extension sidepanel.js event listener
                 break;
 
             case 'manage-group':
