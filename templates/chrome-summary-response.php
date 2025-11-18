@@ -431,19 +431,16 @@ if (empty($bookings)) {
 .status-badge.status-cancelled {
     background: #fee2e2;
     color: #991b1b;
-    border: 1px solid #fca5a5;
 }
 
 .status-badge.status-arrived {
     background: #dbeafe;
     color: #1e40af;
-    border: 1px solid #93c5fd;
 }
 
 .status-badge.status-departed {
     background: #e9d5ff;
     color: #6b21a8;
-    border: 1px solid #c084fc;
 }
 
 .booking-dates-compact {
