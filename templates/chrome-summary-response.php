@@ -339,7 +339,12 @@ if (empty($bookings)) {
     align-items: center;
     gap: 8px;
     position: relative;
-    border-radius: 8px 8px 0 0; /* Match parent card radius for top corners */
+    border-radius: 8px; /* Fully rounded by default (when collapsed) */
+}
+
+/* When card is expanded, header only has top rounded corners */
+.booking-card.expanded .booking-header {
+    border-radius: 8px 8px 0 0;
 }
 
 .booking-main-info {
@@ -444,6 +449,7 @@ if (empty($bookings)) {
 .booking-details {
     padding: 0 8px 8px 8px;
     border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 8px 8px; /* Rounded bottom corners when expanded */
 }
 
 /* Compact Details Section */
