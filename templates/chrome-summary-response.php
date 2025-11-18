@@ -326,9 +326,13 @@ if (empty($bookings)) {
 }
 
 .booking-card.new-booking {
-    border: 2px solid #10b981;
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
     animation: glow 2s ease-in-out infinite;
+}
+
+/* Green border only for non-cancelled new bookings */
+.booking-card.new-booking:not(.cancelled-booking) {
+    border: 2px solid #10b981;
 }
 
 @keyframes glow {
