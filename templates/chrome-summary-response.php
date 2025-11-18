@@ -26,6 +26,14 @@ if (empty($bookings)) {
                 <div class="booking-main-info">
                     <div class="booking-guest">
                         <strong class="<?php echo $is_cancelled ? 'guest-name-cancelled' : ''; ?>"><?php echo esc_html($booking['guest_name']); ?></strong>
+                        <?php if (!$is_cancelled && isset($booking['status'])): ?>
+                            <?php $status_lower = strtolower($booking['status']); ?>
+                            <?php if ($status_lower === 'confirmed'): ?>
+                                <span class="status-badge status-confirmed">Confirmed</span>
+                            <?php elseif (in_array($status_lower, ['provisional', 'unconfirmed'])): ?>
+                                <span class="status-badge status-unconfirmed">Unconfirmed</span>
+                            <?php endif; ?>
+                        <?php endif; ?>
                     </div>
                     <div class="booking-dates-compact">
                         <span><?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival_date']))); ?></span>
@@ -331,6 +339,7 @@ if (empty($bookings)) {
     align-items: center;
     gap: 8px;
     position: relative;
+    border-radius: 8px 8px 0 0; /* Match parent card radius for top corners */
 }
 
 .booking-main-info {
@@ -341,10 +350,39 @@ if (empty($bookings)) {
     gap: 2px;
 }
 
+.booking-guest {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
 .booking-guest strong {
     font-size: 14px;
     color: #2d3748;
     line-height: 1.2;
+}
+
+/* Status badges for confirmed/unconfirmed bookings */
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.status-confirmed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.status-unconfirmed {
+    background: #fef3c7;
+    color: #92400e;
 }
 
 .booking-dates-compact {
