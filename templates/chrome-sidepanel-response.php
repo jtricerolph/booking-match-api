@@ -406,6 +406,10 @@ if (!defined('ABSPATH')) {
                             <input type="hidden" class="form-time-selected" id="time-selected-<?php echo esc_attr($night['date']); ?>">
                             <input type="hidden" class="form-opening-hour-id" id="opening-hour-id-<?php echo esc_attr($night['date']); ?>">
 
+                            <!-- Hidden fields for group data -->
+                            <input type="hidden" class="form-group-members" id="group-members-<?php echo esc_attr($night['date']); ?>" value="">
+                            <input type="hidden" class="form-lead-booking" id="lead-booking-<?php echo esc_attr($night['date']); ?>" value="">
+
                             <!-- Collapsible Section 1: Booking Details -->
                             <div class="bma-expandable-section">
                                 <button type="button" class="bma-section-toggle" data-target="booking-details-<?php echo esc_attr($night['date']); ?>" data-section-type="details">
@@ -521,6 +525,13 @@ if (!defined('ABSPATH')) {
                                 <button type="button" class="bma-btn-cancel"
                                         data-action="toggle-create"
                                         data-date="<?php echo esc_attr($night['date']); ?>">Cancel</button>
+                                <button type="button" class="bma-btn-group"
+                                        data-action="open-group-create"
+                                        data-date="<?php echo esc_attr($night['date']); ?>"
+                                        title="Select group members">
+                                    <span class="material-symbols-outlined">groups</span>
+                                    Group
+                                </button>
                                 <button type="button" class="bma-btn-submit"
                                         data-action="submit-create"
                                         data-date="<?php echo esc_attr($night['date']); ?>">Create Booking</button>
@@ -2588,7 +2599,11 @@ async function submitCreateBooking(date) {
         email: form.querySelector('.form-email').value,
         restaurant_note: form.querySelector('.form-notes').value,
         booking_ref: form.dataset.bookingId,
-        hotel_guest: 'Yes'
+        hotel_guest: 'Yes',
+
+        // Group data
+        group_members: form.querySelector('.form-group-members')?.value || '',
+        lead_booking_id: form.querySelector('.form-lead-booking')?.value || ''
     };
 
     // Validate required fields
@@ -3511,6 +3526,40 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
 
             case 'submit-update':
                 submitUpdateBooking(button.dataset.date, button.dataset.resosBookingId);
+                break;
+
+            case 'open-group-create':
+                {
+                    // Get create form for this date
+                    const formId = 'create-form-' + button.dataset.date;
+                    const form = document.getElementById(formId);
+                    if (!form) {
+                        console.error('Create form not found:', formId);
+                        break;
+                    }
+
+                    // Get current form values
+                    const guestName = form.querySelector('.form-guest-name')?.value || 'New Booking';
+                    const people = form.querySelector('.form-people')?.value || '2';
+                    const timeSelected = form.querySelector('.form-time-selected')?.value || '';
+
+                    // Get existing group selections if any
+                    const groupMembers = form.querySelector('.form-group-members')?.value || '';
+
+                    // Open GROUP modal in CREATE mode (no resosBookingId)
+                    if (window.parent && window.parent.openGroupManagementModal) {
+                        window.parent.openGroupManagementModal(
+                            null,                      // No Resos booking ID (CREATE mode)
+                            form.dataset.bookingId,    // Hotel booking ID
+                            button.dataset.date,       // Date
+                            timeSelected,              // Selected time
+                            guestName,                 // Guest name
+                            people,                    // Number of people
+                            form.dataset.bookingId,    // Use hotel booking as temp lead ID
+                            groupMembers               // Existing group selections
+                        );
+                    }
+                }
                 break;
 
             case 'manage-group':

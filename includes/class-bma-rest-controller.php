@@ -2259,6 +2259,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'dbb' => $request->get_param('dbb'),
                 'dietary_requirements' => $request->get_param('dietary_requirements'),
                 'dietary_other' => $request->get_param('dietary_other'),
+
+                // Group data
+                'group_members' => $request->get_param('group_members'),
+                'lead_booking_id' => $request->get_param('lead_booking_id'),
             );
 
             $actions = new BMA_Booking_Actions();
@@ -2401,6 +2405,20 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'description' => __('Other dietary requirements (free text)', 'booking-match-api'),
                 'type' => 'string',
                 'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'group_members' => array(
+                'description' => __('Group member booking IDs (G- prefixed, comma-separated)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'default' => '',
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'lead_booking_id' => array(
+                'description' => __('Lead booking ID for the group', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'default' => '',
                 'sanitize_callback' => 'sanitize_text_field',
             ),
         );

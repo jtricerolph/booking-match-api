@@ -958,6 +958,34 @@ class BMA_Booking_Actions {
             }
         }
 
+        // Update GROUP/EXCLUDE custom field if group members were provided
+        $group_members = isset($booking_data['group_members']) ? $booking_data['group_members'] : '';
+        $lead_booking_id = isset($booking_data['lead_booking_id']) ? $booking_data['lead_booking_id'] : '';
+
+        if (!empty($group_members) && !empty($booking_id)) {
+            bma_log('BMA: Updating GROUP/EXCLUDE field for new booking ' . $booking_id, 'debug');
+
+            // Build the GROUP/EXCLUDE field value
+            $group_field_value = $group_members;
+
+            // If this booking is not the lead, and a lead booking ID is provided, prepend it
+            if (!empty($lead_booking_id) && $lead_booking_id !== $booking_id) {
+                $group_field_value = 'G-' . $lead_booking_id . ',' . $group_members;
+            }
+
+            bma_log('BMA: GROUP/EXCLUDE field value: ' . $group_field_value, 'debug');
+
+            // Update the custom field
+            $update_result = $this->update_booking_custom_field($booking_id, 'GROUP/EXCLUDE', $group_field_value);
+
+            if ($update_result['success']) {
+                bma_log('BMA: GROUP/EXCLUDE field updated successfully for booking ' . $booking_id, 'info');
+            } else {
+                bma_log('BMA: WARNING: Failed to update GROUP/EXCLUDE field: ' . $update_result['message'], 'warning');
+                // Don't fail the entire booking if GROUP field update fails
+            }
+        }
+
         return array(
             'success' => true,
             'message' => 'Booking created successfully',
