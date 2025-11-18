@@ -1528,6 +1528,29 @@ if (!defined('ABSPATH')) {
     cursor: not-allowed;
 }
 
+.bma-btn-group {
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bma-btn-group:hover {
+    background: #2563eb;
+}
+
+.bma-btn-group .material-symbols-outlined {
+    font-size: 18px;
+}
+
 .bma-form-feedback {
     margin-top: 10px;
     padding: 10px;
@@ -3558,6 +3581,19 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
                             form.dataset.bookingId,    // Use hotel booking as temp lead ID
                             groupMembers               // Existing group selections
                         );
+                    } else if (window.openGroupManagementModal) {
+                        window.openGroupManagementModal(
+                            null,                      // No Resos booking ID (CREATE mode)
+                            form.dataset.bookingId,    // Hotel booking ID
+                            button.dataset.date,       // Date
+                            timeSelected,              // Selected time
+                            guestName,                 // Guest name
+                            people,                    // Number of people
+                            form.dataset.bookingId,    // Use hotel booking as temp lead ID
+                            groupMembers               // Existing group selections
+                        );
+                    } else {
+                        console.error('openGroupManagementModal function not found');
                     }
                 }
                 break;
