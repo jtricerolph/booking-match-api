@@ -965,13 +965,13 @@ class BMA_Booking_Actions {
         if (!empty($group_members) && !empty($booking_id)) {
             bma_log('BMA: Updating GROUP/EXCLUDE field for new booking ' . $booking_id, 'debug');
 
-            // Build the GROUP/EXCLUDE field value
-            $group_field_value = $group_members;
+            // Parse group_members string into array of individual booking IDs
+            $individual_ids = array_filter(array_map('trim', explode(',', $group_members)));
 
-            // If this booking is not the lead, and a lead booking ID is provided, prepend it
-            if (!empty($lead_booking_id) && $lead_booking_id !== $booking_id) {
-                $group_field_value = 'G-' . $lead_booking_id . ',' . $group_members;
-            }
+            bma_log('BMA: Parsed individual IDs: ' . json_encode($individual_ids), 'debug');
+
+            // Use build_group_exclude_value to format correctly (adds # prefix)
+            $group_field_value = $this->build_group_exclude_value(array(), $individual_ids, array());
 
             bma_log('BMA: GROUP/EXCLUDE field value: ' . $group_field_value, 'debug');
 
