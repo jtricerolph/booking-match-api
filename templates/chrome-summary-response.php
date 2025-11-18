@@ -19,14 +19,27 @@ if (empty($bookings)) {
     <?php foreach ($bookings as $booking):
         $group_id = $booking['group_id'] ?? null;
         $is_cancelled = $booking['is_cancelled'] ?? false;
+
+        // Check arrived/departed status
+        $arrival_date = $booking['arrival_date'] ?? null;
+        $departure_date = $booking['departure_date'] ?? null;
+        $today = date('Y-m-d');
+        $is_arrived = !$is_cancelled && $arrival_date && $arrival_date <= $today && $departure_date && $departure_date > $today;
+        $is_departed = !$is_cancelled && $departure_date && $departure_date <= $today;
     ?>
         <div class="booking-card <?php echo $is_cancelled ? 'cancelled-booking' : ''; ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
             <!-- Collapsed Summary -->
             <div class="booking-header">
                 <div class="booking-main-info">
                     <div class="booking-guest">
-                        <strong class="<?php echo $is_cancelled ? 'guest-name-cancelled' : ''; ?>"><?php echo esc_html($booking['guest_name']); ?></strong>
-                        <?php if (!$is_cancelled && isset($booking['status'])): ?>
+                        <strong><?php echo esc_html($booking['guest_name']); ?></strong>
+                        <?php if ($is_cancelled): ?>
+                            <span class="status-badge status-cancelled">Cancelled</span>
+                        <?php elseif ($is_departed): ?>
+                            <span class="status-badge status-departed">Departed</span>
+                        <?php elseif ($is_arrived): ?>
+                            <span class="status-badge status-arrived">Arrived</span>
+                        <?php elseif (isset($booking['status'])): ?>
                             <?php $status_lower = strtolower($booking['status']); ?>
                             <?php if ($status_lower === 'confirmed'): ?>
                                 <span class="status-badge status-confirmed">Confirmed</span>
@@ -312,11 +325,6 @@ if (empty($bookings)) {
     background: #fef2f2;
 }
 
-.guest-name-cancelled {
-    text-decoration: line-through;
-    color: #991b1b !important;
-}
-
 .booking-card.new-booking {
     border: 2px solid #10b981;
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
@@ -388,6 +396,24 @@ if (empty($bookings)) {
 .status-badge.status-unconfirmed {
     background: #fef3c7;
     color: #92400e;
+}
+
+.status-badge.status-cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.status-badge.status-arrived {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.status-badge.status-departed {
+    background: #e9d5ff;
+    color: #6b21a8;
+    border: 1px solid #c084fc;
 }
 
 .booking-dates-compact {
