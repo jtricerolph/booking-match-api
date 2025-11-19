@@ -690,11 +690,6 @@ class BMA_Matcher {
         $raw_bookings = $this->fetch_resos_bookings($date);
         $formatted_bookings = array();
 
-        // Log first booking structure for debugging
-        if (!empty($raw_bookings)) {
-            bma_log('BMA_Matcher: Sample raw Resos booking structure: ' . print_r($raw_bookings[0], true), 'debug');
-        }
-
         foreach ($raw_bookings as $booking) {
             // Extract Hotel Guest status from customFields
             $is_resident = false;

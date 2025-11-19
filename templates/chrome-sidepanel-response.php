@@ -580,7 +580,6 @@ if (!defined('ABSPATH')) {
 
                                 // Restaurant bookings data for Gantt chart
                                 const bookingsForDate = <?php echo wp_json_encode($bookings_for_date); ?>;
-                                console.log('DEBUG: Bookings for date ' + date + ':', bookingsForDate);
 
                                 // Watch for form visibility and initialize on first show
                                 const observer = new MutationObserver(function(mutations) {
@@ -598,8 +597,6 @@ if (!defined('ABSPATH')) {
                                 observer.observe(form, { attributes: true, attributeFilter: ['style'] });
 
                                 async function initializeCreateForm(date) {
-                                    console.log('Initializing create form for date:', date);
-
                                     // Fetch and populate opening hours
                                     try {
                                         const openingHoursData = await fetchOpeningHours(date);
@@ -657,7 +654,6 @@ if (!defined('ABSPATH')) {
                                                             'gantt-' + date     // chart ID
                                                         );
                                                         ganttViewport.innerHTML = ganttHtml;
-                                                        console.log('Gantt chart generated for date:', date, 'bookingsForDate:', bookingsForDate);
                                                     }).catch(error => {
                                                         console.error('Error fetching Gantt chart data:', error);
                                                         // Fallback: render chart without special events/available times
@@ -670,7 +666,6 @@ if (!defined('ABSPATH')) {
                                                             'gantt-' + date
                                                         );
                                                         ganttViewport.innerHTML = ganttHtml;
-                                                        console.log('Gantt chart generated (fallback) for date:', date, 'bookingsForDate:', bookingsForDate);
                                                     });
                                                 }
                                             }
@@ -680,8 +675,6 @@ if (!defined('ABSPATH')) {
                                             const defaultPeriod = periods[defaultPeriodIndex];
                                             const people = parseInt(form.querySelector('.form-people').value) || 2;
                                             await loadAvailableTimesForPeriod(date, people, defaultPeriod._id, defaultPeriodIndex);
-
-                                            console.log('Opening hours loaded, default period:', defaultPeriod.name);
                                         } else {
                                             tabsContainer.innerHTML = '<p style="color: #ef4444;">No service periods available</p>';
                                         }
@@ -716,7 +709,6 @@ if (!defined('ABSPATH')) {
 
                                     // Mark form as initialized
                                     form.dataset.initialized = 'true';
-                                    console.log('Form initialization complete for date:', date);
                                 }
 
                                 async function loadAvailableTimesForPeriod(date, people, periodId, periodIndex) {
@@ -726,7 +718,6 @@ if (!defined('ABSPATH')) {
                                         const section = sectionsContainer.querySelector(`.time-tab-content[data-tab-index="${periodIndex}"]`);
 
                                         if (!section) {
-                                            console.warn('Section not found for period index:', periodIndex);
                                             return;
                                         }
 
@@ -760,8 +751,6 @@ if (!defined('ABSPATH')) {
                                                     }
                                                 });
                                             });
-
-                                            console.log('Loaded available times for period index:', periodIndex);
                                         } else {
                                             section.innerHTML = '<p style="padding: 10px; text-align: center; color: #666;">No available times</p>';
                                         }
@@ -2822,7 +2811,6 @@ function parseGroupExcludeField(fieldValue) {
     }
   });
 
-  console.log('BMA: parseGroupExcludeField - input:', fieldValue, 'output:', result);
   return result;
 }
 
@@ -2840,16 +2828,12 @@ async function openGroupManagementModal(resosBookingId, hotelBookingId, date, re
   GROUP_MODAL_STATE.date = date;
   GROUP_MODAL_STATE.leadBookingId = resosBookingRef;
 
-  console.log('BMA: openGroupManagementModal - resosBookingRef (lead):', resosBookingRef);
-  console.log('BMA: openGroupManagementModal - groupExcludeField raw:', groupExcludeField);
   GROUP_MODAL_STATE.groupExcludeData = parseGroupExcludeField(groupExcludeField);
-  console.log('BMA: openGroupManagementModal - parsed groupExcludeData:', GROUP_MODAL_STATE.groupExcludeData);
 
   // Show modal
   modal.classList.remove('hidden');
 
   // Show ResOS booking info
-  console.log('BMA: ResOS data - time:', resosTime, 'guest:', resosGuest, 'people:', resosPeople);
   const time = (resosTime && resosTime.trim()) || 'N/A';
   const guestName = (resosGuest && resosGuest.trim()) || 'Unknown';
   const people = resosPeople || '0';
@@ -2884,7 +2868,6 @@ async function openGroupManagementModal(resosBookingId, hotelBookingId, date, re
 async function fetchBookingsForDate(date, excludeBookingId) {
   // Check if getAPIConfig is available
   if (typeof getAPIConfig !== 'function') {
-    console.error('getAPIConfig function is not defined! Checking window.apiClient...');
     // Fallback: try to use window.apiClient directly
     if (!window.apiClient) {
       throw new Error('API configuration not available. Please ensure the extension is properly initialized.');
@@ -2949,9 +2932,6 @@ function renderBookingsTable(bookings) {
     // Lead radio - pre-select based on ResOS "Booking #" field
     const isLeadBooking = String(booking.booking_id) === String(GROUP_MODAL_STATE.leadBookingId);
     const checkedAttr = isLeadBooking ? ' checked' : '';
-    if (isLeadBooking) {
-      console.log('BMA: Booking', booking.booking_id, 'matches ResOS Booking # field, pre-selected as lead');
-    }
     html += '<td>';
     html += `<input type="radio" name="lead-booking" value="${booking.booking_id}" class="lead-radio"${checkedAttr}>`;
     html += '</td>';
@@ -2960,9 +2940,6 @@ function renderBookingsTable(bookings) {
     const isInGroupField = groupExcludeData.groups.includes(String(booking.booking_id));
     const autoChecked = isLeadBooking || isInGroupField;
     const checkedGroupAttr = autoChecked ? ' checked' : '';
-    if (autoChecked) {
-      console.log('BMA: Auto-checking group checkbox for booking', booking.booking_id, '(lead or in field)');
-    }
     html += '<td>';
     html += `<input type="checkbox" value="${booking.booking_id}" class="group-checkbox"${checkedGroupAttr}>`;
     html += '</td>';
@@ -3220,9 +3197,7 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     html += '</button>';
 
     // 2. Manage Group button (always shown for matched bookings)
-    console.log('BMA: Manage Group button check:', { resosBookingId, hotelBookingId, date });
     if (resosBookingId) {
-        console.log('BMA: Adding Manage Group button');
         const resosTime = escapeHTML(resos.time || '');
         const resosGuest = escapeHTML(resos.name || '');
         const resosPeople = escapeHTML(resos.people || '0');
@@ -3240,8 +3215,6 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
         html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}" data-resos-time="${resosTime}" data-resos-guest="${resosGuest}" data-resos-people="${resosPeople}" data-resos-booking-ref="${resosBookingRef}" data-group-exclude="${groupExcludeField}" title="Manage Group">`;
         html += '<span class="material-symbols-outlined">groups</span>';
         html += '</button>';
-    } else {
-        console.log('BMA: Manage Group button NOT added - resosBookingId is falsy');
     }
 
     // 3. Exclude Match button (only for non-confirmed, non-matched-elsewhere matches)
@@ -3453,8 +3426,6 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
         }
     });
 
-    console.log('BMA: Submitting updates:', { booking_id: resosBookingId, updates: updates });
-
     // Find the submit button to show loading state
     const submitBtn = container.querySelector('.btn-confirm-match');
     if (submitBtn) {
@@ -3613,8 +3584,6 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
         }
     });
 
-    console.log('BMA: Event listeners attached to document.body');
-
     // Initialize group modal if present
     const groupModal = document.getElementById('group-management-modal');
     if (groupModal) {
@@ -3627,8 +3596,6 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
         if (cancelBtn) cancelBtn.addEventListener('click', closeGroupModal);
         if (overlay) overlay.addEventListener('click', closeGroupModal);
         if (saveBtn) saveBtn.addEventListener('click', saveGroupConfiguration);
-
-        console.log('BMA: Group modal initialized');
     }
 })();
 </script>

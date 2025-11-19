@@ -1665,13 +1665,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
             foreach ($resos_booking['customFields'] as $field) {
                 if (isset($field['name']) && $field['name'] === 'GROUP/EXCLUDE') {
                     $group_exclude_field = $field['value'] ?? '';
-                    error_log('BMA: Found GROUP/EXCLUDE field with value: ' . $group_exclude_field);
                     break;
                 }
             }
-        }
-        if (empty($group_exclude_field)) {
-            error_log('BMA: No GROUP/EXCLUDE field found in customFields');
         }
 
         // Determine if confirmed and matched elsewhere

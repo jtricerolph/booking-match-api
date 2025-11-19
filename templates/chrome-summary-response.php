@@ -54,7 +54,6 @@ if (empty($bookings)) {
         }
         $card_class_string = implode(' ', $card_classes);
     ?>
-        <!-- Debug: is_cancelled=<?php echo $is_cancelled ? 'true' : 'false'; ?>, is_new=<?php echo $is_new ? 'true' : 'false'; ?>, booking_cancelled=<?php echo esc_attr($booking['booking_cancelled'] ?? 'null'); ?>, card_classes=<?php echo esc_attr($card_class_string); ?> -->
         <div class="booking-card <?php echo esc_attr($card_class_string); ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($is_cancelled && !empty($booking['booking_cancelled'])): ?> data-booking-cancelled="<?php echo esc_attr($booking['booking_cancelled']); ?>"<?php endif; ?><?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
             <!-- Collapsed Summary -->
             <div class="booking-header">
