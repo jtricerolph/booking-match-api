@@ -269,10 +269,10 @@ if (!defined('ABSPATH')) {
                                         <?php endif; ?>
                                     </button>
 
-                                    <?php if ($match['match_info']['is_primary'] && !empty($match['resos_booking_id']) && !empty($match['restaurant_id'])): ?>
+                                    <?php if (!empty($match['resos_booking_id']) && !empty($match['restaurant_id'])): ?>
                                         <a href="https://app.resos.com/<?php echo esc_attr($match['restaurant_id']); ?>/bookings/timetable/<?php echo esc_attr($night['date']); ?>/<?php echo esc_attr($match['resos_booking_id']); ?>"
                                            class="bma-action-link bma-resos-link" target="_blank">
-                                            <span class="material-symbols-outlined">visibility</span> ResOS
+                                            <span class="material-symbols-outlined">open_in_new</span> ResOS
                                         </a>
                                     <?php endif; ?>
                                 </div>
