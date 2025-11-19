@@ -419,9 +419,9 @@ None
 ## Support
 
 **Documentation:**
-- `/reference/API_ENDPOINTS.md` - Complete API reference
-- `/reference/DEVELOPER_NOTES.md` - Architecture guide
-- `/reference/CHANGELOG.md` - Full change history
+- `/docs/REST_API_ENDPOINTS.md` - Complete API reference
+- `/docs/ARCHITECTURE.md` - Architecture guide
+- `/docs/CHANGELOG.md` - Full change history (see also root CHANGELOG.md)
 
 **Troubleshooting:**
 1. Check WordPress error logs

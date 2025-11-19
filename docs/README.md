@@ -56,6 +56,16 @@ Quick reference guide with common functions and use cases:
 
 **Use this when:** You need a quick reference or want to copy-paste working code examples.
 
+### [GANTT_CHART.md](GANTT_CHART.md)
+Complete guide for the Gantt Chart visualization class:
+- Display modes (full, medium, compact)
+- Configuration and customization
+- Data format specifications
+- JavaScript integration
+- Performance optimization
+
+**Use this when:** You need to implement or customize the Gantt chart timeline visualization.
+
 ## Quick Start
 
 ### For Developers Integrating with the API
@@ -63,12 +73,14 @@ Quick reference guide with common functions and use cases:
 1. Start with [REST_API_ENDPOINTS.md](REST_API_ENDPOINTS.md) to understand available endpoints
 2. Review [FUNCTION_CHEAT_SHEET.md](FUNCTION_CHEAT_SHEET.md) for quick examples
 3. Check [TEMPLATE_REFERENCE.md](TEMPLATE_REFERENCE.md) if building a UI client
+4. See [GANTT_CHART.md](GANTT_CHART.md) for timeline visualization
 
 ### For Developers Extending the Plugin
 
 1. Read [ARCHITECTURE.md](ARCHITECTURE.md) to understand the system
 2. Study [API_REFERENCE.md](API_REFERENCE.md) for class documentation
 3. Use [FUNCTION_CHEAT_SHEET.md](FUNCTION_CHEAT_SHEET.md) for common patterns
+4. Review [GANTT_CHART.md](GANTT_CHART.md) for visualization components
 
 ### For System Administrators
 
@@ -200,11 +212,13 @@ GPL v2 or later
 - [REST API Endpoints](REST_API_ENDPOINTS.md)
 - [Template Reference](TEMPLATE_REFERENCE.md)
 - [Function Cheat Sheet](FUNCTION_CHEAT_SHEET.md)
+- [Gantt Chart](GANTT_CHART.md)
 
 **Plugin Development:**
 - [API Reference](API_REFERENCE.md)
 - [Architecture](ARCHITECTURE.md)
 - [Function Cheat Sheet](FUNCTION_CHEAT_SHEET.md)
+- [Gantt Chart](GANTT_CHART.md)
 
 **System Administration:**
 - [Architecture](ARCHITECTURE.md)
@@ -216,11 +230,13 @@ GPL v2 or later
 - [REST API Endpoints](REST_API_ENDPOINTS.md)
 - [Template Reference](TEMPLATE_REFERENCE.md)
 - [Function Cheat Sheet](FUNCTION_CHEAT_SHEET.md)
+- [Gantt Chart](GANTT_CHART.md)
 
 **Backend Developers:**
 - [API Reference](API_REFERENCE.md)
 - [Architecture](ARCHITECTURE.md)
 - [Function Cheat Sheet](FUNCTION_CHEAT_SHEET.md)
+- [Gantt Chart](GANTT_CHART.md)
 
 **DevOps/System Admins:**
 - [Architecture](ARCHITECTURE.md#deployment-architecture)

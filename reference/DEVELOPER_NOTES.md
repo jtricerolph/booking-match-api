@@ -871,11 +871,13 @@ booking-match-api/
 │   └── class-bma-response-formatter.php   # HTML formatting
 ├── templates/
 │   └── chrome-sidepanel-response.php      # Extension UI template
-└── reference/
-    ├── DEVELOPER_NOTES.md          # This file
-    ├── API_ENDPOINTS.md            # Detailed API docs
-    ├── GANTT_CHART_CLASS.md        # Chart usage guide
-    └── BOOKING_CREATION_FLOW.md    # End-to-end flow
+└── docs/
+    ├── README.md                   # Documentation index
+    ├── API_REFERENCE.md            # Class and method reference
+    ├── ARCHITECTURE.md             # System architecture
+    ├── REST_API_ENDPOINTS.md       # API endpoint details
+    ├── FUNCTION_CHEAT_SHEET.md     # Quick reference
+    └── TEMPLATE_REFERENCE.md       # Template documentation
 ```
 
 ---

@@ -457,7 +457,7 @@ None in current version. All changes are additive and backward compatible.
 ## Support
 
 For issues, questions, or feature requests:
-1. Check documentation in `/reference/` directory
+1. Check documentation in `/docs/` directory
 2. Review WordPress error logs
 3. Test endpoints manually with cURL/Postman
 4. Verify Resos API key configuration
