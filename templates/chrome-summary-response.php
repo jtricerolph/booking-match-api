@@ -26,8 +26,8 @@ if (empty($bookings)) {
         // Departed: status is 'departed'
         $is_departed = !$is_cancelled && $status === 'departed';
 
-        // Arrived: status indicates in-house (NewBook uses "arrives" for checked-in guests)
-        $is_arrived = !$is_cancelled && in_array($status, ['arrives', 'in_house', 'checked_in']);
+        // Arrived: status indicates in-house (NewBook uses "arrived" for checked-in guests)
+        $is_arrived = !$is_cancelled && in_array($status, ['arrived', 'in_house', 'checked_in']);
 
         // Check if booking is "new" (placed or cancelled within 24 hours)
         $is_new = false;
