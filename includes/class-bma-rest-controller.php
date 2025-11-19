@@ -820,13 +820,22 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $match_count = count($night['resos_matches']);
             $has_package = $night['has_package'] ?? false;
 
-            // For CANCELLED bookings: Any ResOS match = CRITICAL (orphaned booking)
+            // For CANCELLED bookings: Orphaned ResOS bookings
             if ($is_cancelled && $has_matches) {
                 $actions_required[] = 'orphaned_resos';
-                $critical_count += $match_count;
-                // Flag each match as orphaned
+
+                // Flag each match as orphaned and determine severity based on match confidence
                 foreach ($night['resos_matches'] as &$match) {
                     $match['is_orphaned'] = true;
+                    $is_primary = $match['match_info']['is_primary'] ?? false;
+
+                    // Primary match = definitely orphaned (CRITICAL - needs cancellation)
+                    // Suggested match = potentially orphaned (WARNING - needs review)
+                    if ($is_primary) {
+                        $critical_count++;
+                    } else {
+                        $warning_count++;
+                    }
                 }
             }
             // For PLACED bookings: Normal logic

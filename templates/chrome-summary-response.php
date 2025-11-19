@@ -218,10 +218,15 @@ if (empty($bookings)) {
                                         <?php endif; ?>
                                     </span>
                                 </div>
-                                <?php if ($is_orphaned): ?>
+                                <?php if ($is_orphaned && $is_primary): ?>
                                     <div class="night-alert critical-alert">
                                         <span class="material-symbols-outlined">flag</span>
                                         ORPHANED ResOS booking - needs cancellation
+                                    </div>
+                                <?php elseif ($is_orphaned && !$is_primary): ?>
+                                    <div class="night-alert warning-alert">
+                                        <span class="material-symbols-outlined">warning</span>
+                                        Potential orphaned booking - review suggested match
                                     </div>
                                 <?php elseif (!$is_primary): ?>
                                     <div class="night-alert warning-alert">
@@ -259,9 +264,9 @@ if (empty($bookings)) {
                                     </div>
                                 <?php endforeach; ?>
                                 <?php if ($has_orphaned): ?>
-                                    <div class="night-alert critical-alert">
-                                        <span class="material-symbols-outlined">flag</span>
-                                        ORPHANED ResOS bookings - need cancellation
+                                    <div class="night-alert warning-alert">
+                                        <span class="material-symbols-outlined">warning</span>
+                                        Potential orphaned bookings - review matches
                                     </div>
                                 <?php endif; ?>
                                 <div class="night-alert warning-alert">
