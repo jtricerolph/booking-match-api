@@ -300,18 +300,18 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
                             <?php if ($is_group_member): ?>
-                                <span class="restaurant-status has-booking group-member-status" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Group booking">
+                                <span class="restaurant-status has-booking group-member-status" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Group booking" style="color: #10b981;">
                                     with <?php echo esc_html($lead_room); ?>
                                     <span class="material-symbols-outlined" style="color: #10b981; font-size: 16px; vertical-align: middle;">groups</span>
                                 </span>
                             <?php elseif ($has_suggestions): ?>
-                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review">
+                                <a href="#" class="restaurant-status has-booking has-updates clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Has suggested updates - click to review" style="color: #3b82f6;">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <span class="material-symbols-outlined" style="color: #3b82f6;">sync</span>
                                     <span class="material-symbols-outlined" style="color: #10b981;">check</span>
                                 </a>
                             <?php else: ?>
-                                <a href="#" class="restaurant-status has-booking clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Click to view in Restaurant tab">
+                                <a href="#" class="restaurant-status has-booking clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Click to view in Restaurant tab" style="color: #10b981;">
                                     <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                     <?php if ($is_stale): ?>
                                         <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
@@ -327,12 +327,12 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                             $pax = $match['people'] ?? 0;
                             $resos_id = $match['resos_booking_id'] ?? '';
                             ?>
-                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review">
+                            <a href="#" class="restaurant-status has-issue clickable-status" data-tab="restaurant" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($date); ?>" data-resos-id="<?php echo esc_attr($resos_id); ?>" title="Suggested match - click to review" style="color: #f59e0b;">
                                 <?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax
                                 <?php if ($is_stale): ?>
                                     <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
                                 <?php else: ?>
-                                    <span class="material-symbols-outlined">search</span>
+                                    <span class="material-symbols-outlined" style="color: #f59e0b;">search</span>
                                 <?php endif; ?>
                             </a>
                         <?php endif; ?>
@@ -410,7 +410,7 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                  data-date="<?php echo esc_attr($night_date); ?>"
                                  title="Click to create booking in Restaurant tab">
                                 <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                <span class="night-status">No booking</span>
+                                <span class="night-status" style="color: #6b7280;">No booking</span>
                                 <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
                                     <?php if ($is_stale): ?>
                                         <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
@@ -436,19 +436,18 @@ $restaurant_value = "{$restaurant_match_count}/{$total_staying_count}";
                                 $restaurant_id = $match['restaurant_id'] ?? '';
                                 $has_suggestions = $match['has_suggestions'] ?? false;
                             ?>
-                                <div class="night-row <?php echo $is_group_member ? 'resos-deep-link' : 'clickable-issue'; ?>"
+                                <div class="night-row clickable-issue"
                                      data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>"
                                      data-date="<?php echo esc_attr($night_date); ?>"
                                      <?php if ($is_group_member): ?>
-                                         data-resos-id="<?php echo esc_attr($resos_id); ?>"
-                                         data-restaurant-id="<?php echo esc_attr($restaurant_id); ?>"
-                                         title="Group booking - click to view in ResOS"
+                                         data-lead-room="<?php echo esc_attr($lead_room); ?>"
+                                         title="Group booking - click to view lead booking"
                                      <?php else: ?>
                                          data-resos-id="<?php echo esc_attr($resos_id); ?>"
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-time">
+                                    <span class="night-time" style="color: <?php echo $is_group_member ? '#10b981' : ($has_suggestions ? '#3b82f6' : ($is_primary ? '#10b981' : '#f59e0b')); ?>;">
                                         <?php if ($is_group_member): ?>
                                             with <?php echo esc_html($lead_room); ?>
                                             <span class="material-symbols-outlined" style="color: #10b981; font-size: 16px; vertical-align: middle;">groups</span>

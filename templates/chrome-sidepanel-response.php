@@ -269,10 +269,10 @@ if (!defined('ABSPATH')) {
                                         <?php endif; ?>
                                     </button>
 
-                                    <?php if ($match['match_info']['is_primary'] && !empty($match['resos_booking_id']) && !empty($match['restaurant_id'])): ?>
+                                    <?php if (!empty($match['resos_booking_id']) && !empty($match['restaurant_id'])): ?>
                                         <a href="https://app.resos.com/<?php echo esc_attr($match['restaurant_id']); ?>/bookings/timetable/<?php echo esc_attr($night['date']); ?>/<?php echo esc_attr($match['resos_booking_id']); ?>"
                                            class="bma-action-link bma-resos-link" target="_blank">
-                                            <span class="material-symbols-outlined">visibility</span> ResOS
+                                            <span class="material-symbols-outlined">open_in_new</span> ResOS
                                         </a>
                                     <?php endif; ?>
                                 </div>
@@ -393,14 +393,22 @@ if (!defined('ABSPATH')) {
                                 </div>
                             </div>
 
-                            <!-- Service Period Accordion Sections -->
-                            <div id="service-period-sections-<?php echo esc_attr($night['date']); ?>" class="service-period-sections">
+                            <!-- Service Period Tabs (for tab buttons) -->
+                            <div id="service-period-tabs-<?php echo esc_attr($night['date']); ?>" class="service-period-tabs">
                                 <p style="padding: 10px; text-align: center; color: #666;">Loading service periods...</p>
+                            </div>
+
+                            <!-- Time Slots Sections (for time slot content) -->
+                            <div id="time-slots-sections-<?php echo esc_attr($night['date']); ?>" class="time-slots-sections">
                             </div>
 
                             <!-- Hidden fields for selected time and period -->
                             <input type="hidden" class="form-time-selected" id="time-selected-<?php echo esc_attr($night['date']); ?>">
                             <input type="hidden" class="form-opening-hour-id" id="opening-hour-id-<?php echo esc_attr($night['date']); ?>">
+
+                            <!-- Hidden fields for group data -->
+                            <input type="hidden" class="form-group-members" id="group-members-<?php echo esc_attr($night['date']); ?>" value="">
+                            <input type="hidden" class="form-lead-booking" id="lead-booking-<?php echo esc_attr($night['date']); ?>" value="">
 
                             <!-- Collapsible Section 1: Booking Details -->
                             <div class="bma-expandable-section">
@@ -517,6 +525,13 @@ if (!defined('ABSPATH')) {
                                 <button type="button" class="bma-btn-cancel"
                                         data-action="toggle-create"
                                         data-date="<?php echo esc_attr($night['date']); ?>">Cancel</button>
+                                <button type="button" class="bma-btn-group"
+                                        data-action="open-group-create"
+                                        data-date="<?php echo esc_attr($night['date']); ?>"
+                                        title="Select group members">
+                                    <span class="material-symbols-outlined">groups</span>
+                                    Group
+                                </button>
                                 <button type="button" class="bma-btn-submit"
                                         data-action="submit-create"
                                         data-date="<?php echo esc_attr($night['date']); ?>">Create Booking</button>
@@ -565,7 +580,6 @@ if (!defined('ABSPATH')) {
 
                                 // Restaurant bookings data for Gantt chart
                                 const bookingsForDate = <?php echo wp_json_encode($bookings_for_date); ?>;
-                                console.log('DEBUG: Bookings for date ' + date + ':', bookingsForDate);
 
                                 // Watch for form visibility and initialize on first show
                                 const observer = new MutationObserver(function(mutations) {
@@ -583,8 +597,6 @@ if (!defined('ABSPATH')) {
                                 observer.observe(form, { attributes: true, attributeFilter: ['style'] });
 
                                 async function initializeCreateForm(date) {
-                                    console.log('Initializing create form for date:', date);
-
                                     // Fetch and populate opening hours
                                     try {
                                         const openingHoursData = await fetchOpeningHours(date);
@@ -642,7 +654,6 @@ if (!defined('ABSPATH')) {
                                                             'gantt-' + date     // chart ID
                                                         );
                                                         ganttViewport.innerHTML = ganttHtml;
-                                                        console.log('Gantt chart generated for date:', date, 'bookingsForDate:', bookingsForDate);
                                                     }).catch(error => {
                                                         console.error('Error fetching Gantt chart data:', error);
                                                         // Fallback: render chart without special events/available times
@@ -655,7 +666,6 @@ if (!defined('ABSPATH')) {
                                                             'gantt-' + date
                                                         );
                                                         ganttViewport.innerHTML = ganttHtml;
-                                                        console.log('Gantt chart generated (fallback) for date:', date, 'bookingsForDate:', bookingsForDate);
                                                     });
                                                 }
                                             }
@@ -665,8 +675,6 @@ if (!defined('ABSPATH')) {
                                             const defaultPeriod = periods[defaultPeriodIndex];
                                             const people = parseInt(form.querySelector('.form-people').value) || 2;
                                             await loadAvailableTimesForPeriod(date, people, defaultPeriod._id, defaultPeriodIndex);
-
-                                            console.log('Opening hours loaded, default period:', defaultPeriod.name);
                                         } else {
                                             tabsContainer.innerHTML = '<p style="color: #ef4444;">No service periods available</p>';
                                         }
@@ -701,7 +709,6 @@ if (!defined('ABSPATH')) {
 
                                     // Mark form as initialized
                                     form.dataset.initialized = 'true';
-                                    console.log('Form initialization complete for date:', date);
                                 }
 
                                 async function loadAvailableTimesForPeriod(date, people, periodId, periodIndex) {
@@ -711,7 +718,6 @@ if (!defined('ABSPATH')) {
                                         const section = sectionsContainer.querySelector(`.time-tab-content[data-tab-index="${periodIndex}"]`);
 
                                         if (!section) {
-                                            console.warn('Section not found for period index:', periodIndex);
                                             return;
                                         }
 
@@ -745,8 +751,6 @@ if (!defined('ABSPATH')) {
                                                     }
                                                 });
                                             });
-
-                                            console.log('Loaded available times for period index:', periodIndex);
                                         } else {
                                             section.innerHTML = '<p style="padding: 10px; text-align: center; color: #666;">No available times</p>';
                                         }
@@ -1511,6 +1515,29 @@ if (!defined('ABSPATH')) {
 .bma-btn-submit:disabled {
     background: #9ca3af;
     cursor: not-allowed;
+}
+
+.bma-btn-group {
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bma-btn-group:hover {
+    background: #2563eb;
+}
+
+.bma-btn-group .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .bma-form-feedback {
@@ -2584,7 +2611,11 @@ async function submitCreateBooking(date) {
         email: form.querySelector('.form-email').value,
         restaurant_note: form.querySelector('.form-notes').value,
         booking_ref: form.dataset.bookingId,
-        hotel_guest: 'Yes'
+        hotel_guest: 'Yes',
+
+        // Group data
+        group_members: form.querySelector('.form-group-members')?.value || '',
+        lead_booking_id: form.querySelector('.form-lead-booking')?.value || ''
     };
 
     // Validate required fields
@@ -2780,7 +2811,6 @@ function parseGroupExcludeField(fieldValue) {
     }
   });
 
-  console.log('BMA: parseGroupExcludeField - input:', fieldValue, 'output:', result);
   return result;
 }
 
@@ -2798,16 +2828,12 @@ async function openGroupManagementModal(resosBookingId, hotelBookingId, date, re
   GROUP_MODAL_STATE.date = date;
   GROUP_MODAL_STATE.leadBookingId = resosBookingRef;
 
-  console.log('BMA: openGroupManagementModal - resosBookingRef (lead):', resosBookingRef);
-  console.log('BMA: openGroupManagementModal - groupExcludeField raw:', groupExcludeField);
   GROUP_MODAL_STATE.groupExcludeData = parseGroupExcludeField(groupExcludeField);
-  console.log('BMA: openGroupManagementModal - parsed groupExcludeData:', GROUP_MODAL_STATE.groupExcludeData);
 
   // Show modal
   modal.classList.remove('hidden');
 
   // Show ResOS booking info
-  console.log('BMA: ResOS data - time:', resosTime, 'guest:', resosGuest, 'people:', resosPeople);
   const time = (resosTime && resosTime.trim()) || 'N/A';
   const guestName = (resosGuest && resosGuest.trim()) || 'Unknown';
   const people = resosPeople || '0';
@@ -2842,7 +2868,6 @@ async function openGroupManagementModal(resosBookingId, hotelBookingId, date, re
 async function fetchBookingsForDate(date, excludeBookingId) {
   // Check if getAPIConfig is available
   if (typeof getAPIConfig !== 'function') {
-    console.error('getAPIConfig function is not defined! Checking window.apiClient...');
     // Fallback: try to use window.apiClient directly
     if (!window.apiClient) {
       throw new Error('API configuration not available. Please ensure the extension is properly initialized.');
@@ -2907,9 +2932,6 @@ function renderBookingsTable(bookings) {
     // Lead radio - pre-select based on ResOS "Booking #" field
     const isLeadBooking = String(booking.booking_id) === String(GROUP_MODAL_STATE.leadBookingId);
     const checkedAttr = isLeadBooking ? ' checked' : '';
-    if (isLeadBooking) {
-      console.log('BMA: Booking', booking.booking_id, 'matches ResOS Booking # field, pre-selected as lead');
-    }
     html += '<td>';
     html += `<input type="radio" name="lead-booking" value="${booking.booking_id}" class="lead-radio"${checkedAttr}>`;
     html += '</td>';
@@ -2918,9 +2940,6 @@ function renderBookingsTable(bookings) {
     const isInGroupField = groupExcludeData.groups.includes(String(booking.booking_id));
     const autoChecked = isLeadBooking || isInGroupField;
     const checkedGroupAttr = autoChecked ? ' checked' : '';
-    if (autoChecked) {
-      console.log('BMA: Auto-checking group checkbox for booking', booking.booking_id, '(lead or in field)');
-    }
     html += '<td>';
     html += `<input type="checkbox" value="${booking.booking_id}" class="group-checkbox"${checkedGroupAttr}>`;
     html += '</td>';
@@ -3178,9 +3197,7 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
     html += '</button>';
 
     // 2. Manage Group button (always shown for matched bookings)
-    console.log('BMA: Manage Group button check:', { resosBookingId, hotelBookingId, date });
     if (resosBookingId) {
-        console.log('BMA: Adding Manage Group button');
         const resosTime = escapeHTML(resos.time || '');
         const resosGuest = escapeHTML(resos.name || '');
         const resosPeople = escapeHTML(resos.people || '0');
@@ -3198,8 +3215,6 @@ function buildComparisonHTML(data, date, resosBookingId, isConfirmed, isMatchedE
         html += `<button class="btn-manage-group" data-action="manage-group" data-resos-booking-id="${resosBookingId}" data-hotel-booking-id="${hotelBookingId}" data-date="${date}" data-resos-time="${resosTime}" data-resos-guest="${resosGuest}" data-resos-people="${resosPeople}" data-resos-booking-ref="${resosBookingRef}" data-group-exclude="${groupExcludeField}" title="Manage Group">`;
         html += '<span class="material-symbols-outlined">groups</span>';
         html += '</button>';
-    } else {
-        console.log('BMA: Manage Group button NOT added - resosBookingId is falsy');
     }
 
     // 3. Exclude Match button (only for non-confirmed, non-matched-elsewhere matches)
@@ -3411,8 +3426,6 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
         }
     });
 
-    console.log('BMA: Submitting updates:', { booking_id: resosBookingId, updates: updates });
-
     // Find the submit button to show loading state
     const submitBtn = container.querySelector('.btn-confirm-match');
     if (submitBtn) {
@@ -3509,6 +3522,10 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
                 submitUpdateBooking(button.dataset.date, button.dataset.resosBookingId);
                 break;
 
+            case 'open-group-create':
+                // Handled by chrome extension sidepanel.js event listener
+                break;
+
             case 'manage-group':
                 if (window.parent && window.parent.openGroupManagementModal) {
                     window.parent.openGroupManagementModal(
@@ -3567,8 +3584,6 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
         }
     });
 
-    console.log('BMA: Event listeners attached to document.body');
-
     // Initialize group modal if present
     const groupModal = document.getElementById('group-management-modal');
     if (groupModal) {
@@ -3581,8 +3596,6 @@ async function submitSuggestions(date, resosBookingId, hotelBookingId, isConfirm
         if (cancelBtn) cancelBtn.addEventListener('click', closeGroupModal);
         if (overlay) overlay.addEventListener('click', closeGroupModal);
         if (saveBtn) saveBtn.addEventListener('click', saveGroupConfiguration);
-
-        console.log('BMA: Group modal initialized');
     }
 })();
 </script>

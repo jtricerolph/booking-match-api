@@ -42,6 +42,38 @@ class BMA_Comparison {
     }
 
     /**
+     * Check if an email domain is in the excluded domains list
+     *
+     * @param string $email The email address to check
+     * @return bool True if domain is excluded, false otherwise
+     */
+    private function is_email_domain_excluded($email) {
+        if (empty($email)) {
+            return false;
+        }
+
+        // Extract domain from email
+        $email_parts = explode('@', $email);
+        if (count($email_parts) !== 2) {
+            return false; // Invalid email format
+        }
+
+        $domain = strtolower(trim($email_parts[1]));
+
+        // Get excluded domains from settings
+        $excluded_domains = get_option('bma_excluded_email_domains', '');
+        if (empty($excluded_domains)) {
+            return false; // No domains excluded
+        }
+
+        // Split comma-separated domains into array
+        $excluded_list = array_map('trim', explode(',', $excluded_domains));
+
+        // Check if domain is in excluded list
+        return in_array($domain, $excluded_list);
+    }
+
+    /**
      * Prepare comparison data between hotel booking and Resos booking
      *
      * @param array $hotel_booking NewBook booking data
@@ -257,26 +289,15 @@ class BMA_Comparison {
         $hotel_has_package = false;
         $package_inventory_name = get_option('bma_package_inventory_name', '');
 
-        bma_log("BMA DEBUG: Package detection - input_date: '{$input_date}', package_inventory_name option: '{$package_inventory_name}'", 'debug');
-        bma_log("BMA DEBUG: Has inventory_items: " . (isset($hotel_booking['inventory_items']) ? 'YES' : 'NO') . ", Count: " . (isset($hotel_booking['inventory_items']) ? count($hotel_booking['inventory_items']) : 0), 'debug');
-
         if (!empty($package_inventory_name) && isset($hotel_booking['inventory_items']) && is_array($hotel_booking['inventory_items'])) {
             foreach ($hotel_booking['inventory_items'] as $item) {
-                bma_log("BMA DEBUG: Inventory item - stay_date: '" . ($item['stay_date'] ?? 'NOT SET') . "', description: '" . ($item['description'] ?? 'NOT SET') . "'", 'debug');
                 if (isset($item['stay_date']) && $item['stay_date'] == $input_date) {
                     if (isset($item['description']) && stripos($item['description'], $package_inventory_name) !== false) {
-                        bma_log("BMA DEBUG: PACKAGE FOUND! Matched '{$package_inventory_name}' in '{$item['description']}'", 'debug');
                         $hotel_has_package = true;
                         break;
-                    } else {
-                        bma_log("BMA DEBUG: Date matches but description doesn't contain '{$package_inventory_name}'", 'debug');
                     }
-                } else {
-                    bma_log("BMA DEBUG: Date doesn't match - item date: '" . ($item['stay_date'] ?? 'NOT SET') . "' vs input: '{$input_date}'", 'debug');
                 }
             }
-        } else {
-            bma_log("BMA DEBUG: Package check skipped - package_inventory_name empty: " . (empty($package_inventory_name) ? 'YES' : 'NO'), 'debug');
         }
 
         // Check package/DBB match
@@ -313,9 +334,21 @@ class BMA_Comparison {
         }
 
         // Email: Suggest if Resos doesn't have one or if they don't match
+        // UNLESS NewBook email is excluded domain and Resos already has an email
         if (!empty($hotel_email)) {
-            if (empty($resos_email) || strtolower(trim($hotel_email)) !== strtolower(trim($resos_email))) {
+            $is_excluded_domain = $this->is_email_domain_excluded($hotel_email);
+
+            if (empty($resos_email)) {
+                // ResOS has NO email - suggest NewBook email even if excluded
+                // (better to have a forwarding email than no email)
                 $suggested_updates['email'] = $hotel_email;
+            } elseif (strtolower(trim($hotel_email)) !== strtolower(trim($resos_email))) {
+                // ResOS HAS an email and it doesn't match NewBook email
+                if (!$is_excluded_domain) {
+                    // NewBook email is NOT excluded - suggest the update
+                    $suggested_updates['email'] = $hotel_email;
+                }
+                // If NewBook email IS excluded domain - don't suggest overwriting ResOS email
             }
         }
 
@@ -333,19 +366,13 @@ class BMA_Comparison {
         // DBB is a "Yes only" radio button (no "No" option, just Yes or empty)
         // To clear: omit the field from customFields array (handled in update action)
         // Don't suggest if already matched
-        // DEBUG: Log DBB matching status
-        bma_log("BMA DEBUG: DBB Check - hotel_has_package: " . ($hotel_has_package ? 'YES' : 'NO') . ", resos_dbb: '{$resos_dbb}', matches[dbb]: " . (isset($matches['dbb']) && $matches['dbb'] ? 'TRUE' : 'FALSE'), 'debug');
         if (!isset($matches['dbb']) || !$matches['dbb']) {
             if ($hotel_has_package && $resos_dbb !== 'Yes') {
-                bma_log("BMA DEBUG: Suggesting DBB = 'Yes'", 'debug');
                 $suggested_updates['dbb'] = 'Yes';
             } elseif (!$hotel_has_package && $resos_dbb === 'Yes') {
-                bma_log("BMA DEBUG: Suggesting DBB = '' (clear)", 'debug');
                 // Suggest clearing DBB (empty string = omit from customFields array when updating)
                 $suggested_updates['dbb'] = '';
             }
-        } else {
-            bma_log("BMA DEBUG: DBB already matches, NOT suggesting update", 'debug');
         }
 
         // People/Covers: Suggest hotel occupancy if different from Resos covers

@@ -369,6 +369,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function match_booking($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             // Extract parameters
             $booking_id = $request->get_param('booking_id');
             $guest_name = $request->get_param('guest_name');
@@ -391,7 +394,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             // Search for booking(s)
             if ($booking_id) {
                 // Direct booking ID lookup
-                $bookings = $searcher->get_booking_by_id($booking_id, $force_refresh);
+                $bookings = $searcher->get_booking_by_id($booking_id, $force_refresh, $request_context);
                 if (!$bookings) {
                     return new WP_Error(
                         'booking_not_found',
@@ -409,7 +412,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     'phone' => $phone,
                     'group_id' => $group_id,
                     'agent_reference' => $agent_ref,
-                ));
+                ), $request_context);
 
                 if (is_wp_error($search_result)) {
                     return $search_result;
@@ -427,12 +430,35 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 }
             }
 
-            // Match each booking with Resos
+            // PRE-CACHE: Collect all unique dates from all bookings to prevent duplicate API calls
+            $all_dates = array();
+            foreach ($bookings as $booking) {
+                $dates = $this->extract_booking_dates($booking);
+                $all_dates = array_merge($all_dates, $dates);
+            }
+            $all_dates = array_unique($all_dates);
+
+            // Pre-populate cache for all dates BEFORE matching bookings
             $matcher = new BMA_Matcher();
+            $searcher = new BMA_NewBook_Search();
+
+            if (!empty($all_dates)) {
+                bma_log("Restaurant: Pre-caching " . count($all_dates) . " unique dates for booking", 'info');
+
+                foreach ($all_dates as $date) {
+                    // Warm ResOS cache
+                    $matcher->fetch_resos_bookings($date, $force_refresh);
+
+                    // Warm NewBook cache
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
+                }
+            }
+
+            // Match each booking with Resos
             $results = array();
 
             foreach ($bookings as $booking) {
-                $match_result = $matcher->match_booking_all_nights($booking, $force_refresh);
+                $match_result = $matcher->match_booking_all_nights($booking, $force_refresh, $request_context);
                 $results[] = $match_result;
             }
 
@@ -503,10 +529,29 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'sanitize_callback' => 'sanitize_text_field',
             ),
             'force_refresh' => array(
-                'description' => __('Force refresh of Resos cache', 'booking-match-api'),
+                'description' => __('Force refresh bookings list (not matching data)', 'booking-match-api'),
                 'type' => 'boolean',
                 'required' => false,
                 'default' => false,
+            ),
+            'force_refresh_matches' => array(
+                'description' => __('Force refresh matching/Resos data', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => false,
+            ),
+            'cancelled_hours' => array(
+                'description' => __('Show cancelled bookings from last X hours (24/48/72)', 'booking-match-api'),
+                'type' => 'integer',
+                'required' => false,
+                'default' => 24,
+                'sanitize_callback' => 'absint',
+            ),
+            'include_flagged_cancelled' => array(
+                'description' => __('Include older cancelled bookings (within 5 days) that have flags/issues', 'booking-match-api'),
+                'type' => 'boolean',
+                'required' => false,
+                'default' => true,
             ),
         );
     }
@@ -546,72 +591,174 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_summary($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $context = $request->get_param('context') ?: 'json';
             $limit = $request->get_param('limit') ?: 5;
-            $force_refresh = $request->get_param('force_refresh') ?: false;
 
-            bma_log("BMA Summary: Requested limit = {$limit}, context = {$context}", 'debug');
+            // Cancelled bookings parameters
+            $cancelled_hours = $request->get_param('cancelled_hours') ?: 24;
+            $include_flagged_cancelled = $request->get_param('include_flagged_cancelled') !== false ? $request->get_param('include_flagged_cancelled') : true;
 
-            // Fetch recently placed bookings from NewBook
+            // Separate force refresh controls
+            $force_refresh_bookings = $request->get_param('force_refresh') ?: false;
+            $force_refresh_matches = $request->get_param('force_refresh_matches') ?: false;
+
+            bma_log("BMA Summary: Requested limit = {$limit}, cancelled_hours = {$cancelled_hours}, context = {$context}, force_refresh_bookings = " . ($force_refresh_bookings ? 'true' : 'false') . ", force_refresh_matches = " . ($force_refresh_matches ? 'true' : 'false'), 'debug');
+
+            // Fetch recently placed bookings from NewBook (use force_refresh_bookings for THIS call only)
             $searcher = new BMA_NewBook_Search();
-            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit, 72, $force_refresh);
+            $recent_bookings = $searcher->fetch_recent_placed_bookings($limit, 72, $force_refresh_bookings, $request_context);
 
-            if (empty($recent_bookings)) {
-                // Return empty success response
-                if ($context === 'chrome-summary') {
-                    $formatter = new BMA_Response_Formatter();
-                    return array(
-                        'success' => true,
-                        'html' => $formatter->format_summary_html(array()),
-                        'critical_count' => 0,
-                        'warning_count' => 0,
-                        'bookings_count' => 0
-                    );
+            // Fetch recently cancelled bookings (last 5 days)
+            $cancelled_bookings = $searcher->fetch_recent_cancelled_bookings(5, $force_refresh_bookings, $request_context);
+
+            // PRE-CACHE: Collect all unique dates from all bookings to prevent duplicate API calls
+            $all_dates = array();
+            foreach ($recent_bookings as $nb_booking) {
+                $dates = $this->extract_booking_dates($nb_booking);
+                $all_dates = array_merge($all_dates, $dates);
+            }
+            foreach ($cancelled_bookings as $nb_booking) {
+                $dates = $this->extract_booking_dates($nb_booking);
+                $all_dates = array_merge($all_dates, $dates);
+            }
+            $all_dates = array_unique($all_dates);
+
+            // Pre-populate cache for all dates BEFORE processing bookings
+            $matcher = new BMA_Matcher();
+
+            if (!empty($all_dates)) {
+                bma_log("Summary: Pre-caching " . count($all_dates) . " unique dates", 'info');
+
+                foreach ($all_dates as $date) {
+                    // Warm ResOS cache
+                    $matcher->fetch_resos_bookings($date, $force_refresh_bookings);
+
+                    // Warm NewBook cache
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh_bookings, $request_context);
                 }
-
-                return array(
-                    'success' => true,
-                    'bookings' => array(),
-                    'critical_count' => 0,
-                    'warning_count' => 0,
-                    'bookings_count' => 0
-                );
             }
 
-            // Process each booking
+            // Process placed bookings
             $summary_bookings = array();
             $total_critical_count = 0;
             $total_warning_count = 0;
 
-            // Create matcher ONCE and reuse for all bookings to share cache
-            $matcher = new BMA_Matcher();
-
             foreach ($recent_bookings as $nb_booking) {
-                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh, $matcher);
+                // Check if booking is cancelled (even in "placed" section, it may have been cancelled after placement)
+                $booking_status = strtolower($nb_booking['booking_status'] ?? '');
+                $is_cancelled = ($booking_status === 'cancelled');
+
+                // Pass force_refresh_matches to matching operations (NOT force_refresh_bookings)
+                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh_matches, $matcher, $is_cancelled, $request_context);
                 $summary_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
             }
 
+            // Process cancelled bookings
+            $summary_cancelled = array();
+            $cancelled_critical_count = 0;
+            $cancelled_warning_count = 0;
+
+            // Calculate cutoff time for cancelled bookings filter
+            $cancelled_cutoff = date('Y-m-d H:i:s', strtotime("-{$cancelled_hours} hours"));
+
+            foreach ($cancelled_bookings as $nb_booking) {
+                // Process cancelled booking (orphaned ResOS bookings = CRITICAL)
+                $processed = $this->process_booking_for_summary($nb_booking, $force_refresh_matches, $matcher, true, $request_context);
+
+                // Get cancellation time (use booking_modified if available, else booking_id as proxy)
+                $cancelled_time = $nb_booking['booking_modified'] ?? null;
+
+                // Determine if booking should be included
+                $include_booking = false;
+
+                // Include if within time window
+                if ($cancelled_time && $cancelled_time >= $cancelled_cutoff) {
+                    $include_booking = true;
+                }
+
+                // Include if has flags (orphaned ResOS bookings) and include_flagged option is true
+                if ($include_flagged_cancelled && ($processed['critical_count'] > 0 || $processed['warning_count'] > 0)) {
+                    $include_booking = true;
+                }
+
+                if ($include_booking) {
+                    $summary_cancelled[] = $processed;
+                    $cancelled_critical_count += $processed['critical_count'];
+                    $cancelled_warning_count += $processed['warning_count'];
+                }
+            }
+
+            // Total counts (placed + cancelled)
+            $total_all_critical = $total_critical_count + $cancelled_critical_count;
+            $total_all_warning = $total_warning_count + $cancelled_warning_count;
+
+            // Merge placed and cancelled bookings into single activity array
+            $activity_bookings = array_merge($summary_bookings, $summary_cancelled);
+
+            // Remove duplicates (keep cancelled version if booking appears in both arrays)
+            $seen_ids = array();
+            $activity_bookings = array_filter($activity_bookings, function($booking) use (&$seen_ids) {
+                $booking_id = $booking['booking_id'];
+
+                // If we haven't seen this ID yet, mark it as seen
+                if (!isset($seen_ids[$booking_id])) {
+                    $seen_ids[$booking_id] = $booking;
+                    return true;
+                }
+
+                // If we've seen this ID before, keep the cancelled version (more current state)
+                if ($booking['is_cancelled'] && !$seen_ids[$booking_id]['is_cancelled']) {
+                    $seen_ids[$booking_id] = $booking;
+                    return true;
+                }
+
+                // Otherwise skip this duplicate
+                return false;
+            });
+
+            // Re-index array after filtering
+            $activity_bookings = array_values($activity_bookings);
+
+            // Sort by timestamp (most recent first)
+            usort($activity_bookings, function($a, $b) {
+                // Use booking_cancelled for cancelled, booking_placed for placed
+                $time_a = $a['is_cancelled'] ? ($a['booking_cancelled'] ?? $a['booking_placed']) : $a['booking_placed'];
+                $time_b = $b['is_cancelled'] ? ($b['booking_cancelled'] ?? $b['booking_placed']) : $b['booking_placed'];
+                return strcmp($time_b, $time_a); // DESC order (most recent first)
+            });
+
             // Format response based on context
-            if ($context === 'chrome-summary') {
+            if ($context === 'chrome-summary' || $context === 'webapp-summary') {
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
-                    'html' => $formatter->format_summary_html($summary_bookings),
-                    'critical_count' => $total_critical_count,
-                    'warning_count' => $total_warning_count,
-                    'bookings_count' => count($summary_bookings)
+                    'html_activity' => $formatter->format_summary_html($activity_bookings, $context),
+                    'activity_bookings' => $activity_bookings,
+                    'activity_count' => count($activity_bookings),
+                    'placed_count' => count($summary_bookings),
+                    'cancelled_count' => count($summary_cancelled),
+                    'critical_count' => $total_all_critical,
+                    'warning_count' => $total_all_warning,
+                    'badge_count' => $total_all_critical + $total_all_warning,
                 );
             }
 
             // Default JSON response
             return array(
                 'success' => true,
-                'bookings' => $summary_bookings,
-                'critical_count' => $total_critical_count,
-                'warning_count' => $total_warning_count,
-                'bookings_count' => count($summary_bookings)
+                'activity_bookings' => $activity_bookings,
+                'placed_bookings' => $summary_bookings,
+                'cancelled_bookings' => $summary_cancelled,
+                'activity_count' => count($activity_bookings),
+                'placed_count' => count($summary_bookings),
+                'cancelled_count' => count($summary_cancelled),
+                'critical_count' => $total_all_critical,
+                'warning_count' => $total_all_warning,
             );
 
         } catch (Exception $e) {
@@ -627,7 +774,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for summary display
      */
-    private function process_booking_for_summary($booking, $force_refresh = false, $matcher = null) {
+    private function process_booking_for_summary($booking, $force_refresh = false, $matcher = null, $is_cancelled = false, $request_context = null) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -652,7 +799,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         if ($matcher === null) {
             $matcher = new BMA_Matcher();
         }
-        $match_result = $matcher->match_booking_all_nights($booking, $force_refresh);
+        $match_result = $matcher->match_booking_all_nights($booking, $force_refresh, $request_context);
 
         // Determine booking source (placeholder)
         $source_detector = new BMA_Booking_Source();
@@ -664,35 +811,56 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
         // Analyze for actions required with severity levels
         $actions_required = array();
-        $critical_count = 0;  // Red flags: Package bookings without restaurant
+        $critical_count = 0;  // Red flags: Package bookings without restaurant, orphaned ResOS bookings for cancelled
         $warning_count = 0;   // Amber flags: Multiple matches, non-primary matches
         $check_issues = count($issues);
 
-        foreach ($match_result['nights'] as $night) {
+        foreach ($match_result['nights'] as &$night) {
             $has_matches = !empty($night['resos_matches']);
             $match_count = count($night['resos_matches']);
             $has_package = $night['has_package'] ?? false;
 
-            // CRITICAL: Package booking without restaurant reservation
-            if ($has_package && !$has_matches) {
-                $actions_required[] = 'package_alert';
-                $critical_count++;
-            }
-            // WARNING: Multiple matches requiring manual selection
-            elseif ($match_count > 1) {
-                $actions_required[] = 'multiple_matches';
-                $warning_count++;
-            }
-            // WARNING: Single non-primary (suggested) match
-            elseif ($match_count === 1) {
-                $is_primary = $night['resos_matches'][0]['match_info']['is_primary'] ?? false;
-                if (!$is_primary) {
-                    $actions_required[] = 'non_primary_match';
-                    $warning_count++;
+            // For CANCELLED bookings: Orphaned ResOS bookings
+            if ($is_cancelled && $has_matches) {
+                $actions_required[] = 'orphaned_resos';
+
+                // Flag each match as orphaned and determine severity based on match confidence
+                foreach ($night['resos_matches'] as &$match) {
+                    $match['is_orphaned'] = true;
+                    $is_primary = $match['match_info']['is_primary'] ?? false;
+
+                    // Primary match = definitely orphaned (CRITICAL - needs cancellation)
+                    // Suggested match = potentially orphaned (WARNING - needs review)
+                    if ($is_primary) {
+                        $critical_count++;
+                    } else {
+                        $warning_count++;
+                    }
                 }
             }
-            // NO ISSUE: Missing restaurant booking when no package
-            // (Not flagged as this is normal)
+            // For PLACED bookings: Normal logic
+            elseif (!$is_cancelled) {
+                // CRITICAL: Package booking without restaurant reservation
+                if ($has_package && !$has_matches) {
+                    $actions_required[] = 'package_alert';
+                    $critical_count++;
+                }
+                // WARNING: Multiple matches requiring manual selection
+                elseif ($match_count > 1) {
+                    $actions_required[] = 'multiple_matches';
+                    $warning_count++;
+                }
+                // WARNING: Single non-primary (suggested) match
+                elseif ($match_count === 1) {
+                    $is_primary = $night['resos_matches'][0]['match_info']['is_primary'] ?? false;
+                    if (!$is_primary) {
+                        $actions_required[] = 'non_primary_match';
+                        $warning_count++;
+                    }
+                }
+                // NO ISSUE: Missing restaurant booking when no package
+                // (Not flagged as this is normal)
+            }
         }
 
         // Add check issues if any (warnings)
@@ -701,8 +869,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $warning_count += $check_issues;
         }
 
-        // Extract booking placed timestamp
+        // Extract booking timestamps
         $booking_placed = $booking['booking_placed'] ?? null;
+        $booking_cancelled = $booking['booking_cancelled'] ?? null;
 
         return array(
             'booking_id' => $booking_id,
@@ -716,11 +885,13 @@ class BMA_REST_Controller extends WP_REST_Controller {
             'occupants' => $occupants,
             'tariffs' => $tariffs,
             'booking_placed' => $booking_placed,
+            'booking_cancelled' => $booking_cancelled,
             'actions_required' => array_unique($actions_required),
             'critical_count' => $critical_count,
             'warning_count' => $warning_count,
             'check_issues' => $check_issues,
-            'match_details' => $match_result
+            'match_details' => $match_result,
+            'is_cancelled' => $is_cancelled
         );
     }
 
@@ -788,13 +959,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_checks($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $booking_id = $request->get_param('booking_id');
             $context = $request->get_param('context') ?: 'json';
             $force_refresh = $request->get_param('force_refresh') ?: false;
 
             // Fetch booking details from NewBook
             $searcher = new BMA_NewBook_Search();
-            $nb_booking = $searcher->get_booking_by_id($booking_id, $force_refresh);
+            $nb_booking = $searcher->get_booking_by_id($booking_id, $force_refresh, $request_context);
 
             if (!$nb_booking) {
                 return new WP_Error(
@@ -804,9 +978,27 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 );
             }
 
-            // Process booking through matcher to get normalized fields (same as Restaurant tab)
+            // PRE-CACHE: Extract all dates from booking to prevent duplicate API calls
+            $dates = $this->extract_booking_dates($nb_booking);
+
+            // Pre-populate cache for all dates BEFORE processing
             $matcher = new BMA_Matcher();
-            $processed_booking = $matcher->match_booking_all_nights($nb_booking, $force_refresh);
+            $searcher = new BMA_NewBook_Search();
+
+            if (!empty($dates)) {
+                bma_log("Checks: Pre-caching " . count($dates) . " dates for booking", 'info');
+
+                foreach ($dates as $date) {
+                    // Warm ResOS cache
+                    $matcher->fetch_resos_bookings($date, $force_refresh);
+
+                    // Warm NewBook cache
+                    $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
+                }
+            }
+
+            // Process booking through matcher to get normalized fields (same as Restaurant tab)
+            $processed_booking = $matcher->match_booking_all_nights($nb_booking, $force_refresh, $request_context);
 
             // TODO: Implement actual checks logic
             // For now, return placeholder/stub data
@@ -819,12 +1011,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             $badge_count = 0; // No issues for now
 
-            if ($context === 'chrome-checks') {
-                // Format as HTML for Chrome sidepanel
+            if ($context === 'chrome-checks' || $context === 'webapp-checks') {
+                // Format as HTML for Chrome sidepanel or webapp
                 $formatter = new BMA_Response_Formatter();
                 return array(
                     'success' => true,
-                    'html' => $formatter->format_checks_html($processed_booking, $checks),
+                    'html' => $formatter->format_checks_html($processed_booking, $checks, $context),
                     'badge_count' => $badge_count,
                 );
             }
@@ -856,8 +1048,12 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_staying_bookings($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $date = $request->get_param('date');
             $force_refresh = $request->get_param('force_refresh') ?: false;
+            $context = $request->get_param('context') ?: '';
 
             // Default to today if no date provided
             if (empty($date)) {
@@ -873,6 +1069,103 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 );
             }
 
+            // Handle chrome-restaurant context - return ResOS bookings with hotel room numbers
+            if ($context === 'chrome-restaurant') {
+                bma_log("BMA Restaurant: Fetching ResOS bookings for date = {$date} (chrome-restaurant context)", 'debug');
+
+                $matcher = new BMA_Matcher();
+                $resos_bookings = $matcher->fetch_resos_bookings($date, $force_refresh);
+
+                bma_log("BMA Restaurant: Fetched " . count($resos_bookings) . " ResOS bookings for {$date}", 'debug');
+
+                // Fetch hotel bookings to match room numbers
+                $searcher = new BMA_NewBook_Search();
+                $hotel_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
+
+                bma_log("BMA Restaurant: Fetched " . count($hotel_bookings) . " hotel bookings for {$date}", 'debug');
+
+                // Create hotel bookings lookup by booking_id for fast matching
+                $hotel_bookings_by_id = array();
+                foreach ($hotel_bookings as $hotel_booking) {
+                    $booking_id = $hotel_booking['booking_id'] ?? null;
+                    if ($booking_id) {
+                        $hotel_bookings_by_id[$booking_id] = $hotel_booking;
+                    }
+                }
+
+                // Enhance each ResOS booking with room number from hotel booking match
+                $enhanced_bookings = array();
+                foreach ($resos_bookings as $resos_booking) {
+                    // Extract "Booking #" and "GROUP/EXCLUDE" custom fields
+                    $hotel_booking_id = null;
+                    $group_exclude_field = null;
+                    $custom_fields = $resos_booking['customFields'] ?? array();
+
+                    foreach ($custom_fields as $field) {
+                        if (($field['name'] ?? '') === 'Booking #') {
+                            $hotel_booking_id = $field['value'] ?? null;
+                        } elseif (($field['name'] ?? '') === 'GROUP/EXCLUDE') {
+                            $group_exclude_field = $field['value'] ?? null;
+                        }
+                    }
+
+                    // If we have a hotel booking ID, look up the room number
+                    if ($hotel_booking_id && isset($hotel_bookings_by_id[$hotel_booking_id])) {
+                        $hotel_booking = $hotel_bookings_by_id[$hotel_booking_id];
+                        $resos_booking['room_number'] = $hotel_booking['site_name'] ?? '';
+                        $resos_booking['is_hotel_guest'] = true;
+                        $resos_booking['hotel_booking_id'] = $hotel_booking_id;
+
+                        bma_log("BMA Restaurant: Matched ResOS booking {$resos_booking['_id']} to hotel booking {$hotel_booking_id}, room: {$resos_booking['room_number']}", 'debug');
+                    } else {
+                        $resos_booking['room_number'] = '';
+                        $resos_booking['is_hotel_guest'] = false;
+                    }
+
+                    // Parse GROUP/EXCLUDE field to find grouped booking rooms
+                    $grouped_rooms = array();
+                    if ($group_exclude_field) {
+                        $parts = explode(',', $group_exclude_field);
+                        foreach ($parts as $part) {
+                            $part = trim($part);
+                            // Extract booking ID from G-{id}, #${id}, etc.
+                            $grouped_booking_id = null;
+                            if (strpos($part, 'G-') === 0) {
+                                $grouped_booking_id = substr($part, 2);
+                            } elseif (strpos($part, '#') === 0) {
+                                $grouped_booking_id = substr($part, 1);
+                            }
+
+                            // Look up room number for this grouped booking
+                            if ($grouped_booking_id && isset($hotel_bookings_by_id[$grouped_booking_id])) {
+                                $grouped_hotel_booking = $hotel_bookings_by_id[$grouped_booking_id];
+                                $grouped_room = $grouped_hotel_booking['site_name'] ?? '';
+                                // Don't include the primary room in the grouped rooms list
+                                if ($grouped_room && $grouped_booking_id !== $hotel_booking_id) {
+                                    $grouped_rooms[] = $grouped_room;
+                                }
+                            }
+                        }
+                    }
+                    $resos_booking['grouped_rooms'] = $grouped_rooms;
+
+                    $enhanced_bookings[] = $resos_booking;
+                }
+
+                bma_log("BMA Restaurant: Enhanced " . count($enhanced_bookings) . " bookings with room numbers", 'debug');
+
+                // Return enhanced bookings in format expected by client-side JavaScript
+                return array(
+                    'success' => true,
+                    'bookings_by_date' => array(
+                        $date => $enhanced_bookings
+                    ),
+                    'bookings' => $enhanced_bookings,
+                    'date' => $date,
+                    'booking_count' => count($enhanced_bookings)
+                );
+            }
+
             bma_log("BMA Staying: Fetching bookings for date = {$date}", 'debug');
 
             // Calculate adjacent dates
@@ -881,9 +1174,15 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Fetch each date individually for per-date cache reuse
             $searcher = new BMA_NewBook_Search();
-            $previous_bookings = $searcher->fetch_hotel_bookings_for_date($previous_date, $force_refresh);
-            $current_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh);
-            $next_bookings = $searcher->fetch_hotel_bookings_for_date($next_date, $force_refresh);
+            $previous_bookings = $searcher->fetch_hotel_bookings_for_date($previous_date, $force_refresh, $request_context);
+            $current_bookings = $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
+            $next_bookings = $searcher->fetch_hotel_bookings_for_date($next_date, $force_refresh, $request_context);
+
+            // PRE-CACHE: Pre-populate ResOS cache for target date to prevent duplicate API calls
+            // (All bookings will call match_single_night for same target date)
+            $matcher = new BMA_Matcher();
+            bma_log("Staying: Pre-caching ResOS data for dates: $previous_date, $date, $next_date", 'info');
+            $matcher->fetch_resos_bookings($date, $force_refresh);
 
             // Merge and deduplicate by booking_id
             $all_bookings = array();
@@ -945,8 +1244,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             $total_critical_count = 0;
             $total_warning_count = 0;
 
-            // Create matcher ONCE and reuse for all bookings to share cache
-            $matcher = new BMA_Matcher();
+            // Matcher already created above for pre-caching, reuse for all bookings to share cache
 
             foreach ($bookings_by_room as $room => $dates) {
                 // Check if room has a booking staying on target date
@@ -1009,14 +1307,14 @@ class BMA_REST_Controller extends WP_REST_Controller {
                     $timeline_data['next_vacant'] = true;
                 }
 
-                $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data, $matcher);
+                $processed = $this->process_booking_for_staying($current_booking, $date, $force_refresh, $timeline_data, $matcher, $request_context);
                 $processed_bookings[] = $processed;
                 $total_critical_count += $processed['critical_count'];
                 $total_warning_count += $processed['warning_count'];
             }
 
             // Get list of all sites/rooms
-            $all_sites = $searcher->fetch_sites();
+            $all_sites = $searcher->fetch_sites($request_context);
 
             // Create a map of occupied room names
             $occupied_rooms = array();
@@ -1121,7 +1419,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Process a booking for staying display
      */
-    private function process_booking_for_staying($booking, $target_date, $force_refresh = false, $timeline_data = array(), $matcher = null) {
+    private function process_booking_for_staying($booking, $target_date, $force_refresh = false, $timeline_data = array(), $matcher = null, $request_context = null) {
         // Extract basic info
         $booking_id = $booking['booking_id'];
         $guest_name = $this->extract_guest_name($booking);
@@ -1168,7 +1466,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
         $reflection = new ReflectionClass($matcher);
         $method = $reflection->getMethod('match_single_night');
         $method->setAccessible(true);
-        $night_result = $method->invoke($matcher, $booking, $target_date, $force_refresh);
+        $night_result = $method->invoke($matcher, $booking, $target_date, $force_refresh, $request_context);
 
         $matches = $night_result['resos_matches'] ?? array();
 
@@ -1226,6 +1524,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_comparison($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $booking_id = $request->get_param('booking_id');
             $date = $request->get_param('date');
             $resos_booking_id = $request->get_param('resos_booking_id');
@@ -1234,7 +1535,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
 
             // Fetch hotel booking
             $searcher = new BMA_NewBook_Search();
-            $hotel_booking = $searcher->get_booking_by_id($booking_id, $force_refresh);
+            $hotel_booking = $searcher->get_booking_by_id($booking_id, $force_refresh, $request_context);
 
             if (!$hotel_booking) {
                 return new WP_Error(
@@ -1282,7 +1583,7 @@ class BMA_REST_Controller extends WP_REST_Controller {
             } else {
                 // No specific Resos booking ID - find best match for this date
                 // Use matcher to get matches for this night
-                $night_match = $this->get_night_match_from_all($hotel_booking, $date, $force_refresh);
+                $night_match = $this->get_night_match_from_all($hotel_booking, $date, $force_refresh, $request_context);
 
                 if (empty($night_match['resos_matches'])) {
                     return new WP_Error(
@@ -1373,13 +1674,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
             foreach ($resos_booking['customFields'] as $field) {
                 if (isset($field['name']) && $field['name'] === 'GROUP/EXCLUDE') {
                     $group_exclude_field = $field['value'] ?? '';
-                    error_log('BMA: Found GROUP/EXCLUDE field with value: ' . $group_exclude_field);
                     break;
                 }
             }
-        }
-        if (empty($group_exclude_field)) {
-            error_log('BMA: No GROUP/EXCLUDE field found in customFields');
         }
 
         // Determine if confirmed and matched elsewhere
@@ -1538,9 +1835,9 @@ class BMA_REST_Controller extends WP_REST_Controller {
     /**
      * Helper method to get night match data
      */
-    private function get_night_match_from_all($hotel_booking, $date, $force_refresh = false) {
+    private function get_night_match_from_all($hotel_booking, $date, $force_refresh = false, $request_context = null) {
         $matcher = new BMA_Matcher();
-        $all_matches = $matcher->match_booking_all_nights($hotel_booking, $force_refresh);
+        $all_matches = $matcher->match_booking_all_nights($hotel_booking, $force_refresh, $request_context);
 
         // Find the match for the requested date
         foreach ($all_matches['nights'] as $night) {
@@ -1752,13 +2049,16 @@ class BMA_REST_Controller extends WP_REST_Controller {
      */
     public function get_bookings_for_date($request) {
         try {
+            // Capture request context for comprehensive logging
+            $request_context = bma_get_request_context($request);
+
             $date = $request->get_param('date');
             $exclude_booking_id = $request->get_param('exclude_booking_id');
 
             $search = new BMA_NewBook_Search();
 
             // Fetch all hotel bookings for this date
-            $bookings = $search->fetch_hotel_bookings_for_date($date);
+            $bookings = $search->fetch_hotel_bookings_for_date($date, false, $request_context);
 
             if (empty($bookings)) {
                 return rest_ensure_response(array(
@@ -1964,6 +2264,10 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'dbb' => $request->get_param('dbb'),
                 'dietary_requirements' => $request->get_param('dietary_requirements'),
                 'dietary_other' => $request->get_param('dietary_other'),
+
+                // Group data
+                'group_members' => $request->get_param('group_members'),
+                'lead_booking_id' => $request->get_param('lead_booking_id'),
             );
 
             $actions = new BMA_Booking_Actions();
@@ -2106,6 +2410,20 @@ class BMA_REST_Controller extends WP_REST_Controller {
                 'description' => __('Other dietary requirements (free text)', 'booking-match-api'),
                 'type' => 'string',
                 'required' => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'group_members' => array(
+                'description' => __('Group member booking IDs (G- prefixed, comma-separated)', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'default' => '',
+                'sanitize_callback' => 'sanitize_text_field',
+            ),
+            'lead_booking_id' => array(
+                'description' => __('Lead booking ID for the group', 'booking-match-api'),
+                'type' => 'string',
+                'required' => false,
+                'default' => '',
                 'sanitize_callback' => 'sanitize_text_field',
             ),
         );
@@ -2523,5 +2841,31 @@ class BMA_REST_Controller extends WP_REST_Controller {
         }
 
         return $html;
+    }
+
+    /**
+     * Extract all dates (nights) from a booking
+     *
+     * @param array $booking Booking array with booking_arrival and booking_departure
+     * @return array Array of dates in Y-m-d format
+     */
+    private function extract_booking_dates($booking) {
+        $arrival = substr($booking['booking_arrival'] ?? '', 0, 10);
+        $departure = substr($booking['booking_departure'] ?? '', 0, 10);
+
+        if (empty($arrival) || empty($departure)) {
+            return array();
+        }
+
+        $dates = array();
+        $current = new DateTime($arrival);
+        $end = new DateTime($departure);
+
+        while ($current < $end) {
+            $dates[] = $current->format('Y-m-d');
+            $current->modify('+1 day');
+        }
+
+        return $dates;
     }
 }

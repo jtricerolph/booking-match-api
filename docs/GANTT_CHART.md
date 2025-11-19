@@ -708,15 +708,9 @@ echo $chart_html;
 
 ---
 
-## Future Enhancements
+## Related Documentation
 
-Potential improvements to consider:
-
-1. **Drag & Drop:** Allow repositioning bookings
-2. **Click Handlers:** Attach booking click events
-3. **Real-Time Updates:** WebSocket integration
-4. **Color Coding:** Different colors for booking status
-5. **Table Indicators:** Show table assignments
-6. **Zoom Levels:** Dynamic viewport adjustment
-7. **Print Optimization:** CSS for printing
-8. **Accessibility:** ARIA labels and keyboard navigation
+- [REST_API_ENDPOINTS.md](REST_API_ENDPOINTS.md) - API endpoint reference
+- [API_REFERENCE.md](API_REFERENCE.md) - Class and method documentation
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
+- [FUNCTION_CHEAT_SHEET.md](FUNCTION_CHEAT_SHEET.md) - Quick reference guide

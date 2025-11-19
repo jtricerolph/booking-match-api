@@ -20,6 +20,7 @@ class BMA_Admin {
     public function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
+        add_action('admin_init', array($this, 'handle_clear_transients'));
         add_filter('plugin_action_links_booking-match-api/booking-match-api.php', array($this, 'add_settings_link'));
     }
 
@@ -132,6 +133,27 @@ class BMA_Admin {
             )
         );
 
+        register_setting(
+            'bma_settings_group',
+            'bma_use_newbook_cache',
+            array(
+                'type' => 'boolean',
+                'sanitize_callback' => 'rest_sanitize_boolean',
+                'default' => true
+            )
+        );
+
+        // Register excluded email domains setting
+        register_setting(
+            'bma_settings_group',
+            'bma_excluded_email_domains',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => array($this, 'sanitize_excluded_domains'),
+                'default' => ''
+            )
+        );
+
         // Register debug logging setting
         register_setting(
             'bma_settings_group',
@@ -175,6 +197,14 @@ class BMA_Admin {
             'booking-match-api'
         );
 
+        // Add Cache Maintenance section
+        add_settings_section(
+            'bma_cache_maintenance_section',
+            __('Cache Maintenance', 'booking-match-api'),
+            array($this, 'render_cache_maintenance_section_description'),
+            'booking-match-api'
+        );
+
         // Add general settings fields
         add_settings_field(
             'bma_booking_page_url',
@@ -196,6 +226,14 @@ class BMA_Admin {
             'bma_hotel_id',
             __('Hotel ID', 'booking-match-api'),
             array($this, 'render_hotel_id_field'),
+            'booking-match-api',
+            'bma_general_section'
+        );
+
+        add_settings_field(
+            'bma_excluded_email_domains',
+            __('Excluded Email Domains', 'booking-match-api'),
+            array($this, 'render_excluded_email_domains_field'),
             'booking-match-api',
             'bma_general_section'
         );
@@ -242,6 +280,14 @@ class BMA_Admin {
             'bma_newbook_section'
         );
 
+        add_settings_field(
+            'bma_use_newbook_cache',
+            __('API Caching', 'booking-match-api'),
+            array($this, 'render_use_newbook_cache_field'),
+            'booking-match-api',
+            'bma_newbook_section'
+        );
+
         // Add debug settings fields
         add_settings_field(
             'bma_enable_debug_logging',
@@ -249,6 +295,15 @@ class BMA_Admin {
             array($this, 'render_debug_logging_field'),
             'booking-match-api',
             'bma_debug_section'
+        );
+
+        // Add cache maintenance fields
+        add_settings_field(
+            'bma_clear_old_transients',
+            __('Clear Old Transients', 'booking-match-api'),
+            array($this, 'render_clear_transients_field'),
+            'booking-match-api',
+            'bma_cache_maintenance_section'
         );
     }
 
@@ -264,6 +319,31 @@ class BMA_Admin {
         $url = trailingslashit(esc_url_raw($url));
 
         return $url;
+    }
+
+    /**
+     * Sanitize excluded email domains input
+     */
+    public function sanitize_excluded_domains($input) {
+        if (empty($input)) {
+            return '';
+        }
+
+        // Split by comma or newline, trim, lowercase, remove @ prefix
+        $domains = preg_split('/[\n,]+/', $input);
+        $cleaned = array();
+
+        foreach ($domains as $domain) {
+            $domain = trim(strtolower($domain));
+            $domain = ltrim($domain, '@'); // Remove leading @ if present
+
+            if (!empty($domain)) {
+                $cleaned[] = $domain;
+            }
+        }
+
+        // Return as comma-separated string for storage
+        return implode(',', $cleaned);
     }
 
     /**
@@ -338,6 +418,31 @@ class BMA_Admin {
     }
 
     /**
+     * Render excluded email domains field
+     */
+    public function render_excluded_email_domains_field() {
+        $value = get_option('bma_excluded_email_domains', '');
+        // Convert comma-separated to newline-separated for display
+        $display_value = str_replace(',', "\n", $value);
+
+        echo '<textarea name="bma_excluded_email_domains" id="bma_excluded_email_domains" rows="4" class="large-text code">' . esc_textarea($display_value) . '</textarea>';
+        echo '<p class="description">';
+        echo __('Enter email domains to exclude from email update suggestions (one per line or comma-separated).', 'booking-match-api');
+        echo '<br />';
+        echo __('Example: <code>booking.com</code>, <code>expedia.com</code>, <code>hotels.com</code>', 'booking-match-api');
+        echo '<br />';
+        echo '<strong>' . __('Use case:', 'booking-match-api') . '</strong> ' . __('Agent bookings often use forwarding emails (@booking.com, @expedia.com). If the guest entered their personal email in Resos, you don\'t want to overwrite it with the forwarding address.', 'booking-match-api');
+        echo '<br />';
+        echo '<strong>' . __('Logic:', 'booking-match-api') . '</strong>';
+        echo '<ul style="margin: 5px 0 0 20px;">';
+        echo '<li>' . __('If Resos has <strong>no email</strong> → Still suggest excluded domain email (better than nothing)', 'booking-match-api') . '</li>';
+        echo '<li>' . __('If Resos has email + NewBook has excluded domain → Don\'t suggest overwriting', 'booking-match-api') . '</li>';
+        echo '<li>' . __('If Resos has email + NewBook has non-excluded domain → Normal suggestion logic', 'booking-match-api') . '</li>';
+        echo '</ul>';
+        echo '</p>';
+    }
+
+    /**
      * Render Resos API key field
      */
     public function render_resos_api_key_field() {
@@ -398,6 +503,41 @@ class BMA_Admin {
     }
 
     /**
+     * Render NewBook cache plugin toggle field
+     */
+    public function render_use_newbook_cache_field() {
+        $enabled = get_option('bma_use_newbook_cache', true);
+        $cache_plugin_active = class_exists('NewBook_API_Cache');
+
+        echo '<label for="bma_use_newbook_cache">';
+        echo '<input type="checkbox" name="bma_use_newbook_cache" id="bma_use_newbook_cache" value="1" ' . checked($enabled, true, false);
+
+        if (!$cache_plugin_active) {
+            echo ' disabled';
+        }
+
+        echo ' />';
+        echo ' ' . __('Use NewBook API Cache plugin for faster performance', 'booking-match-api');
+        echo '</label>';
+
+        if ($cache_plugin_active) {
+            echo '<p class="description" style="color: #46b450;">';
+            echo '✓ ' . __('NewBook API Cache plugin detected and active', 'booking-match-api');
+            echo '<br />';
+            echo '<a href="' . admin_url('options-general.php?page=newbook-cache-settings') . '">';
+            echo __('Configure cache settings', 'booking-match-api') . ' →';
+            echo '</a>';
+            echo '</p>';
+        } else {
+            echo '<p class="description" style="color: #f0b849;">';
+            echo '⚠ ' . __('NewBook API Cache plugin not installed', 'booking-match-api');
+            echo '<br />';
+            echo __('Install the newbook-api-cache plugin to enable caching and reduce API calls by ~95%.', 'booking-match-api');
+            echo '</p>';
+        }
+    }
+
+    /**
      * Render debug logging field
      */
     public function render_debug_logging_field() {
@@ -409,6 +549,79 @@ class BMA_Admin {
         echo '<p class="description">';
         echo __('When enabled, the plugin will write detailed debug information to the WordPress debug.log file. Disable this in production to improve performance and reduce log file size.', 'booking-match-api');
         echo '</p>';
+    }
+
+    /**
+     * Render Cache Maintenance section description
+     */
+    public function render_cache_maintenance_section_description() {
+        echo '<p>' . __('Advanced maintenance tools for clearing old cache data. Use with caution.', 'booking-match-api') . '</p>';
+    }
+
+    /**
+     * Render clear transients field
+     */
+    public function render_clear_transients_field() {
+        // Check if transients were just cleared
+        if (isset($_GET['transients_cleared'])) {
+            echo '<div class="notice notice-success inline" style="margin: 0 0 10px 0; padding: 8px 12px;">';
+            echo '<p style="margin: 0.5em 0;"><strong>✓ Old transients cleared successfully!</strong></p>';
+            echo '</div>';
+        }
+
+        echo '<p>';
+        echo '<a href="' . wp_nonce_url(admin_url('options-general.php?page=booking-match-api&action=clear_bma_transients'), 'clear_bma_transients') . '" class="button button-secondary">';
+        echo __('Clear Old BMA Transients', 'booking-match-api');
+        echo '</a>';
+        echo '</p>';
+        echo '<p class="description">';
+        echo __('Click this button to remove old cached data from previous plugin versions.', 'booking-match-api');
+        echo '<br />';
+        echo __('<strong>Use case:</strong> After updating the plugin, old transient cache entries may cause stale data issues. Clearing them forces fresh data from the cache plugin or API.', 'booking-match-api');
+        echo '<br />';
+        echo '<strong style="color: #d63638;">' . __('Note:', 'booking-match-api') . '</strong> ' . __('This is safe to run and only removes legacy cache entries (bma_newbook_* transients).', 'booking-match-api');
+        echo '</p>';
+    }
+
+    /**
+     * Handle clear transients action
+     */
+    public function handle_clear_transients() {
+        // Check if we're on the right page and action
+        if (!isset($_GET['page']) || $_GET['page'] !== 'booking-match-api') {
+            return;
+        }
+
+        if (!isset($_GET['action']) || $_GET['action'] !== 'clear_bma_transients') {
+            return;
+        }
+
+        // Check nonce
+        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'clear_bma_transients')) {
+            wp_die(__('Security check failed.', 'booking-match-api'));
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Unauthorized.', 'booking-match-api'));
+        }
+
+        // Clear old BMA transients
+        global $wpdb;
+        $deleted = $wpdb->query(
+            "DELETE FROM {$wpdb->options}
+             WHERE option_name LIKE '_transient_bma_newbook_%'
+             OR option_name LIKE '_transient_timeout_bma_newbook_%'"
+        );
+
+        bma_log("Cleared {$deleted} old BMA transients", 'info');
+
+        // Redirect back with success message
+        wp_redirect(add_query_arg(array(
+            'page' => 'booking-match-api',
+            'transients_cleared' => '1'
+        ), admin_url('options-general.php')));
+        exit;
     }
 
     /**

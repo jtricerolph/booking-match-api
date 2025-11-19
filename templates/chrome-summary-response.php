@@ -14,17 +14,63 @@ if (empty($bookings)) {
     return;
 }
 ?>
-
+<!-- Template Version: 2025-01-19 00:35 Use only NewBook status for arrived/departed -->
 <div class="bma-summary">
     <?php foreach ($bookings as $booking):
         $group_id = $booking['group_id'] ?? null;
+        $is_cancelled = $booking['is_cancelled'] ?? false;
+
+        // Check arrived/departed status - purely based on NewBook status field
+        $status = isset($booking['status']) ? strtolower($booking['status']) : '';
+
+        // Departed: status is 'departed'
+        $is_departed = !$is_cancelled && $status === 'departed';
+
+        // Arrived: status indicates in-house (NewBook uses "arrived" for checked-in guests)
+        $is_arrived = !$is_cancelled && in_array($status, ['arrived', 'in_house', 'checked_in']);
+
+        // Check if booking is "new" (placed or cancelled within 24 hours)
+        $is_new = false;
+        $now = time();
+        $new_threshold = 24 * 60 * 60; // 24 hours in seconds
+
+        if ($is_cancelled && !empty($booking['booking_cancelled'])) {
+            // Check if recently cancelled
+            $cancelled_time = strtotime($booking['booking_cancelled']);
+            $is_new = ($now - $cancelled_time) <= $new_threshold;
+        } elseif (!$is_cancelled && !empty($booking['booking_placed'])) {
+            // Check if recently placed
+            $placed_time = strtotime($booking['booking_placed']);
+            $is_new = ($now - $placed_time) <= $new_threshold;
+        }
+
+        // Build CSS classes
+        $card_classes = array();
+        if ($is_cancelled) {
+            $card_classes[] = 'cancelled-booking';
+        }
+        if ($is_new) {
+            $card_classes[] = 'new-booking';
+        }
+        $card_class_string = implode(' ', $card_classes);
     ?>
-        <div class="booking-card" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
+        <div class="booking-card <?php echo esc_attr($card_class_string); ?>" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-booking-placed="<?php echo esc_attr($booking['booking_placed'] ?? ''); ?>"<?php if ($is_cancelled && !empty($booking['booking_cancelled'])): ?> data-booking-cancelled="<?php echo esc_attr($booking['booking_cancelled']); ?>"<?php endif; ?><?php if ($group_id): ?> data-group-id="<?php echo esc_attr($group_id); ?>"<?php endif; ?>>
             <!-- Collapsed Summary -->
             <div class="booking-header">
                 <div class="booking-main-info">
                     <div class="booking-guest">
                         <strong><?php echo esc_html($booking['guest_name']); ?></strong>
+                        <?php if ($is_cancelled): ?>
+                            <span class="status-badge status-cancelled">Cancelled</span>
+                        <?php elseif ($is_departed): ?>
+                            <span class="status-badge status-departed">Departed</span>
+                        <?php elseif ($is_arrived): ?>
+                            <span class="status-badge status-arrived">Arrived</span>
+                        <?php elseif ($status === 'confirmed'): ?>
+                            <span class="status-badge status-confirmed">Confirmed</span>
+                        <?php elseif (in_array($status, ['provisional', 'unconfirmed'])): ?>
+                            <span class="status-badge status-unconfirmed">Unconfirmed</span>
+                        <?php endif; ?>
                     </div>
                     <div class="booking-dates-compact">
                         <span><?php echo esc_html(date('D, d/m/y', strtotime($booking['arrival_date']))); ?></span>
@@ -51,8 +97,10 @@ if (empty($bookings)) {
 
                 <span class="expand-icon">▼</span>
 
-                <!-- Time Since Placed -->
-                <?php if (!empty($booking['booking_placed'])): ?>
+                <!-- Time Since Placed/Cancelled -->
+                <?php if ($is_cancelled && !empty($booking['booking_cancelled'])): ?>
+                    <div class="time-since-placed" data-placed-time="<?php echo esc_attr($booking['booking_cancelled']); ?>"></div>
+                <?php elseif (!empty($booking['booking_placed'])): ?>
                     <div class="time-since-placed" data-placed-time="<?php echo esc_attr($booking['booking_placed']); ?>"></div>
                 <?php endif; ?>
             </div>
@@ -109,7 +157,7 @@ if (empty($bookings)) {
                                 <!-- No booking -->
                                 <div class="night-row clickable-issue create-booking-link" data-booking-id="<?php echo esc_attr($booking['booking_id']); ?>" data-date="<?php echo esc_attr($night_date); ?>" title="Click to create booking in Restaurant tab">
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-status">No booking</span>
+                                    <span class="night-status" style="color: #6b7280;">No booking</span>
                                     <span class="status-icon <?php echo $has_package ? 'critical' : 'ok'; ?>">
                                         <?php if ($is_stale): ?>
                                             <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
@@ -131,6 +179,7 @@ if (empty($bookings)) {
                                 $is_primary = $match['match_info']['is_primary'] ?? false;
                                 $is_group_member = $match['match_info']['is_group_member'] ?? false;
                                 $has_suggestions = $match['has_suggestions'] ?? false;
+                                $is_orphaned = $match['is_orphaned'] ?? false;
                                 $time = date('H:i', strtotime($match['time']));
                                 $pax = $match['people'] ?? 0;
                                 $lead_room = $match['match_info']['lead_booking_room'] ?? 'N/A';
@@ -149,7 +198,7 @@ if (empty($bookings)) {
                                          title="<?php echo $has_suggestions ? 'Has suggested updates - click to review in Restaurant tab' : 'Click to view in Restaurant tab'; ?>"
                                      <?php endif; ?>>
                                     <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                    <span class="night-time">
+                                    <span class="night-time" style="color: <?php echo $is_group_member ? '#10b981' : ($has_suggestions ? '#3b82f6' : ($is_primary ? '#10b981' : '#f59e0b')); ?>;">
                                         <?php if ($is_group_member): ?>
                                             <?php echo esc_html($time); ?> with <?php echo esc_html($lead_room); ?>
                                         <?php else: ?>
@@ -169,7 +218,17 @@ if (empty($bookings)) {
                                         <?php endif; ?>
                                     </span>
                                 </div>
-                                <?php if (!$is_primary): ?>
+                                <?php if ($is_orphaned && $is_primary): ?>
+                                    <div class="night-alert critical-alert">
+                                        <span class="material-symbols-outlined">flag</span>
+                                        ORPHANED ResOS booking - needs cancellation
+                                    </div>
+                                <?php elseif ($is_orphaned && !$is_primary): ?>
+                                    <div class="night-alert warning-alert">
+                                        <span class="material-symbols-outlined">warning</span>
+                                        Potential orphaned booking - review suggested match
+                                    </div>
+                                <?php elseif (!$is_primary): ?>
                                     <div class="night-alert warning-alert">
                                         <span class="material-symbols-outlined">warning</span>
                                         Suggested match - low confidence
@@ -177,8 +236,12 @@ if (empty($bookings)) {
                                 <?php endif; ?>
                             <?php else: ?>
                                 <!-- Multiple matches -->
-                                <?php foreach ($matches as $match):
+                                <?php
+                                $has_orphaned = false;
+                                foreach ($matches as $match):
                                     $is_primary = $match['match_info']['is_primary'] ?? false;
+                                    $is_orphaned = $match['is_orphaned'] ?? false;
+                                    if ($is_orphaned) $has_orphaned = true;
                                     $time = date('H:i', strtotime($match['time']));
                                     $pax = $match['people'] ?? 0;
                                     $resos_id = $match['resos_booking_id'] ?? '';
@@ -190,7 +253,7 @@ if (empty($bookings)) {
                                          data-date="<?php echo esc_attr($night_date); ?>"
                                          title="Click to view in Restaurant tab">
                                         <span class="night-date"><?php echo esc_html(date('D, d/m', strtotime($night_date))); ?>:</span>
-                                        <span class="night-time"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
+                                        <span class="night-time" style="color: <?php echo $is_primary ? '#10b981' : '#f59e0b'; ?>;"><?php echo esc_html($time); ?>, <?php echo esc_html($pax); ?> pax</span>
                                         <span class="status-icon <?php echo $is_primary ? 'ok' : 'warning'; ?>">
                                             <?php if ($is_stale): ?>
                                                 <span class="material-symbols-outlined stale-indicator" title="Data from cache - may be outdated">sync_problem</span>
@@ -200,6 +263,12 @@ if (empty($bookings)) {
                                         </span>
                                     </div>
                                 <?php endforeach; ?>
+                                <?php if ($has_orphaned): ?>
+                                    <div class="night-alert warning-alert">
+                                        <span class="material-symbols-outlined">warning</span>
+                                        Potential orphaned bookings - review matches
+                                    </div>
+                                <?php endif; ?>
                                 <div class="night-alert warning-alert">
                                     <span class="material-symbols-outlined">warning</span>
                                     Multiple matches - needs review
@@ -276,10 +345,23 @@ if (empty($bookings)) {
     border-color: #3182ce;
 }
 
+.booking-card.cancelled-booking {
+    border: 2px solid #ef4444 !important;
+    opacity: 0.85;
+}
+
+.booking-card.cancelled-booking .booking-header {
+    background: #fef2f2;
+}
+
 .booking-card.new-booking {
-    border: 2px solid #10b981;
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
     animation: glow 2s ease-in-out infinite;
+}
+
+/* Green border only for non-cancelled new bookings */
+.booking-card.new-booking:not(.cancelled-booking) {
+    border: 2px solid #10b981;
 }
 
 @keyframes glow {
@@ -298,6 +380,12 @@ if (empty($bookings)) {
     align-items: center;
     gap: 8px;
     position: relative;
+    border-radius: 8px; /* Fully rounded by default (when collapsed) */
+}
+
+/* When card is expanded, header only has top rounded corners */
+.booking-card.expanded .booking-header {
+    border-radius: 8px 8px 0 0;
 }
 
 .booking-main-info {
@@ -308,10 +396,54 @@ if (empty($bookings)) {
     gap: 2px;
 }
 
+.booking-guest {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
 .booking-guest strong {
     font-size: 14px;
     color: #2d3748;
     line-height: 1.2;
+}
+
+/* Status badges for confirmed/unconfirmed bookings */
+.status-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-badge.status-confirmed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.status-unconfirmed {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.status-cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-badge.status-arrived {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-badge.status-departed {
+    background: #e9d5ff;
+    color: #6b21a8;
 }
 
 .booking-dates-compact {
@@ -373,6 +505,7 @@ if (empty($bookings)) {
 .booking-details {
     padding: 0 8px 8px 8px;
     border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 8px 8px; /* Rounded bottom corners when expanded */
 }
 
 /* Compact Details Section */
@@ -416,7 +549,7 @@ if (empty($bookings)) {
 }
 
 .detail-section h4 .material-symbols-outlined {
-    font-size: 16px;
+    font-size: 10px;
 }
 
 /* Clickable Restaurant Header */

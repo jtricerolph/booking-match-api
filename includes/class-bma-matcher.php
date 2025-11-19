@@ -25,9 +25,10 @@ class BMA_Matcher {
      *
      * @param array $booking NewBook booking data
      * @param bool $force_refresh Force refresh of Resos cache
+     * @param array $request_context Request context for logging (user, IP, route, etc.)
      * @return array Match results for all nights
      */
-    public function match_booking_all_nights($booking, $force_refresh = false) {
+    public function match_booking_all_nights($booking, $force_refresh = false, $request_context = null) {
         // Extract arrival and departure dates
         $arrival = $booking['booking_arrival'] ?? '';
         $departure = $booking['booking_departure'] ?? '';
@@ -48,7 +49,7 @@ class BMA_Matcher {
         // Match for each night
         $night_matches = array();
         foreach ($nights as $night) {
-            $match = $this->match_single_night($booking, $night, $force_refresh);
+            $match = $this->match_single_night($booking, $night, $force_refresh, $request_context);
             $night_matches[] = $match;
         }
 
@@ -83,13 +84,13 @@ class BMA_Matcher {
     /**
      * Match booking for a single night
      */
-    private function match_single_night($booking, $date, $force_refresh = false) {
+    private function match_single_night($booking, $date, $force_refresh = false, $request_context = null) {
         // Fetch Resos bookings for this date
         $resos_bookings = $this->fetch_resos_bookings($date, $force_refresh);
 
         // Fetch ALL hotel bookings for this date (for "matched elsewhere" checking)
         // Note: Caching is now handled in call_api(), not at matcher level
-        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date);
+        $all_hotel_bookings = $this->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
 
         // Build array of all hotel booking IDs for this date (excluding current booking)
         $current_booking_id = $booking['booking_id'] ?? '';
@@ -487,11 +488,43 @@ class BMA_Matcher {
             return $cached;
         }
 
+        // ============================================
+        // LOCK-BASED REQUEST DEDUPLICATION
+        // Prevent multiple parallel requests from hitting ResOS API for same date
+        // ============================================
+        $lock_key = $cache_key . '_lock';
+        $lock_wait_seconds = 0;
+        $max_wait_seconds = 10; // Reduced from 30 to prevent gateway timeouts
+
+        // Check if another request is already fetching this data
+        while (get_transient($lock_key) !== false && $lock_wait_seconds < $max_wait_seconds) {
+            // Another request is currently fetching - wait for it to complete
+            usleep(200000); // Wait 0.2 seconds (reduced from 0.5s for faster polling)
+            $lock_wait_seconds += 0.2;
+
+            // Check if cache is now populated by the other request
+            $cached = get_transient($cache_key);
+            if ($cached !== false) {
+                bma_log("BMA: ResOS ✓ CACHE HIT after lock wait ({$lock_wait_seconds}s) for date {$date}", 'info');
+                return $cached;
+            }
+        }
+
+        // If we hit max wait time, proceed anyway to avoid cascade timeouts
+        if (get_transient($lock_key) !== false) {
+            bma_log("BMA: ResOS lock timeout ({$max_wait_seconds}s) - proceeding anyway for date {$date}", 'warning');
+        }
+
+        // Set lock to indicate this request is fetching data (15 second lock)
+        set_transient($lock_key, time(), 15);
+        // ============================================
+
         // Get Resos API key (check new option first, fallback to old)
         $api_key = get_option('bma_resos_api_key') ?: get_option('hotel_booking_resos_api_key');
 
         if (empty($api_key)) {
             bma_log("BMA ERROR: Resos API key not configured", 'error');
+            delete_transient($lock_key); // Release lock before returning
             return array();
         }
 
@@ -507,72 +540,79 @@ class BMA_Matcher {
             'timeout' => 30
         );
 
-        $response = wp_remote_get($url, $args);
+        // Make request and process response (lock released in finally block)
+        try {
+            $response = wp_remote_get($url, $args);
 
-        if (is_wp_error($response)) {
-            bma_log("BMA ERROR: Resos API call failed for date {$date}: " . $response->get_error_message(), 'error');
+            if (is_wp_error($response)) {
+                bma_log("BMA ERROR: Resos API call failed for date {$date}: " . $response->get_error_message(), 'error');
 
-            // Try to return stale cache if available (with _stale suffix)
-            $stale_cache = get_transient($cache_key . '_stale');
-            if ($stale_cache !== false) {
-                bma_log("BMA WARNING: Returning stale cache for date {$date} due to API failure", 'warning');
-                $this->stale_cache_dates[] = $date;
-                return $stale_cache;
+                // Try to return stale cache if available (with _stale suffix)
+                $stale_cache = get_transient($cache_key . '_stale');
+                if ($stale_cache !== false) {
+                    bma_log("BMA WARNING: Returning stale cache for date {$date} due to API failure", 'warning');
+                    $this->stale_cache_dates[] = $date;
+                    return $stale_cache;
+                }
+
+                return array();
             }
 
-            return array();
-        }
+            $http_code = wp_remote_retrieve_response_code($response);
+            if ($http_code !== 200) {
+                bma_log("BMA ERROR: Resos API returned HTTP {$http_code} for date {$date}", 'error');
 
-        $http_code = wp_remote_retrieve_response_code($response);
-        if ($http_code !== 200) {
-            bma_log("BMA ERROR: Resos API returned HTTP {$http_code} for date {$date}", 'error');
+                // Try to return stale cache
+                $stale_cache = get_transient($cache_key . '_stale');
+                if ($stale_cache !== false) {
+                    bma_log("BMA WARNING: Returning stale cache for date {$date} due to HTTP {$http_code}", 'warning');
+                    $this->stale_cache_dates[] = $date;
+                    return $stale_cache;
+                }
 
-            // Try to return stale cache
-            $stale_cache = get_transient($cache_key . '_stale');
-            if ($stale_cache !== false) {
-                bma_log("BMA WARNING: Returning stale cache for date {$date} due to HTTP {$http_code}", 'warning');
-                $this->stale_cache_dates[] = $date;
-                return $stale_cache;
+                return array();
             }
 
-            return array();
-        }
+            $body = wp_remote_retrieve_body($response);
+            $data = json_decode($body, true);
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
+            if (!is_array($data)) {
+                bma_log("BMA ERROR: Resos API returned invalid JSON for date {$date}", 'error');
 
-        if (!is_array($data)) {
-            bma_log("BMA ERROR: Resos API returned invalid JSON for date {$date}", 'error');
+                // Try to return stale cache
+                $stale_cache = get_transient($cache_key . '_stale');
+                if ($stale_cache !== false) {
+                    bma_log("BMA WARNING: Returning stale cache for date {$date} due to invalid JSON", 'warning');
+                    $this->stale_cache_dates[] = $date;
+                    return $stale_cache;
+                }
 
-            // Try to return stale cache
-            $stale_cache = get_transient($cache_key . '_stale');
-            if ($stale_cache !== false) {
-                bma_log("BMA WARNING: Returning stale cache for date {$date} due to invalid JSON", 'warning');
-                $this->stale_cache_dates[] = $date;
-                return $stale_cache;
+                return array();
             }
 
-            return array();
-        }
+            // Filter out canceled/no-show
+            $excluded_statuses = array('canceled', 'cancelled', 'no_show', 'no-show', 'deleted');
+            $filtered = array();
 
-        // Filter out canceled/no-show
-        $excluded_statuses = array('canceled', 'cancelled', 'no_show', 'no-show', 'deleted');
-        $filtered = array();
-
-        foreach ($data as $booking) {
-            $status = strtolower($booking['status'] ?? '');
-            if (!in_array($status, $excluded_statuses)) {
-                $filtered[] = $booking;
+            foreach ($data as $booking) {
+                $status = strtolower($booking['status'] ?? '');
+                if (!in_array($status, $excluded_statuses)) {
+                    $filtered[] = $booking;
+                }
             }
+
+            // Cache for 60 seconds
+            set_transient($cache_key, $filtered, 60);
+
+            // Also set a stale cache (5 minutes) as fallback
+            set_transient($cache_key . '_stale', $filtered, 300);
+
+            return $filtered;
+
+        } finally {
+            // Always release lock, even if there was an error
+            delete_transient($lock_key);
         }
-
-        // Cache for 60 seconds
-        set_transient($cache_key, $filtered, 60);
-
-        // Also set a stale cache (5 minutes) as fallback
-        set_transient($cache_key . '_stale', $filtered, 300);
-
-        return $filtered;
     }
 
     /**
@@ -649,11 +689,6 @@ class BMA_Matcher {
     public function fetch_all_bookings_for_gantt($date) {
         $raw_bookings = $this->fetch_resos_bookings($date);
         $formatted_bookings = array();
-
-        // Log first booking structure for debugging
-        if (!empty($raw_bookings)) {
-            bma_log('BMA_Matcher: Sample raw Resos booking structure: ' . print_r($raw_bookings[0], true), 'debug');
-        }
 
         foreach ($raw_bookings as $booking) {
             // Extract Hotel Guest status from customFields
@@ -748,11 +783,13 @@ class BMA_Matcher {
      * All caching is now handled in BMA_NewBook_Search::call_api()
      *
      * @param string $date Date in YYYY-MM-DD format
+     * @param bool $force_refresh If true, bypass and clear cache
+     * @param array $request_context Request context for logging (user, IP, route, etc.)
      * @return array Array of hotel bookings for the date
      */
-    private function fetch_hotel_bookings_for_date($date) {
+    private function fetch_hotel_bookings_for_date($date, $force_refresh = false, $request_context = null) {
         $searcher = new BMA_NewBook_Search();
-        return $searcher->fetch_hotel_bookings_for_date($date);
+        return $searcher->fetch_hotel_bookings_for_date($date, $force_refresh, $request_context);
     }
 
     /**
@@ -1053,7 +1090,7 @@ class BMA_Matcher {
             }
         }
 
-        // Find lead booking's room number
+        // Find lead booking's room number (only if this booking references a lead)
         if (!empty($lead_booking_id) && !empty($all_hotel_bookings)) {
             bma_log('BMA_Matcher: Searching for lead booking ID ' . $lead_booking_id . ' in ' . count($all_hotel_bookings) . ' hotel bookings', 'debug');
             foreach ($all_hotel_bookings as $hb) {
@@ -1066,9 +1103,8 @@ class BMA_Matcher {
             if (empty($lead_booking_room)) {
                 bma_log('BMA_Matcher: Lead booking ID ' . $lead_booking_id . ' not found in hotel bookings list', 'error');
             }
-        } else {
-            bma_log('BMA_Matcher: Cannot find lead room - lead_booking_id: ' . ($lead_booking_id ?: 'EMPTY') . ', all_hotel_bookings count: ' . count($all_hotel_bookings), 'error');
         }
+        // Note: Empty lead_booking_id is normal - means this is a standalone booking or the lead itself
 
         // Check if booking is in a group that's linked (G#5678)
         if (!empty($bookings_group_id) && !empty($group_exclude_data['groups'])) {

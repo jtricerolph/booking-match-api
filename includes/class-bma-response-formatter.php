@@ -31,6 +31,11 @@ class BMA_Response_Formatter {
             return $this->format_html_response($results, $search_method, 'chrome-sidepanel');
         }
 
+        // Webapp contexts (mobile-optimized HTML)
+        if ($context === 'webapp-restaurant') {
+            return $this->format_html_response($results, $search_method, 'webapp-restaurant');
+        }
+
         // Default JSON response
         return $this->format_json_response($results, $search_method);
     }
@@ -178,6 +183,8 @@ class BMA_Response_Formatter {
         // Load appropriate template based on context
         if ($context === 'chrome-sidepanel') {
             $template_file = BMA_PLUGIN_DIR . 'templates/chrome-sidepanel-response.php';
+        } elseif ($context === 'webapp-restaurant') {
+            $template_file = BMA_PLUGIN_DIR . 'templates/webapp-restaurant-response.php';
         } else {
             $template_file = BMA_PLUGIN_DIR . 'templates/chrome-extension-response.php';
         }
@@ -263,11 +270,17 @@ class BMA_Response_Formatter {
     }
 
     /**
-     * Format summary HTML for Chrome sidepanel
+     * Format summary HTML for Chrome sidepanel or webapp
      */
-    public function format_summary_html($bookings) {
+    public function format_summary_html($bookings, $context = 'chrome-summary') {
         ob_start();
-        $template_file = BMA_PLUGIN_DIR . 'templates/chrome-summary-response.php';
+
+        // Select template based on context
+        if ($context === 'webapp-summary') {
+            $template_file = BMA_PLUGIN_DIR . 'templates/webapp-summary-response.php';
+        } else {
+            $template_file = BMA_PLUGIN_DIR . 'templates/chrome-summary-response.php';
+        }
 
         if (file_exists($template_file)) {
             include $template_file;
@@ -289,11 +302,17 @@ class BMA_Response_Formatter {
     }
 
     /**
-     * Format checks HTML for Chrome sidepanel
+     * Format checks HTML for Chrome sidepanel or webapp
      */
-    public function format_checks_html($booking, $checks) {
+    public function format_checks_html($booking, $checks, $context = 'chrome-checks') {
         ob_start();
-        $template_file = BMA_PLUGIN_DIR . 'templates/chrome-checks-response.php';
+
+        // Select template based on context
+        if ($context === 'webapp-checks') {
+            $template_file = BMA_PLUGIN_DIR . 'templates/webapp-checks-response.php';
+        } else {
+            $template_file = BMA_PLUGIN_DIR . 'templates/chrome-checks-response.php';
+        }
 
         if (file_exists($template_file)) {
             include $template_file;
