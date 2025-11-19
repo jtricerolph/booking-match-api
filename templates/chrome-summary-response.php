@@ -14,7 +14,7 @@ if (empty($bookings)) {
     return;
 }
 ?>
-<!-- Template Version: 2025-01-19 00:15 Use actual status for arrived/departed detection -->
+<!-- Template Version: 2025-01-19 00:30 Fix arrived detection with status and date logic -->
 <div class="bma-summary">
     <?php foreach ($bookings as $booking):
         $group_id = $booking['group_id'] ?? null;
@@ -29,10 +29,15 @@ if (empty($bookings)) {
         // Use actual status to determine if departed (not just dates)
         $is_departed = !$is_cancelled && $status === 'departed';
 
-        // Arrived = currently in date range AND not departed AND not cancelled
+        // Arrived = status indicates in-house OR (in date range AND not departed AND not future confirmed)
+        // NewBook uses "arrives" for in-house guests
+        $is_in_house_status = in_array($status, ['arrives', 'in_house', 'checked_in']);
+        $is_in_date_range = $arrival_date && $arrival_date <= $today &&
+                           $departure_date && $departure_date >= $today;
+        $is_future_arrival = $status === 'confirmed' && $arrival_date && $arrival_date > $today;
+
         $is_arrived = !$is_cancelled && !$is_departed &&
-                     $arrival_date && $arrival_date <= $today &&
-                     $departure_date && $departure_date > $today;
+                     ($is_in_house_status || ($is_in_date_range && !$is_future_arrival));
 
         // Check if booking is "new" (placed or cancelled within 24 hours)
         $is_new = false;
