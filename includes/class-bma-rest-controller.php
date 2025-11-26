@@ -243,6 +243,34 @@ class BMA_REST_Controller extends WP_REST_Controller {
      * 4. Copy the generated password and use it with your WordPress username for HTTP Basic Auth
      */
     public function permissions_check($request) {
+        // Parse Authorization header if PHP_AUTH_USER/PHP_AUTH_PW not set
+        // Some server configs don't automatically populate these from the Authorization header
+        if (!isset($_SERVER['PHP_AUTH_USER']) && !isset($_SERVER['PHP_AUTH_PW'])) {
+            // Check for Authorization header
+            $auth_header = null;
+            if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+                $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+            } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+                $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+            } elseif (function_exists('apache_request_headers')) {
+                $headers = apache_request_headers();
+                if (isset($headers['Authorization'])) {
+                    $auth_header = $headers['Authorization'];
+                }
+            }
+
+            // Parse Basic Auth header
+            if ($auth_header && strpos($auth_header, 'Basic ') === 0) {
+                $credentials = base64_decode(substr($auth_header, 6));
+                if ($credentials && strpos($credentials, ':') !== false) {
+                    list($username, $password) = explode(':', $credentials, 2);
+                    $_SERVER['PHP_AUTH_USER'] = $username;
+                    $_SERVER['PHP_AUTH_PW'] = $password;
+                    bma_log("BMA-AUTH: Parsed Authorization header - user: {$username}", 'debug');
+                }
+            }
+        }
+
         // Log key request details
         bma_log(sprintf(
             'BMA-AUTH: Request [%s %s] Origin: %s | Auth: %s | PHP_AUTH_USER: %s',
