@@ -296,7 +296,7 @@ class BMA_Matcher {
 
         // Priority 5: Booking ID in notes (SUGGESTED - should be in custom field)
         $notes = $this->get_resos_notes($resos_booking);
-        if (!empty($hotel_booking_id) && stripos($notes, (string)$hotel_booking_id) !== false) {
+        if (!empty($hotel_booking_id) && preg_match('/\b' . preg_quote((string)$hotel_booking_id, '/') . '\b/i', $notes)) {
             // Check current custom fields to suggest updates
             $current_booking_number = '';
             $current_hotel_guest = '';
@@ -324,7 +324,7 @@ class BMA_Matcher {
         }
 
         // Priority 6: Agent ref in notes (SUGGESTED - should be in custom field)
-        if (!empty($hotel_ref) && stripos($notes, $hotel_ref) !== false) {
+        if (!empty($hotel_ref) && preg_match('/\b' . preg_quote($hotel_ref, '/') . '\b/i', $notes)) {
             // Check current custom fields
             $current_booking_number = '';
             $current_hotel_guest = '';
@@ -357,7 +357,7 @@ class BMA_Matcher {
         $match_types = array();
 
         // Room number match
-        if (!empty($hotel_room) && stripos($notes, $hotel_room) !== false) {
+        if (!empty($hotel_room) && preg_match('/\b' . preg_quote($hotel_room, '/') . '\b/i', $notes)) {
             $score += 8;
             $match_count++;
             $match_types[] = 'room';
