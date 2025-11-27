@@ -356,8 +356,8 @@ class BMA_Matcher {
         $match_count = 0;
         $match_types = array();
 
-        // Room number match
-        if (!empty($hotel_room) && preg_match('/\b' . preg_quote($hotel_room, '/') . '\b/i', $notes)) {
+        // Room number match - require whitespace or delimiter before number
+        if (!empty($hotel_room) && preg_match('/(^|[\s\/,+&-])' . preg_quote($hotel_room, '/') . '\b/i', $notes)) {
             $score += 8;
             $match_count++;
             $match_types[] = 'room';

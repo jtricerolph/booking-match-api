@@ -271,7 +271,7 @@ class BMA_Comparison {
 
         // Check notes match - look for room number or booking ID in notes
         if (!empty($resos_notes) && (!empty($hotel_room) || !empty($hotel_booking_id))) {
-            $room_found = !empty($hotel_room) && preg_match('/\b' . preg_quote($hotel_room, '/') . '\b/i', $resos_notes);
+            $room_found = !empty($hotel_room) && preg_match('/(^|[\s\/,+&-])' . preg_quote($hotel_room, '/') . '\b/i', $resos_notes);
             $booking_found = !empty($hotel_booking_id) && preg_match('/\b' . preg_quote($hotel_booking_id, '/') . '\b/i', $resos_notes);
 
             if ($room_found || $booking_found) {
